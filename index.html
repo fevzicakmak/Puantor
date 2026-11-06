@@ -433,7 +433,7 @@ window.downloadFis=function(){
   }catch(e){ 
     try{
       var txt=document.getElementById("fisText").value;
-      var dataUri = 'data:text/plain;charset=utf-8,[STRIPPED]+encodeURIComponent(txt);
+      var dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
       var win = window.open(dataUri, '_blank');
       if(!win) alert("İndirme engellendi - Kopyala butonunu kullan");
     }catch(e2){ alert("İndirme hatası: "+e2.message); }
