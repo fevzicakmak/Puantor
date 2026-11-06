@@ -15,20 +15,51 @@ a{color:#1d4ed8}
 <h1>🚜 Puantör | Operatör</h1>
 <p>Makine çalışma takibi</p>
 <form id="operatorLogin" autocomplete="off">
-<label for="username">Kullanıcı adı</label>
-<input id="username" name="username" required minlength="3" maxlength="32" pattern="[a-z0-9._-]{3,32}" autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="Örn. bekir.36">
+<label for="username">E-posta</label>
+<input id="username" name="username" type="email" required autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="E-posta adresiniz">
 <label for="pin">Parola</label>
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p>
-<div class="notice"><strong>Kurulum aşamasında.</strong> Firebase Authentication ile ücretsiz parola girişi hazırlanıyor. Bu ekran henüz giriş yapmaz; operatörlere hesap bilgisi dağıtmayın.</div>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p class="notice">Bu ekran şimdilik yalnızca görüntüleme içindir. Başlatma ve duraklatma, makineye özel güvenli yazma kuralları tamamlanınca açılacak.</p><button type="button" id="signout">Çıkış yap</button></section>
+<div class="notice"><strong>Kurulum aşamasında.</strong> Firebase Authentication ile giriş yapılır. Makine yetki kaydı tamamlanmadan çalışma kontrolleri açılmaz.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
-<script>
-document.getElementById("operatorLogin").addEventListener("submit",function(e){
- e.preventDefault();
- document.getElementById("error").textContent="Operatör girişi henüz etkin değil. Firebase hesabı ve makine yetkisi bağlandıktan sonra açılacak.";
- document.getElementById("pin").value="";
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const $=id=>document.getElementById(id);
+let unsubscribe=null;
+function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
+function showError(e){$("error").textContent=e}
+onAuthStateChanged(auth,async user=>{
+ if(unsubscribe){unsubscribe();unsubscribe=null}
+ $("operatorLogin").hidden=!!user;$("session").hidden=!user;
+ if(!user)return;
+ $("who").textContent=user.email||"Operatör";
+ try{
+ const profile=await getDoc(doc(db,"users",user.uid));
+ if(!profile.exists()||profile.data().role!=="operator"){showError("Bu hesap için operatör yetkisi henüz tanımlanmadı.");return}
+ const ids=profile.data().machineIds;
+ if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
+ unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
+ if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
+ const m=snap.data();$("machine").textContent=m.machineName||m.plaka||ids[0];
+ $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
+ const elapsed=Number(m.elapsedMs)||0,start=m.startedAt?.toMillis?.()||0;
+ $("machineTime").textContent=fmt(elapsed+(m.status==="running"&&start?Date.now()-start:0));
+ showError("");
+ },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
+ }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
+$("operatorLogin").addEventListener("submit",async e=>{
+ e.preventDefault();showError("");const b=e.target.querySelector("button");b.disabled=true;
+ try{await signInWithEmailAndPassword(auth,$("username").value.trim(),$("pin").value)}
+ catch(err){showError("Giriş başarısız. E-posta ve parolayı kontrol edin.")}
+ finally{$("pin").value="";b.disabled=false}
+});
+$("signout").addEventListener("click",()=>signOut(auth));
 </script></body></html>
