@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puantör Live | Yönetici</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5}*{box-sizing:border-box}body{margin:0;padding:14px;max-width:960px;margin-inline:auto}header{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:23px;margin:12px 0 2px}.muted{color:#64748b;font-size:12px}.card{background:white;border:1px solid #d6e0ed;border-radius:14px;padding:15px;margin:12px 0;box-shadow:0 2px 7px #1420330a}input,button{font:inherit;border-radius:9px;padding:12px;width:100%;margin:5px 0;border:1px solid #cbd5e1}button{background:#0f172a;color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.5}button.secondary{background:#e2e8f0;color:#142033}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:14px;background:white;border-radius:12px;text-align:center}.stat b{display:block;font-size:26px}.machine{border-left:5px solid #94a3b8}.machine.running{border-color:#16a34a}.machine.paused{border-color:#eab308}.machine.broken{border-color:#dc2626}.machine.done{border-color:#3b82f6}.tag{border-radius:30px;background:#e2e8f0;padding:5px 9px;font-size:12px;font-weight:700}.top{display:flex;justify-content:space-between;align-items:center;gap:8px}.hidden{display:none!important}#error{color:#b91c1c;white-space:pre-wrap}#status{font-size:12px}small{color:#64748b} .machine p{margin:7px 0;font-size:14px}
+</style></head><body>
+<header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
+<div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
+<section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
+<main id="dashboard" class="hidden">
+<div class="grid" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
+<div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div>
+</main>
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,collection,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const $=id=>document.getElementById(id);let unsubscribe=null;let ticker=null;let cached=[];
+function message(t){$("status").textContent=t}
+function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+const labels={running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arıza",done:"Tamamlandı",idle:"Hazır"};
+function render(){
+ $("total").textContent=cached.length;$("running").textContent=cached.filter(m=>m.status==="running").length;$("paused").textContent=cached.filter(m=>m.status==="paused").length;$("broken").textContent=cached.filter(m=>m.status==="broken").length;
+ $("machines").innerHTML=cached.length?cached.map(m=>'<article class="card machine '+safe(["running","paused","broken","done"].includes(m.status)?m.status:"")+'"><div class="top"><strong>🚜 '+safe(m.machineName||m.plaka||m.id)+'</strong><span class="tag">'+safe(labels[m.status]||"Bilinmiyor")+'</span></div><p>Operatör: '+safe(m.operatorName||"Atanmadı")+'</p><p>Müşteri: '+safe(m.customerName||"Atanmadı")+'</p><p>Çalışma süresi: <strong>'+duration(m)+'</strong></p>'+(m.status==="broken"?'<p style="color:#b91c1c">Arıza: '+safe(m.faultReason||"Açıklama yok")+'</p>':"")+'<small>Son güncelleme: '+safe(m.updatedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small></article>').join(""):'<p class="muted">Henüz makine kaydı yok. Operatör bağlantısı kurulduğunda burada görünecek.</p>';
+}
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("error").textContent="";try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value)}catch(err){$("error").textContent="Giriş başarısız: "+err.code}});
+$("logout").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async user=>{
+ if(unsubscribe){unsubscribe();unsubscribe=null}if(ticker){clearInterval(ticker);ticker=null}
+ $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
+ if(!user){$("login").classList.remove("hidden");message("Yönetici hesabıyla giriş yapın.");return}
+ $("login").classList.add("hidden");
+ try{
+  const profile=await getDoc(doc(db,"users",user.uid));
+  if(!profile.exists()||profile.data().role!=="admin"){message("Bu hesap için yönetici yetkisi tanımlı değil. Kullanıcı UID: "+user.uid);$("logout").classList.remove("hidden");return}
+  $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
+  unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
+  ticker=setInterval(render,1000);
+ }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
+});
+</script></body></html>
