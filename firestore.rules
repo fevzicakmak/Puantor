@@ -1,8 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  // Replace the placeholder with the administrator's Firebase Authentication UID
-  // before publishing. Do NOT deploy these rules with a placeholder and expect access.
   function isAdmin() { return request.auth != null && request.auth.uid == '3m5MqDVbbFTVWl0VNWz1ipKZ8eO2'; }
   function signedIn() { return request.auth != null; }
   function isAssigned(machineId) {
@@ -18,15 +16,34 @@ service cloud.firestore {
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
    allow create, delete: if isAdmin();
-   // Operator may update only runtime state fields of an assigned machine.
-   allow update: if isAdmin() ||
-     (isAssigned(machineId) &&
-      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-       'status','startedAt','elapsedMs','faultReason','updatedAt','operatorName','customerName'
-      ]) &&
-      request.resource.data.status in ['idle','running','paused','broken','done'] &&
-      request.resource.data.elapsedMs is number &&
-      request.resource.data.elapsedMs >= 0);
+   // Assigned operators can change runtime state only, never machine ownership.
+   allow update: if isAdmin() || (
+     isAssigned(machineId) &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+       'status','startedAt','elapsedMs','faultReason','updatedAt'
+     ]) &&
+     request.resource.data.updatedAt == request.time &&
+     request.resource.data.elapsedMs is number &&
+     request.resource.data.elapsedMs >= resource.data.elapsedMs &&
+     request.resource.data.elapsedMs >= 0 &&
+     (
+       (request.resource.data.status == 'running' &&
+        resource.data.status in ['idle','paused','broken'] &&
+        request.resource.data.startedAt == request.time &&
+        request.resource.data.elapsedMs == resource.data.elapsedMs &&
+        request.resource.data.faultReason == '') ||
+       (request.resource.data.status in ['paused','broken','done'] &&
+        resource.data.status in ['idle','running','paused','broken'] &&
+        request.resource.data.startedAt == null &&
+        (resource.data.status != 'running' ||
+         (resource.data.startedAt is timestamp &&
+          request.resource.data.elapsedMs >= resource.data.elapsedMs)) &&
+        (request.resource.data.status != 'broken' ||
+         (request.resource.data.faultReason is string &&
+          request.resource.data.faultReason.size() > 0 &&
+          request.resource.data.faultReason.size() <= 500)))
+     )
+   );
   }
   match /jobs/{jobId} {
    allow read: if isAdmin() || (signedIn() && resource.data.operatorUid == request.auth.uid);
