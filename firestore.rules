@@ -3,7 +3,7 @@ service cloud.firestore {
  match /databases/{database}/documents {
   // Replace the placeholder with the administrator's Firebase Authentication UID
   // before publishing. Do NOT deploy these rules with a placeholder and expect access.
-  function isAdmin() { return request.auth != null && request.auth.uid == 'ADMIN_UID_BURAYA'; }
+  function isAdmin() { return request.auth != null && request.auth.uid == '3m5MqDVbbFTVWl0VNWz1ipKZ8eO2'; }
   function signedIn() { return request.auth != null; }
   function isAssigned(machineId) {
    return signedIn() &&
