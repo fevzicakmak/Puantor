@@ -8,7 +8,7 @@ main{width:100%;max-width:440px;background:white;border:1px solid #d6e0ed;border
 h1{font-size:25px;margin:0 0 5px}p{color:#64748b;line-height:1.5}label{display:block;font-weight:700;margin:16px 0 5px}
 input{width:100%;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:14px;font:inherit;font-size:18px}
 button{width:100%;border:0;border-radius:10px;background:#0f172a;color:white;padding:15px;font-size:16px;font-weight:750;margin-top:20px}
-.notice{border-radius:10px;background:#f1f5f9;padding:12px;font-size:13px;color:#475569}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}.actions button{margin:0}.actions button:disabled{opacity:.45}.actions .danger{background:#a52b25}.notice{border-radius:10px;background:#f1f5f9;padding:12px;font-size:13px;color:#475569}
 #error{color:#9a3412;font-weight:650;min-height:1.5em}
 a{color:#1d4ed8}
 </style></head><body><main>
@@ -21,7 +21,7 @@ a{color:#1d4ed8}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p class="notice">Bu ekran şimdilik yalnızca görüntüleme içindir. Başlatma ve duraklatma, makineye özel güvenli yazma kuralları tamamlanınca açılacak.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Kontroller güvenli Firebase yazma kuralları yayımlandıktan sonra etkinleşecek.</p><button type="button" id="signout">Çıkış yap</button></section>
 <div class="notice"><strong>Kurulum aşamasında.</strong> Firebase Authentication ile giriş yapılır. Makine yetki kaydı tamamlanmadan çalışma kontrolleri açılmaz.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
@@ -29,14 +29,35 @@ a{color:#1d4ed8}
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
-let unsubscribe=null;
+let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e}
+function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
+async function changeState(action){
+ if(!machineId||busy)return;let reason="";
+ if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
+ if(action==="finish"&&!confirm("Bu makinenin çalışmasını bitirmek istiyor musunuz?"))return;
+ busy=true;updateControls();showError("");
+ try{
+  await runTransaction(db,async tx=>{
+   const ref=doc(db,"machines",machineId),snap=await tx.get(ref);
+   if(!snap.exists())throw Error("Makine bulunamadı");
+   const m=snap.data(),now=Timestamp.now(),start=m.startedAt?.toMillis?.()||0;
+   const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
+   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");
+   const elapsed=Math.max(0,Number(m.elapsedMs)||0)+(m.status==="running"&&start?Math.max(0,now.toMillis()-start):0);
+   const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
+   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?now:null,faultReason:action==="fault"?reason.trim():"",updatedAt:serverTimestamp()});
+  });
+ }catch(e){showError(e.code==="permission-denied"?"Firebase yazma yetkisi henüz yayımlanmadı.":("İşlem başarısız: "+(e.message||e.code)))}
+ finally{busy=false;updateControls()}
+}
+for(const id of controls)$(id).addEventListener("click",()=>changeState(id));
 onAuthStateChanged(auth,async user=>{
- if(unsubscribe){unsubscribe();unsubscribe=null}
+ if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();
  $("operatorLogin").hidden=!!user;$("session").hidden=!user;
  if(!user)return;
  $("who").textContent=user.email||"Operatör";
@@ -45,9 +66,9 @@ onAuthStateChanged(auth,async user=>{
  if(!profile.exists()||profile.data().role!=="operator"){showError("Bu hesap için operatör yetkisi henüz tanımlanmadı.");return}
  const ids=profile.data().machineIds;
  if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
- unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
+ machineId=ids[0];unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
- const m=snap.data();$("machine").textContent=m.machineName||m.plaka||ids[0];
+ const m=snap.data();machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  const elapsed=Number(m.elapsedMs)||0,start=m.startedAt?.toMillis?.()||0;
  $("machineTime").textContent=fmt(elapsed+(m.status==="running"&&start?Date.now()-start:0));
