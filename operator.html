@@ -35,6 +35,8 @@ const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e}
+function renderTime(){if(!machineData)return;const elapsed=Number(machineData.elapsedMs)||0,start=machineData.startedAt?.toMillis?.()||0;$("machineTime").textContent=fmt(elapsed+(machineData.status==="running"&&start?Math.max(0,Date.now()-start):0))}
+setInterval(renderTime,1000);
 function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
  if(!machineId||busy)return;let reason="";
@@ -50,7 +52,7 @@ async function changeState(action){
    if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");
    const elapsed=Math.max(0,Number(m.elapsedMs)||0)+(m.status==="running"&&start?Math.max(0,now.toMillis()-start):0);
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?now:null,faultReason:action==="fault"?reason.trim():"",updatedAt:serverTimestamp()});
+   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",updatedAt:serverTimestamp()});
   });
  }catch(e){showError(e.code==="permission-denied"?"Firebase yazma yetkisi henüz yayımlanmadı.":("İşlem başarısız: "+(e.message||e.code)))}
  finally{busy=false;updateControls()}
@@ -70,8 +72,7 @@ onAuthStateChanged(auth,async user=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
  const m=snap.data();machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
- const elapsed=Number(m.elapsedMs)||0,start=m.startedAt?.toMillis?.()||0;
- $("machineTime").textContent=fmt(elapsed+(m.status==="running"&&start?Date.now()-start:0));
+ renderTime();
  showError("");
  },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
