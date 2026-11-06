@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puantör - Araç Kutusu V19</title>
+<style>
+:root{--green:#16a34a;--red:#dc2626;--dark:#0f172a;--yellow:#f59e0b;--bg:#e2e8f0}
+*{box-sizing:border-box} body{font-family:system-ui;background:var(--bg);margin:0;padding:8px}
+.card{background:#fff;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #cbd5e1}
+h2{margin:0 0 8px;font-size:18px}
+label{font-size:11px;font-weight:700;color:#334155;margin-top:8px;display:block;text-transform:uppercase;letter-spacing:.5px}
+input,select{width:100%;padding:11px;margin-top:4px;border-radius:10px;border:1px solid #cbd5e1;font-size:14px;background:#f8fafc}
+button{width:100%;padding:12px;margin-top:7px;border-radius:10px;border:none;font-weight:800;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.timer{font-size:52px;text-align:center;font-weight:900;font-family:monospace;margin:12px 0;letter-spacing:-2px}
+.price{font-size:26px;text-align:center;color:var(--green);font-weight:900}
+.sub{font-size:11px;text-align:center;color:#64748b;margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-start{background:var(--green);color:#fff;font-size:15px} .btn-pause{background:var(--yellow);color:#000} .btn-stop{background:var(--red);color:#fff} .btn-reset{background:#e2e8f0;color:#334155}
+.btn-dark{background:var(--dark);color:#fff} .btn-wa{background:#25D366;color:#fff}
+.hidden{display:none!important}
+.arac-kutusu{background:#0f172a;border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 8px 24px rgba(15,23,42,.3);border:2px solid #1e293b}
+.arac-kutusu-baslik{color:#f1f5f9;font-size:12px;font-weight:800;letter-spacing:1px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+.gozler{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(min-width:400px){.gozler{grid-template-columns:1fr 1fr 1fr}}
+.goz{position:relative;background:#1e293b;border:2px solid #334155;border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:transform .1s, border-color .15s, background .15s;min-height:82px;display:flex;flex-direction:column;justify-content:center;align-items:center;user-select:none}
+.goz:active{transform:scale(0.96)}
+.goz.active{background:#fff;border-color:#fff;box-shadow:0 0 0 3px #38bdf8, 0 6px 20px rgba(56,189,248,.4)}
+.goz.running{border-color:#22c55e;background:#14532d}
+.goz.running.active{background:#dcfce7;border-color:#22c55e;box-shadow:0 0 0 3px #22c55e}
+.goz.done{border-color:#3b82f6;background:#1e3a5f}
+.goz.done.active{background:#dbeafe;border-color:#3b82f6}
+.goz-icon{font-size:22px;margin-bottom:4px;pointer-events:none}
+.goz-ad{font-size:12px;font-weight:800;line-height:1.2;color:#e2e8f0;pointer-events:none}
+.goz.active .goz-ad{color:#0f172a}
+.goz.running .goz-ad{color:#bbf7d0}
+.goz.running.active .goz-ad{color:#14532d}
+.goz-sure{font-size:10px;font-weight:700;margin-top:3px;font-family:monospace;padding:2px 6px;border-radius:99px;background:rgba(255,255,255,.15);color:#f1f5f9;pointer-events:none}
+.goz.active .goz-sure{background:#0f172a;color:#fff}
+.goz.running .goz-sure{background:#22c55e;color:#000}
+.goz-badge{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:2px solid #0f172a;display:flex;align-items:center;justify-content:center;font-size:10px;pointer-events:none}
+.machine-card{border:3px solid #e2e8f0;border-radius:16px;padding:14px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.machine-card.running{border-color:#22c55e;background:#f0fdf4;box-shadow:0 4px 20px rgba(34,197,94,.2)}
+.machine-card.done{border-color:#3b82f6;background:#eff6ff}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.9);display:flex;align-items:center;justify-content:center;z-index:9999;padding:14px}
+.modal-card{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:480px;max-height:90vh;overflow:auto}
+.item{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px;margin-top:6px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="card" style="padding:10px">
+<div class="grid2">
+<button class="btn-dark" type="button" onclick="openAdmin()">🔐 Yönetici</button>
+<button style="background:#f1f5f9" type="button" onclick="toggleHistory()">📋 Geçmiş (<span id="jobCount">0</span>)</button>
+</div>
+<div id="admin-panel" class="hidden" style="margin-top:10px">
+<div id="admin-login"><input id="adminPassInput" type="password" placeholder="Şifre: 1234"><button class="btn-dark" type="button" onclick="doLogin()">Giriş</button></div>
+<div id="admin-content" class="hidden">
+<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px;margin-top:10px">
+<label>Şirket</label><input id="companyName"><label>Patron Tel</label><input id="ownerPhone" placeholder="5321112233"><label>Saat Ücreti</label><input id="defaultPrice" type="number">
+<button class="btn-dark" type="button" onclick="saveCompany()">💾 Kaydet</button>
+<button style="background:#fee2e2;color:#b91c1c" type="button" onclick="resetAll()">🗑️ Sıfırla</button>
+</div>
+<div style="background:#fefce8;border-radius:10px;padding:10px;margin-top:10px"><label>Müşteri Adı</label><input id="newCustName" placeholder="Ali Yılmaz"><label>Telefon</label><input id="newCustTel" placeholder="532..."><button class="btn-dark" type="button" onclick="addCust()">➕ Ekle</button><div id="custListAdmin"></div></div>
+<div style="background:#fffbeb;border-radius:10px;padding:10px;margin-top:10px"><label>Operatör</label><div class="grid2"><input id="newOp"><button class="btn-dark" type="button" onclick="addOp()">Ekle</button></div><div id="opListAdmin"></div></div>
+<div style="background:#f0fdf4;border-radius:10px;padding:10px;margin-top:10px"><label>Makine</label><input id="newPlaka" placeholder="CAT 320D - 34 ABC"><label>Ücret</label><div class="grid2"><input id="newFiyat" type="number"><button class="btn-dark" type="button" onclick="addMak()">+ Göz Ekle</button></div><div id="makListAdmin"></div></div>
+<button style="background:#e2e8f0;margin-top:10px" type="button" onclick="closeAdmin()">Kapat</button>
+</div>
+</div>
+<div id="history-panel" class="hidden" style="margin-top:10px"><div id="historyList"></div><button style="background:#fee2e2;color:#b91c1c" type="button" onclick="clearHist()">Geçmişi Sil</button></div>
+</div>
+
+<div class="card" style="padding:10px">
+<h2>🚜 <span id="companyDisplay">Puantör</span></h2>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
+<label>👥 Müşteri Seç</label>
+<div class="grid2"><select id="globalCustSel" onchange="onGlobalCustChange(this.value)"></select><button type="button" onclick="openCustModal()" style="background:#dbeafe;color:#1e40af">➕ Yeni</button></div>
+</div>
+</div>
+
+<div class="arac-kutusu">
+<div class="arac-kutusu-baslik"><span>🧰 ARAÇ KUTUSU - MAKİNELER</span><span id="kutuInfo" style="font-size:10px;background:#334155;padding:3px 8px;border-radius:99px">4 GÖZ</span></div>
+<div id="gozler" class="gozler"></div>
+<div style="margin-top:10px;font-size:10px;color:#94a3b8;text-align:center">Dokun, o makinenin kartı aşağıda açılsın - Hepsi aynı anda çalışabilir</div>
+</div>
+
+<div id="machinesContainer"></div>
+
+<div id="fisModal" class="modal hidden"><div class="modal-card"><textarea id="fisText" readonly style="height:240px;width:100%"></textarea><button class="btn-dark" type="button" onclick="downloadFis()">⬇️ FİŞİ İNDİR</button><button style="background:#25D366;color:#fff" type="button" onclick="shareFis()">📤 PAYLAŞ</button><div class="grid2"><button class="btn-wa" type="button" onclick="copyFis()">📋 Kopyala</button><button style="background:#e2e8f0" type="button" onclick="closeFis()">Kapat</button></div></div></div>
+<div id="raporModal" class="modal hidden"><div class="modal-card">
+<h3 style="margin:0 0 10px">📤 Rapor Gönder</h3>
+<p id="raporInfo" style="font-size:12px;color:#64748b;margin:0 0 10px"></p>
+<label>Kime Gönderilsin?</label>
+<select id="raporTarget" style="width:100%;padding:12px;border-radius:10px;border:1px solid #cbd5e1;font-size:14px;background:#f8fafc"></select>
+<div id="raporPreview" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:10px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow:auto"></div>
+<div class="grid2" style="margin-top:12px"><button class="btn-wa" type="button" onclick="sendRapor()">✅ WhatsApp Aç</button><button style="background:#e2e8f0" type="button" onclick="closeRaporDialog()">İptal</button></div>
+</div></div>
+<div id="custModal" class="modal hidden"><div class="modal-card"><label>Müşteri Adı</label><input id="modalCustName"><label>Telefon</label><input id="modalCustTel"><div class="grid2"><button class="btn-dark" type="button" onclick="saveModalCust()">Kaydet</button><button style="background:#e2e8f0" type="button" onclick="closeCustModal()">İptal</button></div></div></div>
+
+<script>
+var DEFAULT_OPS = ["Ahmet Usta", "Mehmet Usta", "Ali Usta"];
+var DEFAULT_MAKS = [
+  {plaka:"CAT 320D", kod:"34 ABC 01", fiyat:1500},
+  {plaka:"JCB 3CX", kod:"06 XYZ 02", fiyat:1200},
+  {plaka:"Volvo EC210", kod:"35 DEF 03", fiyat:1800},
+  {plaka:"Komatsu PC200", kod:"06 KLM 04", fiyat:1600}
+];
+var DEFAULT_CUSTOMERS = [
+  {id:1, name:"Ahmet Yılmaz - Villa", tel:"5320001122"},
+  {id:2, name:"Mehmet Demir - Fabrika", tel:"5331112233"},
+  {id:3, name:"Ayşe Kaya - Yol", tel:"5342223344"}
+];
+var DEFAULT_COMPANY = {name:"Puantör - Makine Takip", owner:"5321112233", def:1500};
+
+var ops = DEFAULT_OPS.slice();
+var maks = DEFAULT_MAKS.slice();
+var company = {name:DEFAULT_COMPANY.name, owner:DEFAULT_COMPANY.owner, def:DEFAULT_COMPANY.def};
+var customers = DEFAULT_CUSTOMERS.slice();
+var jobs = [];
+var machineStates = [];
+var activeIdx = 0;
+
+function loadData(){
+  try{
+    var s = localStorage.getItem("is_takip_v19");
+    if(s){
+      var d = JSON.parse(s);
+      if(d.ops!==undefined) ops = d.ops;
+      if(d.maks!==undefined) maks = d.maks;
+      if(d.company && d.company.name) company = d.company;
+      if(d.customers!==undefined) customers = d.customers;
+      if(d.machineStates && d.machineStates.length>0){
+        machineStates = d.machineStates.map(function(st){
+          return {elapsed:st.elapsed||0, sessions:st.sessions||[], lastFinished:st.lastFinished||null, running:false, selectedOpIdx:st.selectedOpIdx||0, selectedCustId:st.selectedCustId|| (customers[0]?customers[0].id:null), startAt:null};
+        });
+      }
+      if(typeof d.activeIdx === 'number') activeIdx = d.activeIdx;
+    }else{
+      var old = localStorage.getItem("is_takip_v18") || localStorage.getItem("is_takip_v17") || localStorage.getItem("is_takip_v16");
+      if(old){
+        var d2 = JSON.parse(old);
+        if(d2.ops) ops = d2.ops;
+        if(d2.maks) maks = d2.maks;
+        if(d2.company) company = d2.company;
+        if(d2.customers) customers = d2.customers;
+        if(d2.machineStates) machineStates = d2.machineStates.map(function(st){ return {elapsed:st.elapsed||0, sessions:st.sessions||[], lastFinished:st.lastFinished||null, running:false, selectedOpIdx:st.selectedOpIdx||0, selectedCustId:st.selectedCustId|| (customers[0]?customers[0].id:null), startAt:null}; });
+        if(typeof d2.activeIdx === 'number') activeIdx = d2.activeIdx;
+      }
+    }
+    var j = localStorage.getItem("is_takip_jobs_v19") || localStorage.getItem("is_takip_jobs_v18");
+    if(j){ var p=JSON.parse(j); if(Array.isArray(p)) jobs=p; }
+  }catch(e){}
+  if(ops===undefined || ops===null) ops = DEFAULT_OPS.slice();
+  if(maks===undefined || maks===null) maks = DEFAULT_MAKS.slice();
+  if(customers===undefined || customers===null) customers = DEFAULT_CUSTOMERS.slice();
+  if(maks.length===0) activeIdx=0;
+  else if(activeIdx>=maks.length) activeIdx=maks.length-1;
+  ensureMachineStates();
+}
+function ensureMachineStates(){
+  if(maks.length===0){ machineStates=[]; activeIdx=0; return; }
+  while(machineStates.length < maks.length){
+    var cid = customers[0]?customers[0].id:null;
+    machineStates.push({elapsed:0, sessions:[], lastFinished:null, running:false, selectedOpIdx:0, selectedCustId:cid, startAt:null});
+  }
+  while(machineStates.length > maks.length) machineStates.pop();
+}
+function saveAll(){
+  try{
+    var toSave = machineStates.map(function(s){ return {elapsed:s.elapsed, sessions:s.sessions, lastFinished:s.lastFinished, running:s.running, selectedOpIdx:s.selectedOpIdx, selectedCustId:s.selectedCustId}; });
+    localStorage.setItem("is_takip_v19", JSON.stringify({ops:ops, maks:maks, company:company, customers:customers, machineStates:toSave, activeIdx:activeIdx}));
+    localStorage.setItem("is_takip_jobs_v19", JSON.stringify(jobs));
+  }catch(e){}
+  renderAll();
+}
+function fmt(ms){
+  var s=Math.floor(ms/1000); var h=Math.floor(s/3600); s%=3600; var m=Math.floor(s/60); s%=60;
+  function pad(n){ return n<10?"0"+n:""+n; }
+  return pad(h)+":"+pad(m)+":"+pad(s);
+}
+
+window.selectMachine = function(idx){
+  activeIdx = idx;
+  var allGoz = document.querySelectorAll(".goz");
+  for(var g=0;g<allGoz.length;g++){
+    allGoz[g].classList.remove("active");
+    if(parseInt(allGoz[g].getAttribute("data-idx"))===idx) allGoz[g].classList.add("active");
+  }
+  try{ 
+    var current = JSON.parse(localStorage.getItem("is_takip_v19")||"{}");
+    current.activeIdx = idx;
+    localStorage.setItem("is_takip_v19", JSON.stringify({ops:ops, maks:maks, company:company, customers:customers, machineStates:machineStates.map(function(s){ return {elapsed:s.elapsed, sessions:s.sessions, lastFinished:s.lastFinished, running:s.running, selectedOpIdx:s.selectedOpIdx, selectedCustId:s.selectedCustId}; }), activeIdx:idx}));
+  }catch(e){}
+  renderMachines();
+};
+
+function renderAll(){
+  document.getElementById("companyDisplay").textContent = company.name;
+  document.getElementById("jobCount").textContent = jobs.length;
+  var cn=document.getElementById("companyName"); if(cn) cn.value=company.name;
+  var op=document.getElementById("ownerPhone"); if(op) op.value=company.owner;
+  var dp=document.getElementById("defaultPrice"); if(dp) dp.value=company.def;
+  var gSel=document.getElementById("globalCustSel");
+  if(gSel){
+    var html=""; for(var i=0;i<customers.length;i++){ var c=customers[i]; html+='<option value="'+c.id+'" '+(customers[0]&&c.id===machineStates[activeIdx]?.selectedCustId?'selected':'')+'>'+c.name+' - 0'+c.tel.slice(-10)+'</option>'; }
+    gSel.innerHTML=html;
+  }
+  var custAdmin=document.getElementById("custListAdmin");
+  if(custAdmin){
+    custAdmin.innerHTML="";
+    if(customers.length===0){ custAdmin.innerHTML="<p style='color:#999;font-size:12px'>Müşteri yok</p>"; }
+    for(var i=0;i<customers.length;i++){
+      (function(c, idx){
+        var div=document.createElement("div"); div.className="item";
+        var info=document.createElement("div"); info.style.flex="1"; info.textContent=c.name+" - 0"+c.tel.slice(-10);
+        var btn=document.createElement("button"); btn.textContent="Sil"; btn.style.cssText="width:auto;min-width:50px;background:#fee2e2;color:#b91c1c";
+        btn.onclick=function(){ customers.splice(idx,1); try{ localStorage.setItem("is_takip_v19", JSON.stringify({ops:ops, maks:maks, company:company, customers:customers, machineStates:machineStates.map(function(s){ return {elapsed:s.elapsed, sessions:s.sessions, lastFinished:s.lastFinished, running:s.running, selectedOpIdx:s.selectedOpIdx, selectedCustId:s.selectedCustId}; }), activeIdx:activeIdx})); }catch(e){} renderAll(); };
+        div.appendChild(info); div.appendChild(btn); custAdmin.appendChild(div);
+      })(customers[i], i);
+    }
+  }
+  var opC=document.getElementById("opListAdmin");
+  if(opC){
+    opC.innerHTML="";
+    if(ops.length===0){ opC.innerHTML="<p style='color:#999;font-size:12px'>Operatör yok</p>"; }
+    for(var i=0;i<ops.length;i++){
+      (function(o, idx){
+        var div=document.createElement("div"); div.className="item";
+        var sp=document.createElement("span"); sp.textContent=o; sp.style.flex="1";
+        var b=document.createElement("button"); b.textContent="Sil"; b.style.cssText="width:auto;min-width:50px;background:#fee2e2;color:#b91c1c";
+        b.onclick=function(){ ops.splice(idx,1); try{ localStorage.setItem("is_takip_v19", JSON.stringify({ops:ops, maks:maks, company:company, customers:customers, machineStates:machineStates.map(function(s){ return {elapsed:s.elapsed, sessions:s.sessions, lastFinished:s.lastFinished, running:s.running, selectedOpIdx:s.selectedOpIdx, selectedCustId:s.selectedCustId}; }), activeIdx:activeIdx})); }catch(e){} renderAll(); };
+        div.appendChild(sp); div.appendChild(b); opC.appendChild(div);
+      })(ops[i], i);
+    }
+  }
+  var makC=document.getElementById("makListAdmin");
+  if(makC){
+    makC.innerHTML="";
+    if(maks.length===0){ makC.innerHTML="<p style='color:#999;font-size:12px'>Makine yok - ekle</p>"; }
+    for(var i=0;i<maks.length;i++){
+      (function(m, idx){
+        var div=document.createElement("div"); div.className="item";
+        var sp=document.createElement("span"); sp.style.flex="1"; sp.textContent=(m.plaka+" "+(m.kod||""))+" - "+m.fiyat+" TL";
+        var b=document.createElement("button"); b.textContent="Sil"; b.style.cssText="width:auto;min-width:50px;background:#fee2e2;color:#b91c1c";
+        b.onclick=function(){ maks.splice(idx,1); machineStates.splice(idx,1); if(maks.length===0) activeIdx=0; else if(activeIdx>=maks.length) activeIdx=maks.length-1; ensureMachineStates(); try{ localStorage.setItem("is_takip_v19", JSON.stringify({ops:ops, maks:maks, company:company, customers:customers, machineStates:machineStates.map(function(s){ return {elapsed:s.elapsed, sessions:s.sessions, lastFinished:s.lastFinished, running:s.running, selectedOpIdx:s.selectedOpIdx, selectedCustId:s.selectedCustId}; }), activeIdx:activeIdx})); localStorage.setItem("is_takip_jobs_v19", JSON.stringify(jobs)); }catch(e){ alert("Kayıt hatası: "+e.message); } renderAll(); };
+        div.appendChild(sp); div.appendChild(b); makC.appendChild(div);
+      })(maks[i], i);
+    }
+  }
+  var hl=document.getElementById("historyList");
+  if(hl){
+    if(jobs.length===0) hl.innerHTML="<p style='color:#999'>Yok - BİTİR basınca otomatik eklenir</p>";
+    else{
+      var h=""; for(var i=0;i<jobs.length;i++){ var j=jobs[i]; h+='<div class="item"><div style="flex:1"><b>'+j.name+'</b> - '+j.price+'<br><span style="font-size:11px">'+j.mak+' | '+j.time+' | '+j.date+'</span></div><div style="display:flex;gap:4px"><button data-id="'+j.id+'" class="btnOld" style="width:auto;min-width:50px;background:#0f172a;color:#fff">Gör</button><button data-del="'+j.id+'" class="btnDel" style="width:auto;min-width:40px;background:#fee2e2;color:#b91c1c">Sil</button></div></div>'; }
+      hl.innerHTML=h;
+      var btns=hl.querySelectorAll(".btnOld");
+      for(var k=0;k<btns.length;k++){ btns[k].onclick=function(){ var id=parseInt(this.getAttribute("data-id")); for(var x=0;x<jobs.length;x++){ if(jobs[x].id===id){ showFisModal(jobs[x].company+"\nMusteri: "+jobs[x].name+" "+jobs[x].tel+"\nMakine: "+jobs[x].mak+"\nOperator: "+jobs[x].op+"\nSure: "+jobs[x].time+"\nTutar: "+jobs[x].price+"\nTarih: "+jobs[x].date); break; } } }; }
+      var delBtns=hl.querySelectorAll(".btnDel");
+      for(var k=0;k<delBtns.length;k++){ delBtns[k].onclick=function(){ var id=parseInt(this.getAttribute("data-del")); if(confirm("Bu işi sil?")){ for(var x=0;x<jobs.length;x++){ if(jobs[x].id===id){ jobs.splice(x,1); break; } } try{ localStorage.setItem("is_takip_jobs_v19", JSON.stringify(jobs)); }catch(e){} renderAll(); } }; }
+    }
+  }
+  renderGozler();
+  renderMachines();
+}
+
+function renderGozler(){
+  var gozler=document.getElementById("gozler");
+  var kutuInfo=document.getElementById("kutuInfo");
+  if(!gozler) return;
+  gozler.innerHTML="";
+  if(maks.length===0){
+    gozler.innerHTML="<p style='color:#94a3b8;font-size:12px;padding:10px'>Makine yok - Yönetici > Makine Ekle</p>";
+    if(kutuInfo) kutuInfo.textContent="0 GÖZ";
+    return;
+  }
+  for(var i=0;i<maks.length;i++){
+    var m=maks[i];
+    var st=machineStates[i];
+    var cls="goz";
+    if(i===activeIdx) cls+=" active";
+    else if(st && st.running) cls+=" running";
+    else if(st && st.lastFinished) cls+=" done";
+    var icon = st && st.running ? "⏱️" : st && st.lastFinished ? "✅" : "🚜";
+    var sureText = "";
+    if(st && st.running) sureText = fmt(st.elapsed);
+    else if(st && st.lastFinished) sureText = st.lastFinished.time;
+    else sureText = m.fiyat+" TL/s";
+    var badge = st && st.running ? '<div class="goz-badge">●</div>' : '';
+    var html = '<div class="'+cls+'" data-idx="'+i+'" onclick="selectMachine('+i+')" ontouchstart="selectMachine('+i+')">'+badge+'<div class="goz-icon">'+icon+'</div><div class="goz-ad">'+m.plaka+'</div><div class="goz-ad" style="font-size:10px;opacity:.8">'+(m.kod||'')+'</div><div class="goz-sure" id="goz-sure-'+i+'">'+sureText+'</div></div>';
+    gozler.innerHTML+=html;
+  }
+  if(kutuInfo) kutuInfo.textContent=maks.length+" GÖZ - "+(function(){ var c=0; for(var r=0;r<machineStates.length;r++) if(machineStates[r].running) c++; return c; })()+" ÇALIŞIYOR";
+}
+
+function renderMachines(){
+  var container=document.getElementById("machinesContainer");
+  if(!container) return;
+  container.innerHTML="";
+  if(!maks || maks.length===0){
+    container.innerHTML="<div class='card' style='padding:20px;text-align:center;color:#999'>Makine yok<br><small>Yönetici (1234) > Makine Ekle</small></div>";
+    return;
+  }
+  var idx=activeIdx;
+  if(idx>=maks.length) idx=0;
+  var m=maks[idx];
+  var st=machineStates[idx];
+  if(!st){ st={elapsed:0, sessions:[], lastFinished:null, running:false, selectedOpIdx:0, selectedCustId:customers[0]?customers[0].id:null, startAt:null}; machineStates[idx]=st; }
+  var cust=null; for(var c=0;c<customers.length;c++){ if(customers[c].id===st.selectedCustId){ cust=customers[c]; break; } }
+  if(!cust) cust=customers[0];
+  var opName=ops[st.selectedOpIdx]||ops[0]||"";
+  var totalHours=st.elapsed/3600000;
+  var totalPrice=totalHours*m.fiyat;
+  var card=document.createElement("div");
+  card.className="machine-card"+(st.running?" running":st.lastFinished?" done":"");
+  var opOptions=""; for(var o=0;o<ops.length;o++){ opOptions+='<option value="'+o+'" '+(o===st.selectedOpIdx?'selected':'')+'>'+ops[o]+'</option>'; }
+  var custOptions=""; for(var cc=0;cc<customers.length;cc++){ custOptions+='<option value="'+customers[cc].id+'" '+(customers[cc].id===st.selectedCustId?'selected':'')+'>'+customers[cc].name+' - 0'+customers[cc].tel.slice(-10)+'</option>'; }
+  var lastInfo = st.lastFinished ? '<p style="font-size:12px;color:#16a34a;font-weight:800;text-align:center;margin:0 0 6px">✅ FİŞ HAZIR - '+st.lastFinished.time+' / '+st.lastFinished.price+' - Otomatik geçmişe eklendi</p><p style="font-size:11px;color:#334155;background:#f0fdf4;padding:6px;border-radius:6px;text-align:center">Müşteri: '+st.lastFinished.name+' - 0'+st.lastFinished.tel.slice(-10)+'<br>Patron: 0'+(company.owner?company.owner.slice(-10):'')+'</p>' : '';
+  card.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">🚜 '+m.plaka+' '+(m.kod?'<span style="font-size:12px;color:#64748b">'+m.kod+'</span>':'')+'</h3><span style="font-size:11px;background:'+(st.running?'#16a34a':'#e2e8f0')+';color:'+(st.running?'#fff':'#334155')+';padding:4px 10px;border-radius:99px;font-weight:800">'+(st.running?'● ÇALIŞIYOR':st.lastFinished?'✅ FİŞ HAZIR':'HAZIR')+'</span></div>'+
+    '<div class="grid2"><div><label>Operatör</label><select id="opSel-'+idx+'" onchange="onOpChange('+idx+', this.value)">'+opOptions+'</select></div><div><label>Müşteri</label><select id="custSel-'+idx+'" onchange="onCustChange('+idx+', this.value)">'+custOptions+'</select></div></div>'+
+    '<div class="timer" id="display-'+idx+'">'+fmt(st.elapsed)+'</div>'+
+    '<div class="price" id="livePrice-'+idx+'">'+totalPrice.toLocaleString("tr-TR",{minimumFractionDigits:2})+' TL</div>'+
+    '<div class="sub" id="liveSub-'+idx+'">'+totalHours.toFixed(2)+' saat x '+m.fiyat+' TL | '+(cust?cust.name:'')+' | '+opName+'</div>'+
+    '<div class="grid2" style="margin-top:12px"><button class="btn-start" type="button" onclick="startMachine('+idx+')">▶ BAŞLAT</button><button class="btn-pause" type="button" onclick="pauseMachine('+idx+')">⏸ DURAKLAT</button><button class="btn-stop" type="button" onclick="finishMachine('+idx+')">✅ BİTİR</button><button class="btn-reset" type="button" onclick="resetMachine('+idx+')">🔄 SIFIRLA</button></div>'+
+    '<div id="actionArea-'+idx+'" class="'+(st.lastFinished?'':'hidden')+'" style="margin-top:12px;border-top:2px solid #e2e8f0;padding-top:10px">'+
+      lastInfo+
+      '<button class="btn-dark" type="button" onclick="showFisForMachine('+idx+')">📄 FİŞİ GÖR / İNDİR</button>'+
+      '<button class="btn-wa" type="button" style="background:#25D366" onclick="openRaporDialog('+idx+')">📤 RAPOR GÖNDER</button>'+
+    '</div>';
+  container.appendChild(card);
+}
+
+var globalTicker=null;
+function ensureTicker(){
+  if(globalTicker) return;
+  globalTicker=setInterval(function(){
+    var any=false;
+    for(var i=0;i<machineStates.length;i++){
+      var st=machineStates[i];
+      if(st.running){
+        any=true;
+        st.elapsed=Date.now()-st.startAt;
+        var gozSure = document.getElementById("goz-sure-"+i);
+        if(gozSure) gozSure.textContent = fmt(st.elapsed);
+        if(i===activeIdx){
+          var disp=document.getElementById("display-"+i);
+          if(disp) disp.textContent=fmt(st.elapsed);
+          var lp=document.getElementById("livePrice-"+i);
+          if(lp){ var m=maks[i]; var tot=(st.elapsed/3600000)*m.fiyat; lp.textContent=tot.toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL"; }
+        }
+      }
+    }
+  },200);
+}
+window.startMachine=function(idx){
+  var st=machineStates[idx]; if(st.running) return;
+  var cust=null; for(var i=0;i<customers.length;i++){ if(customers[i].id===st.selectedCustId){ cust=customers[i]; break; } }
+  if(!cust){ alert("Müşteri seç - Yönetici panelinden müşteri ekle"); return; }
+  // 1 - OPERATÖR TEK MAKİNEDE AKTİF KONTROLÜ
+  var selectedOp = st.selectedOpIdx;
+  for(var j=0;j<machineStates.length;j++){
+    if(j!==idx && machineStates[j].running && machineStates[j].selectedOpIdx===selectedOp){
+      var opName = ops[selectedOp]||"Bu operatör";
+      var otherMak = maks[j]?maks[j].plaka:"diğer makine";
+      alert(opName+" zaten "+otherMak+" makinesinde çalışıyor! Bir operatör aynı anda 2 makinede çalışamaz. Önce "+otherMak+" makinesini DURAKLAT veya BİTİR.");
+      return;
+    }
+  }
+  st.sessionStart=new Date(); st.startAt=Date.now()-st.elapsed; st.running=true;
+  ensureTicker(); saveAll();
+};
+window.pauseMachine=function(idx){
+  var st=machineStates[idx]; if(!st.running) return;
+  var prev=0; for(var i=0;i<st.sessions.length;i++) prev+=st.sessions[i].dur;
+  st.sessions.push({start:st.sessionStart, end:new Date(), dur:st.elapsed-prev});
+  st.running=false; st.startAt=null; saveAll();
+};
+window.finishMachine=function(idx){
+  var st=machineStates[idx]; if(st.elapsed<500){ alert("Süre yok - Önce BAŞLAT"); return; }
+  if(st.running){ var prev=0; for(var i=0;i<st.sessions.length;i++) prev+=st.sessions[i].dur; st.sessions.push({start:st.sessionStart, end:new Date(), dur:st.elapsed-prev}); st.running=false; st.startAt=null; }
+  var m=maks[idx]; var cust=null; for(var i=0;i<customers.length;i++){ if(customers[i].id===st.selectedCustId){ cust=customers[i]; break; } } if(!cust) cust=customers[0];
+  var opName=ops[st.selectedOpIdx]||""; var totalPrice=(st.elapsed/3600000)*m.fiyat;
+  var sess=[]; for(var s=0;s<st.sessions.length;s++){ sess.push("Oturum "+(s+1)+": "+new Date(st.sessions[s].start).toLocaleTimeString("tr-TR")+" - "+new Date(st.sessions[s].end).toLocaleTimeString("tr-TR")+" ("+fmt(st.sessions[s].dur)+")"); }
+  var finished={id:Date.now()+idx, company:company.name, name:cust?cust.name:"Müşteri", tel:cust?cust.tel:"", op:opName, mak:m.plaka+" "+(m.kod||"")+" - "+m.fiyat+" TL", time:fmt(st.elapsed), price:totalPrice.toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL", sessions:sess, date:new Date().toLocaleString("tr-TR")};
+  jobs.unshift(finished);
+  st.lastFinished=finished;
+  st.elapsed=0; st.sessions=[]; st.sessionStart=null; saveAll();
+};
+window.resetMachine=function(idx){
+  var st=machineStates[idx]; if(!confirm("Sıfırla?")) return;
+  st.elapsed=0; st.sessions=[]; st.sessionStart=null; st.running=false; st.startAt=null; st.lastFinished=null; saveAll();
+};
+window.onOpChange=function(idx, val){ 
+  var newOp=parseInt(val)||0;
+  var st=machineStates[idx];
+  if(st && st.running){
+    for(var j=0;j<machineStates.length;j++){
+      if(j!==idx && machineStates[j].running && machineStates[j].selectedOpIdx===newOp){
+        var opName=ops[newOp]||"Bu operatör";
+        var otherMak=maks[j]?maks[j].plaka:"diğer makine";
+        alert(opName+" zaten "+otherMak+" makinesinde çalışıyor! Önce o makineyi durdur.");
+        renderMachines();
+        return;
+      }
+    }
+  }
+  machineStates[idx].selectedOpIdx=newOp; saveAll(); 
+};
+window.onCustChange=function(idx, val){ machineStates[idx].selectedCustId=parseInt(val)||null; saveAll(); };
+window.onGlobalCustChange=function(val){ var id=parseInt(val); for(var i=0;i<machineStates.length;i++){ machineStates[i].selectedCustId=id; } saveAll(); };
+
+function showFisModal(text){ document.getElementById("fisText").value=text; document.getElementById("fisModal").classList.remove("hidden"); }
+window.closeFis=function(){ document.getElementById("fisModal").classList.add("hidden"); };
+window.copyFis=function(){ var t=document.getElementById("fisText"); t.select(); try{ document.execCommand("copy"); alert("Kopyalandı"); }catch(e){} };
+
+window.downloadFis=function(){ 
+  try{ 
+    var text=document.getElementById("fisText").value; 
+    if(!text){ alert("Fiş yok"); return; }
+    var blob=new Blob([text],{type:"text/plain;charset=utf-8"}); 
+    var url=URL.createObjectURL(blob); 
+    var a=document.createElement("a"); 
+    a.href=url; 
+    a.download="Fis_"+Date.now()+".txt"; 
+    a.style.display="none";
+    document.body.appendChild(a); 
+    a.click(); 
+    setTimeout(function(){ 
+      try{ document.body.removeChild(a); }catch(e){}
+      URL.revokeObjectURL(url); 
+    },1000); 
+  }catch(e){ 
+    try{
+      var txt=document.getElementById("fisText").value;
+      var dataUri = 'data:text/plain;charset=utf-8,[STRIPPED]+encodeURIComponent(txt);
+      var win = window.open(dataUri, '_blank');
+      if(!win) alert("İndirme engellendi - Kopyala butonunu kullan");
+    }catch(e2){ alert("İndirme hatası: "+e2.message); }
+  } 
+};
+window.shareFis=function(){
+  var text=document.getElementById("fisText").value;
+  if(!text){ alert("Fiş yok"); return; }
+  if(navigator.share){ navigator.share({title:"Fiş", text:text}).catch(function(){ window.copyFis(); }); }
+  else{ window.copyFis(); }
+};
+window.showFisForMachine=function(idx){
+  var d=machineStates[idx]?machineStates[idx].lastFinished:null; if(!d){ alert("Önce BİTİR"); return; }
+  var t=d.company+" - HIZMET FORMU\nMusteri: "+d.name+"\nTel: "+d.tel+"\nMakine: "+d.mak+"\nOperator: "+d.op+"\nTarih: "+d.date+"\n\n";
+  for(var i=0;i<d.sessions.length;i++) t+=d.sessions[i]+"\n";
+  t+="\nTOPLAM SURE: "+d.time+"\nTOPLAM TUTAR: "+d.price+"\n";
+  showFisModal(t);
+};
+
+var currentRaporIdx=null;
+function openWhatsAppDirect(phoneRaw, message){
+  var clean=(phoneRaw||"").replace(/\D/g,'').slice(-10);
+  if(clean.length<10){ alert("Tel hatalı: "+phoneRaw+" - 10 hane olmalı"); return; }
+  var enc=encodeURIComponent(message);
+  var direct="whatsapp://send?phone=90"+clean+"&text="+enc;
+  try{
+    var a=document.createElement("a");
+    a.href=direct;
+    a.style.display="none";
+    a.setAttribute("target","_blank");
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} },500);
+  }catch(e){
+    try{ window.open(direct, "_blank"); }catch(e2){}
+    try{ window.location.href=direct; }catch(e3){}
+  }
+}
+window.openRaporDialog=function(idx){
+  var d=machineStates[idx]?machineStates[idx].lastFinished:null;
+  if(!d){ alert("Önce BİTİR - Fiş hazır olmalı"); return; }
+  currentRaporIdx=idx;
+  var sel=document.getElementById("raporTarget");
+  var info=document.getElementById("raporInfo");
+  var prev=document.getElementById("raporPreview");
+  if(!sel) return;
+  sel.innerHTML="";
+  for(var i=0;i<customers.length;i++){
+    var c=customers[i];
+    var opt=document.createElement("option");
+    opt.value=c.tel;
+    opt.textContent="👤 "+c.name+" - 0"+c.tel.slice(-10);
+    if(d.tel && c.tel===d.tel) opt.selected=true;
+    sel.appendChild(opt);
+  }
+  if(company.owner){
+    var opt2=document.createElement("option");
+    opt2.value=company.owner;
+    opt2.textContent="🏢 Patron - 0"+company.owner.slice(-10);
+    sel.appendChild(opt2);
+  }
+  if(customers.length===0 && !company.owner){
+    var opt3=document.createElement("option");
+    opt3.value="";
+    opt3.textContent="Numara yok - Yönetici panelinden ekle";
+    sel.appendChild(opt3);
+  }
+  if(info) info.textContent=d.mak+" | "+d.time+" | "+d.price+" - "+d.name;
+  if(prev) prev.textContent=d.company+" HIZMET FORMU\nMusteri: "+d.name+"\nMakine: "+d.mak+"\nSure: "+d.time+"\nTutar: "+d.price+"\nTarih: "+d.date+"\nOperator: "+d.op;
+  document.getElementById("raporModal").classList.remove("hidden");
+};
+window.closeRaporDialog=function(){
+  document.getElementById("raporModal").classList.add("hidden");
+  currentRaporIdx=null;
+};
+window.sendRapor=function(){
+  var sel=document.getElementById("raporTarget");
+  if(!sel || !sel.value){ alert("Numara seç"); return; }
+  var idx=currentRaporIdx;
+  var d=machineStates[idx]?machineStates[idx].lastFinished:null;
+  if(!d){ alert("Fiş yok"); return; }
+  var phone=sel.value;
+  var isPatron = company.owner && phone===company.owner;
+  var plain;
+  if(isPatron){
+    plain="[YEDEK] IS BITTI\nMusteri: "+d.name+" "+d.tel+"\nMakine: "+d.mak+"\nSure: "+d.time+"\nTutar: "+d.price+"\nTarih: "+d.date+"\nOperator: "+d.op;
+  }else{
+    plain=d.company+" HIZMET FORMU\nMusteri: "+d.name+"\nMakine: "+d.mak+"\nSure: "+d.time+"\nTutar: "+d.price+"\nTarih: "+d.date+"\nOperator: "+d.op;
+  }
+  openWhatsAppDirect(phone, plain);
+  setTimeout(function(){ document.getElementById("raporModal").classList.add("hidden"); },300);
+};
+
+window.openAdmin=function(){ document.getElementById("admin-panel").classList.remove("hidden"); document.getElementById("admin-login").classList.remove("hidden"); document.getElementById("admin-content").classList.add("hidden"); document.getElementById("history-panel").classList.add("hidden"); };
+window.doLogin=function(){ if(document.getElementById("adminPassInput").value==="1234"){ document.getElementById("admin-login").classList.add("hidden"); document.getElementById("admin-content").classList.remove("hidden"); renderAll(); }else alert("Şifre 1234"); };
+window.closeAdmin=function(){ document.getElementById("admin-panel").classList.add("hidden"); };
+window.toggleHistory=function(){ document.getElementById("history-panel").classList.toggle("hidden"); document.getElementById("admin-panel").classList.add("hidden"); };
+window.saveCompany=function(){ var name=document.getElementById("companyName").value.trim()||"Puantör"; var owner=document.getElementById("ownerPhone").value.replace(/\D/g,''); var def=parseFloat(document.getElementById("defaultPrice").value)||1500; if(owner.length>0 && owner.length<10){ alert("Patron tel 10 hane olmalı - 532..."); return; } company={name:name, owner:owner, def:def}; saveAll(); alert("Kaydedildi - Patron: 0"+owner.slice(-10)); };
+window.addCust=function(){ var name=document.getElementById("newCustName").value.trim(); var tel=document.getElementById("newCustTel").value.replace(/\D/g,''); if(!name||tel.length<10){ alert("Ad ve 10 haneli tel"); return; } customers.push({id:Date.now(), name:name, tel:tel}); document.getElementById("newCustName").value=""; document.getElementById("newCustTel").value=""; saveAll(); };
+window.addOp=function(){ var v=document.getElementById("newOp").value.trim(); if(!v) return; ops.push(v); document.getElementById("newOp").value=""; saveAll(); };
+window.addMak=function(){ var p=document.getElementById("newPlaka").value.trim(); var f=parseFloat(document.getElementById("newFiyat").value); if(!p||!f) return alert("Plaka ve fiyat"); var kod=""; var parts=p.split("-"); if(parts.length>1){ kod=parts[1].trim(); p=parts[0].trim(); } maks.push({plaka:p,kod:kod,fiyat:f}); machineStates.push({elapsed:0,sessions:[],lastFinished:null,running:false,selectedOpIdx:0,selectedCustId:customers[0]?customers[0].id:null,startAt:null}); document.getElementById("newPlaka").value=""; document.getElementById("newFiyat").value=""; activeIdx=maks.length-1; saveAll(); };
+window.clearHist=function(){ if(confirm("Sil?")){ jobs=[]; saveAll(); } };
+window.resetAll=function(){ if(confirm("Sıfırla?")){ localStorage.clear(); ops=DEFAULT_OPS.slice(); maks=DEFAULT_MAKS.slice(); customers=DEFAULT_CUSTOMERS.slice(); company={name:DEFAULT_COMPANY.name, owner:DEFAULT_COMPANY.owner, def:DEFAULT_COMPANY.def}; machineStates=[]; jobs=[]; activeIdx=0; ensureMachineStates(); saveAll(); alert("Sıfırlandı"); } };
+window.openCustModal=function(){ document.getElementById("custModal").classList.remove("hidden"); };
+window.closeCustModal=function(){ document.getElementById("custModal").classList.add("hidden"); };
+window.saveModalCust=function(){ var name=document.getElementById("modalCustName").value.trim(); var tel=document.getElementById("modalCustTel").value.replace(/\D/g,''); if(!name||tel.length<10){ alert("Ad ve 10 haneli tel"); return; } customers.push({id:Date.now(), name:name, tel:tel}); document.getElementById("modalCustName").value=""; document.getElementById("modalCustTel").value=""; document.getElementById("custModal").classList.add("hidden"); saveAll(); };
+
+window.addEventListener("load", function(){ loadData(); renderAll(); ensureTicker(); });
+</script>
+</body>
+</html>
