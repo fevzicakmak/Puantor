@@ -14,12 +14,18 @@
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
 <div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div>
 </main>
+<script>
+window.__puantorReady=false;
+window.addEventListener("error",e=>{const el=document.getElementById("status");if(el)el.textContent="Sayfa hatası: "+(e.message||"JavaScript yüklenemedi")});
+window.addEventListener("unhandledrejection",e=>{const el=document.getElementById("status");if(el)el.textContent="Bağlantı hatası: "+(e.reason?.message||String(e.reason||"Bilinmeyen hata"))});
+setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("status");if(el&&el.textContent.includes("hazırlanıyor"))el.textContent="Firebase başlatılamadı. Safari'de sayfayı yeniden yükleyin; sorun sürerse ekran görüntüsünü gönderin (modül veya ağ bağlantısı hatası)."}},9000);
+</script>
 <script type="module">
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,updateDoc,runTransaction,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
 const $=id=>document.getElementById(id);let unsubscribe=null;let ticker=null;let cached=[];
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
