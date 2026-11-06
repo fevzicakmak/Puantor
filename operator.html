@@ -17,18 +17,18 @@ a{color:#1d4ed8}
 <form id="operatorLogin" autocomplete="off">
 <label for="username">Kullanıcı adı</label>
 <input id="username" name="username" required minlength="3" maxlength="32" pattern="[a-z0-9._-]{3,32}" autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="Örn. bekir.36">
-<label for="pin">4 haneli PIN</label>
-<input id="pin" name="pin" required type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" placeholder="••••">
+<label for="pin">Parola</label>
+<input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
 <p id="error" role="status" aria-live="polite"></p>
-<div class="notice"><strong>Kurulum aşamasında.</strong> Güvenli PIN doğrulaması henüz etkinleştirilmedi. Bu sayfa PIN'inizi kaydetmez veya sunucuya göndermez. Operatörlere giriş bilgisi dağıtmayın.</div>
+<div class="notice"><strong>Kurulum aşamasında.</strong> Firebase Authentication ile ücretsiz parola girişi hazırlanıyor. Bu ekran henüz giriş yapmaz; operatörlere hesap bilgisi dağıtmayın.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
 <script>
 document.getElementById("operatorLogin").addEventListener("submit",function(e){
  e.preventDefault();
- document.getElementById("error").textContent="Operatör girişi henüz etkin değil. Güvenli doğrulama kurulmadan makine erişimi açılamaz.";
+ document.getElementById("error").textContent="Operatör girişi henüz etkin değil. Firebase hesabı ve makine yetkisi bağlandıktan sonra açılacak.";
  document.getElementById("pin").value="";
 });
 </script></body></html>
