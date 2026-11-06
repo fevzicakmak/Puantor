@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  // Replace the placeholder with the administrator's Firebase Authentication UID
+  // before publishing. Do NOT deploy these rules with a placeholder and expect access.
+  function isAdmin() { return request.auth != null && request.auth.uid == 'ADMIN_UID_BURAYA'; }
+  function signedIn() { return request.auth != null; }
+  function isAssigned(machineId) {
+   return signedIn() &&
+     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operator' &&
+     machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
+  }
+  match /users/{uid} {
+   allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+   allow write: if isAdmin();
+  }
+  match /machines/{machineId} {
+   allow read: if isAdmin() || isAssigned(machineId);
+   allow create, delete: if isAdmin();
+   // Operator may update only runtime state fields of an assigned machine.
+   allow update: if isAdmin() ||
+     (isAssigned(machineId) &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+       'status','startedAt','elapsedMs','faultReason','updatedAt','operatorName','customerName'
+      ]) &&
+      request.resource.data.status in ['idle','running','paused','broken','done'] &&
+      request.resource.data.elapsedMs is number &&
+      request.resource.data.elapsedMs >= 0);
+  }
+  match /jobs/{jobId} {
+   allow read: if isAdmin() || (signedIn() && resource.data.operatorUid == request.auth.uid);
+   allow create: if isAdmin() || (signedIn() && request.resource.data.operatorUid == request.auth.uid);
+   allow update, delete: if isAdmin();
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
