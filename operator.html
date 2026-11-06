@@ -21,8 +21,8 @@ a{color:#1d4ed8}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Kontroller güvenli Firebase yazma kuralları yayımlandıktan sonra etkinleşecek.</p><button type="button" id="signout">Çıkış yap</button></section>
-<div class="notice"><strong>Kurulum aşamasında.</strong> Firebase Authentication ile giriş yapılır. Makine yetki kaydı tamamlanmadan çalışma kontrolleri açılmaz.</div>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
+<div class="notice">Makine çalışma kontrolleri yalnızca yetkili operatör tarafından kullanılabilir.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
 <script type="module">
@@ -35,7 +35,8 @@ const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e}
-function renderTime(){if(!machineData)return;const elapsed=Number(machineData.elapsedMs)||0,start=machineData.startedAt?.toMillis?.()||0;$("machineTime").textContent=fmt(elapsed+(machineData.status==="running"&&start?Math.max(0,Date.now()-start):0))}
+let runningAnchor=0;
+function renderTime(){if(!machineData)return;const elapsed=Number(machineData.elapsedMs)||0;const start=machineData.startedAt?.toMillis?.()||runningAnchor;const delta=machineData.status==="running"&&start?Math.max(0,Date.now()-start):0;$("machineTime").textContent=fmt(elapsed+delta)}
 setInterval(renderTime,1000);
 function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
@@ -70,7 +71,7 @@ onAuthStateChanged(auth,async user=>{
  if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
  machineId=ids[0];unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
- const m=snap.data();machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
+ const m=snap.data();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  showError("");
