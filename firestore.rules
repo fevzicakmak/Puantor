@@ -9,15 +9,20 @@ service cloud.firestore {
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operator' &&
      machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
   }
+  function invitePath() { return /databases/$(database)/documents/operators/$(request.auth.token.email); }
+  function validInvite() { return signedIn() && request.auth.token.email_verified == true && exists(invitePath()) && get(invitePath()).data.authStatus == "pending"; }
   match /users/{uid} {
    allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-   allow write: if isAdmin();
+   allow create: if isAdmin() || (signedIn() && request.auth.uid == uid && validInvite() && request.resource.data.keys().hasOnly(["role","email","username","displayName","machineIds","createdAt"]) && request.resource.data.role == "operator" && request.resource.data.email == request.auth.token.email && request.resource.data.username == get(invitePath()).data.username && request.resource.data.displayName == get(invitePath()).data.displayName && request.resource.data.machineIds == [] && request.resource.data.createdAt == request.time);
+   allow update, delete: if isAdmin();
   }
   match /customers/{customerId} {
    allow read, write: if isAdmin();
   }
   match /operators/{operatorId} {
-   allow read, write: if isAdmin();
+   allow read: if isAdmin() || (signedIn() && request.auth.token.email == operatorId);
+   allow create, delete: if isAdmin();
+   allow update: if isAdmin() || (signedIn() && request.auth.token.email_verified == true && request.auth.token.email == operatorId && resource.data.authStatus == "pending" && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["authUid","authStatus","updatedAt"]) && request.resource.data.authUid == request.auth.uid && request.resource.data.authStatus == "active" && request.resource.data.updatedAt == request.time && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "operator" && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == operatorId);
   }
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
