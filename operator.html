@@ -55,6 +55,12 @@ async function changeState(action){
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
    tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",updatedAt:serverTimestamp()});
   });
+  const verified=await getDoc(doc(db,"machines",machineId));
+  const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
+  if(!verified.exists()||verified.data().status!==expected)throw Error("İşlem kaydı doğrulanamadı. Sayfayı yenileyip tekrar kontrol edin.");
+  machineData=verified.data();
+  if(action==="finish"){runningAnchor=0;showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");}
+  updateControls();renderTime();
  }catch(e){showError(e.code==="permission-denied"?"Firebase yazma yetkisi henüz yayımlanmadı.":("İşlem başarısız: "+(e.message||e.code)))}
  finally{busy=false;updateControls()}
 }
@@ -62,11 +68,11 @@ for(const id of controls)$(id).addEventListener("click",()=>changeState(id));
 onAuthStateChanged(auth,async user=>{
  if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();
  $("operatorLogin").hidden=!!user;$("session").hidden=!user;
- if(!user)return;
+ if(!user){location.replace("./giris.html");return;}
  $("who").textContent=user.email||"Operatör";
  try{
  const profile=await getDoc(doc(db,"users",user.uid));
- if(!profile.exists()||profile.data().role!=="operator"){showError("Bu hesap için operatör yetkisi henüz tanımlanmadı.");return}
+ if(!profile.exists()||profile.data().role!=="operator"){location.replace("./giris.html");return}
  const ids=profile.data().machineIds;
  if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
  machineId=ids[0];unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
@@ -74,7 +80,7 @@ onAuthStateChanged(auth,async user=>{
  const m=snap.data();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
- showError("");
+ showError(m.status==="done"?"İş tamamlandı. Yeni çalışma için yönetici bekleniyor.":"");
  },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
