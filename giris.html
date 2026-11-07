@@ -8,14 +8,14 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
-let checking=false,registering=false;
+let checking=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
 try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
 if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-$("status").textContent="Hesap giriş yaptı ancak henüz yetkilendirilmemiş. Operatör davetini kabul edin.";$("register").hidden=false;$("login").hidden=true;$("showRegister").hidden=true;$("regEmail").value=user.email;
+$("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
-onAuthStateChanged(auth,user=>{if(registering)return;if(user&&!registering){getDoc(doc(db,"users",user.uid)).then(p=>{if(p.exists())route(user);else {$("register").hidden=false;$("login").hidden=true;$("showRegister").hidden=true;$("regEmail").value=user.email;$("status").textContent="Davet kodunu girip Kaydol ve Daveti Kabul Et butonuna basın."}}).catch(err=>{$("status").textContent="Yetki kontrolü: "+(err.code||err.message)})}else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
-$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const email=login.includes("@")?login:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);saveEmail($("email").value)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
+onAuthStateChanged(auth,user=>{if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
+$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const email=login.includes("@")?login:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);localStorage.setItem("puantor_last_login",$("email").value)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
 </script></body></html>
