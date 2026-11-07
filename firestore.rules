@@ -13,6 +13,9 @@ service cloud.firestore {
    allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
    allow write: if isAdmin();
   }
+  match /operators/{operatorId} {
+   allow read, write: if isAdmin();
+  }
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
    allow create, delete: if isAdmin();
