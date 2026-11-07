@@ -12,6 +12,7 @@
 <section class="card"><div class="top"><strong>Yeni makine kaydı</strong></div><form id="machineForm"><label>Makine adı / plaka<input id="newMachine" maxlength="80" placeholder="Örn. 35 ABC 123" required></label><label>Operatör adı<input id="newOperator" maxlength="80" placeholder="Örn. Ahmet"></label><label>Operatör kullanıcı adı<input id="newUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi" placeholder="Örn. bekir"></label><label>Müşteri adı<input id="newCustomer" maxlength="100" placeholder="Örn. Çakmaklar İnşaat"></label><button type="submit" id="addMachine">Makineyi ekle</button></form><p id="machineError" role="alert" style="color:#b91c1c"></p><small>Makine eklenince aşağıdaki canlı listede görünür. Başlatma ve duraklatma bağlantısı sonraki aşamada yapılacak.</small></section>
 <section class="card"><strong>Operatör hesap hazırlığı</strong><p class="muted">Kullanıcı adını ve atanacak makineyi kaydeder. Firebase UID ile makine erişimini eşleştirir; parola burada tutulmaz.</p><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Firebase UID<input id="opUid" required minlength="20" maxlength="128" placeholder="Firebase Authentication kullanıcı UID"></label><label>Operatör adı<input id="opName" maxlength="80" required placeholder="Bekir"></label><label>Makine seç<select id="opMachine" required><option value="">Makine seçin</option></select></label><button type="submit" id="opSave">Operatörü hazırla</button></form><p id="opResult" role="status"></p><small>PIN veya şifre bu formda istenmez. Gerçek giriş, sunucu doğrulaması kurulunca açılacaktır.</small></section>
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
+<section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section>
 <div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div>
 </main>
 <script>
@@ -26,11 +27,24 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,updateDoc,runTransaction,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
-const $=id=>document.getElementById(id);let unsubscribe=null;let ticker=null;let cached=[];
+const $=id=>document.getElementById(id);let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
 const labels={running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arıza",done:"Tamamlandı",idle:"Hazır"};
+function renderJobs(){
+ const target=$("jobsHistory");
+ if(!archivedJobs.length){target.innerHTML='<p class="muted">Henüz arşivlenmiş çalışma yok.</p>';return}
+ target.innerHTML=archivedJobs.map(j=>'<article class="card"><strong>🚜 '+safe(j.machineName||j.machineId||"Makine")+'</strong><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Müşteri: '+safe(j.customerName||"—")+'</p><p>Toplam çalışma: <strong>'+duration({...j,status:"done"})+'</strong></p><small>Tamamlanma: '+safe(j.completedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small></article>').join("");
+}
+$("exportJobs").addEventListener("click",()=>{
+ if(!archivedJobs.length){message("İndirilecek geçmiş kayıt yok.");return}
+ const rows=[["Makine","Operatör","Müşteri","Süre (saat:dakika:saniye)","Tamamlanma"]];
+ for(const j of archivedJobs)rows.push([j.machineName||j.machineId||"",j.operatorName||"",j.customerName||"",duration({...j,status:"done"}),j.completedAt?.toDate?.().toLocaleString("tr-TR")||""]);
+ const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="puantor-calisma-gecmisi.csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
 function refreshSuggestions(){
  const select=$("opMachine"),previous=select.value;
  select.replaceChildren(new Option("Makine seçin",""));
@@ -52,7 +66,7 @@ $("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editFor
 $("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");await updateDoc(doc(db,"machines",id),{machineName:$("editMachine").value.trim(),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
 $("logout").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{
- if(unsubscribe){unsubscribe();unsubscribe=null}if(ticker){clearInterval(ticker);ticker=null}
+ if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(ticker){clearInterval(ticker);ticker=null}
  $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
  if(!user){$("login").classList.remove("hidden");message("Yönetici hesabıyla giriş yapın.");return}
  $("login").classList.add("hidden");
@@ -61,6 +75,7 @@ onAuthStateChanged(auth,async user=>{
   if(!profile.exists()||profile.data().role!=="admin"){message("Bu hesap için yönetici yetkisi tanımlı değil. Kullanıcı UID: "+user.uid);$("logout").classList.remove("hidden");return}
   $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
   unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));refreshSuggestions();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
+  unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));renderJobs()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
   ticker=setInterval(render,1000);
  }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
 });
