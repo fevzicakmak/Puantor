@@ -62,11 +62,11 @@ $("logout").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{
  if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(ticker){clearInterval(ticker);ticker=null}
  $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
- if(!user){$("login").classList.remove("hidden");message("Yönetici hesabıyla giriş yapın.");return}
+ if(!user){location.replace("./giris.html");return}
  $("login").classList.add("hidden");
  try{
   const profile=await getDoc(doc(db,"users",user.uid));
-  if(!profile.exists()||profile.data().role!=="admin"){message("Bu hesap için yönetici yetkisi tanımlı değil. Kullanıcı UID: "+user.uid);$("logout").classList.remove("hidden");return}
+  if(!profile.exists()||profile.data().role!=="admin"){location.replace("./giris.html");return}
   $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
   unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));refreshSuggestions();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
   unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
