@@ -9,45 +9,15 @@ service cloud.firestore {
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operator' &&
      machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
   }
-  function invitePath(code) { return /databases/$(database)/documents/operators/$(code); }
-  function validInvite(code) {
-    return signedIn() && code is string && code.size() == 32 &&
-      exists(invitePath(code)) &&
-      get(invitePath(code)).data.authStatus == "pending";
-  }
   match /users/{uid} {
    allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-   allow create: if isAdmin() || (
-     signedIn() && request.auth.uid == uid &&
-     request.resource.data.keys().hasOnly(["role","email","username","displayName","machineIds","inviteCode","createdAt"]) &&
-     validInvite(request.resource.data.inviteCode) &&
-     request.resource.data.role == "operator" &&
-     request.resource.data.email == request.auth.token.email &&
-     request.resource.data.username == get(invitePath(request.resource.data.inviteCode)).data.username &&
-     request.resource.data.displayName == get(invitePath(request.resource.data.inviteCode)).data.displayName &&
-     request.resource.data.machineIds == [] &&
-     request.resource.data.createdAt == request.time &&
-     getAfter(invitePath(request.resource.data.inviteCode)).data.authUid == uid &&
-     getAfter(invitePath(request.resource.data.inviteCode)).data.authStatus == "active"
-   );
-   allow update, delete: if isAdmin();
+   allow create, update, delete: if isAdmin();
   }
   match /customers/{customerId} {
    allow read, write: if isAdmin();
   }
   match /operators/{operatorId} {
-   allow read: if isAdmin() || (signedIn() && operatorId.size() == 32);
-   allow create, delete: if isAdmin();
-   allow update: if isAdmin() || (
-     signedIn() && operatorId.size() == 32 &&
-     resource.data.authStatus == "pending" &&
-     request.resource.data.diff(resource.data).affectedKeys().hasOnly(["authUid","authStatus","updatedAt"]) &&
-     request.resource.data.authUid == request.auth.uid &&
-     request.resource.data.authStatus == "active" &&
-     request.resource.data.updatedAt == request.time &&
-     getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.inviteCode == operatorId &&
-     getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "operator"
-   );
+   allow read, write: if isAdmin();
   }
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
