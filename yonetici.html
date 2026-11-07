@@ -13,7 +13,7 @@ details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-ra
 <details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
 <label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
 <div id="addMachinePanel" class="hidden"><form id="machineForm"><label>Makine adı / plaka<input id="newMachine" maxlength="80" required placeholder="35 CJV 827"></label><button type="submit" id="addMachine">Makineyi kaydet</button></form><p id="machineError" role="alert"></p></div>
-<div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör e-posta adresi<input id="opEmail" type="email" required autocomplete="off" placeholder="operator@ornek.com"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><p class="muted">Makine seçimi Görev Ekle bölümünde yapılır. Operatör kendi e-posta adresiyle ortak giriş ekranından kaydolur.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
+<div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör e-posta adresi (isteğe bağlı iletişim)<input id="opEmail" type="email" autocomplete="off" placeholder="operator@ornek.com"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><p class="muted">Makine seçimi Görev Ekle bölümünde yapılır. Operatör kendi e-posta adresiyle ortak giriş ekranından kaydolur.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
 <div id="addCustomerPanel" class="hidden"><form id="customerForm"><label>Müşteri adı<input id="customerName" required maxlength="100" placeholder="Çakmak Yapı"></label><button type="submit" id="customerSave">Müşteriyi kaydet</button></form><p id="customerResult" role="status"></p></div>
 </div></details>
 <details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Görev Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content"><form id="taskForm">
@@ -63,7 +63,7 @@ $("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
  const operator=operators.find(o=>o.displayName+" (@"+o.username+")"===operatorText);
  const customer=customers.find(c=>c.name===customerName);
  if(!machine||!operator||!customer)throw Error("Lütfen listeden kayıtlı makine, operatör ve müşteri seçin.");if(!operator.authUid||operator.authStatus!=="active")throw Error("Operatör henüz daveti kabul ederek kayıt olmadı.");
- await runTransaction(db,async tx=>{const machineRef=doc(db,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"operators",operator.email);
+ await runTransaction(db,async tx=>{const machineRef=doc(db,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"operators",operator.id);
  const [ms,us,os]=await Promise.all([tx.get(machineRef),tx.get(userRef),tx.get(opRef)]);
  if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="operator")throw Error("Makine veya operatör yetkisi bulunamadı.");
  const m=ms.data();if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
@@ -89,11 +89,12 @@ $("machineForm").addEventListener("submit",async e=>{e.preventDefault();const bu
 $("operatorForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("opSave"),out=$("opResult");b.disabled=true;out.textContent="";try{
  const username=$("opUsername").value.trim().replace(/^@+/,"").toLowerCase(),name=$("opName").value.trim(),email=$("opEmail").value.trim().toLowerCase();
  if(!/^[a-z0-9._-]{3,32}$/.test(username))throw Error("Geçerli kullanıcı adı girin.");
- if(!name||!email.includes("@"))throw Error("Ad ve e-posta gerekli.");
- const existing=operators.find(o=>o.username===username||o.email===email);
+ if(!name)throw Error("Operatör adı gerekli.");
+ const existing=operators.find(o=>o.username===username||(email&&o.email===email));
  if(existing)throw Error("Bu kullanıcı adı veya e-posta zaten kayıtlı.");
- await setDoc(doc(db,"operators",email),{username,displayName:name,email,authStatus:"pending",machineIds:[],createdAt:serverTimestamp()});
- out.textContent="Davet hazır. Operatör "+email+" adresiyle ortak girişte 'Operatör Kaydı' seçeneğini kullanabilir.";
+ const bytes=crypto.getRandomValues(new Uint8Array(16));const code=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+ await setDoc(doc(db,"operators",code),{username,displayName:name,email,authStatus:"pending",machineIds:[],createdAt:serverTimestamp()});
+ out.textContent="Davet kodu: "+code+" — Bu kodu operatöre güvenli şekilde iletin. Kod tek kullanımlıktır.";
  $("operatorForm").reset();
  }catch(err){out.textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
 $("machines").addEventListener("click",e=>{const b=e.target.closest("button.edit-machine");if(!b)return;const m=cached.find(x=>x.id===b.dataset.id);if(!m)return;$("editId").value=m.id;$("editMachine").value=m.machineName||m.plaka||"";$("editOperator").value=m.operatorName||"";$("editUsername").value=m.operatorUsername||"";$("editCustomer").value=m.customerName||"";$("editError").textContent="";$("editSection").classList.remove("hidden");$("editSection").scrollIntoView({behavior:"smooth",block:"start"})});
