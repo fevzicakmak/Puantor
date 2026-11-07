@@ -20,12 +20,15 @@ service cloud.firestore {
    allow update: if isAdmin() || (
      isAssigned(machineId) &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-       'status','startedAt','elapsedMs','faultReason','updatedAt'
+       'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt'
      ]) &&
      request.resource.data.updatedAt == request.time &&
      request.resource.data.elapsedMs is number &&
      request.resource.data.elapsedMs >= resource.data.elapsedMs &&
      request.resource.data.elapsedMs >= 0 &&
+     // Only the manager may authorize a new job; operators may only revoke authorization on finish.
+     resource.data.get('jobReady', false) == true &&
+     request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
      (
        (request.resource.data.status == 'running' &&
         resource.data.status in ['idle','paused','broken'] &&
