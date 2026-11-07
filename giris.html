@@ -24,8 +24,6 @@ async function claimInvite(user){
 $("register").addEventListener("submit",async e=>{e.preventDefault();const b=$("regSubmit");b.disabled=true;registering=true;try{
  const email=$("regEmail").value.trim().toLowerCase(),user=auth.currentUser;
  if(user&&user.email?.toLowerCase()===email){await claimInvite(user);return}
- const inv=await getDoc(doc(db,"operators",email));
- if(!inv.exists()||inv.data().authStatus!=="pending")throw Error("Bu e-posta için bekleyen davet yok.");
  const cred=await createUserWithEmailAndPassword(auth,email,$("regPassword").value);
  await sendEmailVerification(cred.user);
  $("status").textContent="Doğrulama e-postası gönderildi. Bağlantıyı açtıktan sonra tekrar bu butona basın.";
