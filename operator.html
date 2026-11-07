@@ -38,7 +38,7 @@ function showError(e){$("error").textContent=e}
 let runningAnchor=0;
 function renderTime(){if(!machineData)return;const elapsed=Number(machineData.elapsedMs)||0;const start=machineData.startedAt?.toMillis?.()||runningAnchor;const delta=machineData.status==="running"&&start?Math.max(0,Date.now()-start):0;$("machineTime").textContent=fmt(elapsed+delta)}
 setInterval(renderTime,1000);
-function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
+function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&machineData.jobReady===false)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
  if(!machineId||busy)return;let reason="";
  if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
@@ -50,10 +50,10 @@ async function changeState(action){
    if(!snap.exists())throw Error("Makine bulunamadı");
    const m=snap.data(),now=Timestamp.now(),start=m.startedAt?.toMillis?.()||0;
    const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
-   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");
+   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady===false)throw Error("Yeni iş yönetici tarafından açılmadı.");
    const elapsed=Math.max(0,Number(m.elapsedMs)||0)+(m.status==="running"&&start?Math.max(0,now.toMillis()-start):0);
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",updatedAt:serverTimestamp()});
+   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp()});
   });
   const verified=await getDoc(doc(db,"machines",machineId));
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
@@ -80,7 +80,7 @@ onAuthStateChanged(auth,async user=>{
  const m=snap.data();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
- showError(m.status==="done"?"İş tamamlandı. Yeni çalışma için yönetici bekleniyor.":"");
+ showError(m.status==="done"||m.jobReady===false?"Yeni çalışma için yönetici bekleniyor.":"");
  },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
