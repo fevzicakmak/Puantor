@@ -27,6 +27,15 @@ exports.operatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async
   }catch(err){if(user)await auth.deleteUser(user.uid).catch(()=>{});throw err;}
   return {username:name};
  }
+ if(action==="rename"){
+  const name=username(d.username),displayName=String(d.displayName||"").trim();
+  if(!displayName||displayName.length>80)throw new HttpsError("invalid-argument","Geçerli operatör adı gerekli.");
+  const ref=db.collection("operators").doc(name),snap=await ref.get();
+  if(!snap.exists||!snap.data().authUid)throw new HttpsError("not-found","Operatör bulunamadı.");
+  await auth.updateUser(snap.data().authUid,{displayName});
+  const batch=db.batch();batch.update(ref,{displayName});batch.update(db.collection("users").doc(snap.data().authUid),{displayName});await batch.commit();
+  return {ok:true};
+ }
  if(action==="password"){
   const name=username(d.username),snap=await db.collection("operators").doc(name).get();
   if(!snap.exists||!snap.data().authUid)throw new HttpsError("not-found","Operatör bulunamadı.");
