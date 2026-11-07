@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puantör | Giriş</title>
+<style>:root{font-family:system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5}*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:18px}main{width:100%;max-width:420px;background:white;border:1px solid #d6e0ed;border-radius:20px;padding:28px;box-shadow:0 8px 32px #14203312;text-align:center}h1{margin:8px 0;font-size:30px}p{color:#64748b}form{text-align:left;margin-top:28px}label{display:block;margin:15px 0 6px;font-weight:650}input{width:100%;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:14px;font:inherit;font-size:17px}button{width:100%;background:#0f172a;color:white;border:0;border-radius:10px;padding:15px;margin-top:22px;font:inherit;font-weight:750}button:disabled{opacity:.6}#status{min-height:24px;font-size:14px;line-height:1.5}small{color:#64748b}</style></head>
+<body><main><div style="font-size:54px">🚜</div><h1>PUANTÖR</h1><p>Makine ve çalışma takip sistemi</p><form id="login"><label for="email">E-posta</label><input id="email" type="email" autocomplete="username" autocapitalize="none" required><label for="password">Şifre</label><input id="password" type="password" autocomplete="current-password" required><button id="submit" type="submit">Giriş Yap</button></form><p id="status" role="status" aria-live="polite">Oturum kontrol ediliyor…</p><small>Yetkinize göre yönetici veya operatör ekranı açılır.</small></main>
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
+let checking=false;
+async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
+try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
+if(role==="admin"){location.replace("./yonetici.html");return}
+if(role==="operator"){location.replace("./operator.html");return}
+$("status").textContent="Bu hesaba henüz yönetici veya operatör yetkisi tanımlanmamış.";await signOut(auth);
+}catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
+finally{checking=false;$("submit").disabled=false}}
+onAuthStateChanged(auth,user=>{if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
+$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}catch(err){$("status").textContent="Giriş başarısız. E-posta ve şifrenizi kontrol edin.";$("submit").disabled=false}finally{$("password").value=""}});
+</script></body></html>
