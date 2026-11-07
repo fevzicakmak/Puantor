@@ -8,10 +8,28 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
-let checking=false;let registering=false;
+let checking=false,registering=false;
 $("showRegister").onclick=()=>{$("login").hidden=true;$("showRegister").hidden=true;$("register").hidden=false;$("status").textContent="Davet edilen e-posta adresinizi yazın."};
 $("backLogin").onclick=()=>{$("login").hidden=false;$("showRegister").hidden=false;$("register").hidden=true;$("status").textContent=""};
-$("register").addEventListener("submit",async e=>{e.preventDefault();const b=$("regSubmit");b.disabled=true;registering=true;try{const email=$("regEmail").value.trim().toLowerCase(),invRef=doc(db,"operators",email);$("status").textContent="Davet kontrol ediliyor…";const invite=await getDoc(invRef);if(!invite.exists()||invite.data().email!==email||invite.data().authStatus!=="pending")throw Error("Bu e-posta için bekleyen davet bulunamadı.");const cred=await createUserWithEmailAndPassword(auth,email,$("regPassword").value);const userRef=doc(db,"users",cred.user.uid);const batch=writeBatch(db);batch.set(userRef,{role:"operator",email,username:invite.data().username,displayName:invite.data().displayName,machineIds:[],createdAt:serverTimestamp()});batch.update(invRef,{authUid:cred.user.uid,authStatus:"active",updatedAt:serverTimestamp()});await batch.commit();$("status").textContent="Kayıt tamamlandı. Yönlendiriliyor…";registering=false;await route(cred.user)}catch(err){$("status").textContent="Kayıt tamamlanamadı: "+(err.message||err.code)+". Hesap oluşturulduysa tekrar kayıt yapmayın, destek isteyin.";registering=false}finally{b.disabled=false;$("regPassword").value=""}});
+async function claimInvite(user){
+ await reload(user);if(!user.emailVerified)throw Error("Önce e-posta doğrulama bağlantısını açın.");
+ const email=user.email.toLowerCase(),invRef=doc(db,"operators",email),inv=await getDoc(invRef);
+ if(!inv.exists()||inv.data().authStatus!=="pending")throw Error("Bekleyen davet bulunamadı.");
+ const batch=writeBatch(db);
+ batch.set(doc(db,"users",user.uid),{role:"operator",email,username:inv.data().username,displayName:inv.data().displayName,machineIds:[],createdAt:serverTimestamp()});
+ batch.update(invRef,{authUid:user.uid,authStatus:"active",updatedAt:serverTimestamp()});
+ await batch.commit();
+ $("status").textContent="Davet kabul edildi.";await route(user);
+}
+$("register").addEventListener("submit",async e=>{e.preventDefault();const b=$("regSubmit");b.disabled=true;registering=true;try{
+ const email=$("regEmail").value.trim().toLowerCase(),user=auth.currentUser;
+ if(user&&user.email?.toLowerCase()===email){await claimInvite(user);return}
+ const inv=await getDoc(doc(db,"operators",email));
+ if(!inv.exists()||inv.data().authStatus!=="pending")throw Error("Bu e-posta için bekleyen davet yok.");
+ const cred=await createUserWithEmailAndPassword(auth,email,$("regPassword").value);
+ await sendEmailVerification(cred.user);
+ $("status").textContent="Doğrulama e-postası gönderildi. Bağlantıyı açtıktan sonra tekrar bu butona basın.";
+ }catch(err){$("status").textContent="Kayıt: "+(err.message||err.code)}finally{registering=false;b.disabled=false;$("regPassword").value=""}});
 const emailKey="puantor-login-emails-v1";
 function savedEmails(){try{const v=JSON.parse(localStorage.getItem(emailKey)||"[]");return Array.isArray(v)?v.filter(x=>typeof x==="string"&&x.includes("@")).slice(0,8):[]}catch{return []}}
 function saveEmail(email){try{const e=email.trim().toLowerCase();if(!e.includes("@"))return;localStorage.setItem(emailKey,JSON.stringify([e,...savedEmails().filter(x=>x!==e)].slice(0,8)))}catch{}}
@@ -27,6 +45,6 @@ if(role==="operator"){location.replace("./operator.html");return}
 $("status").textContent="Bu hesaba henüz yönetici veya operatör yetkisi tanımlanmamış.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
-onAuthStateChanged(auth,user=>{if(registering)return;if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
+onAuthStateChanged(auth,user=>{if(registering)return;if(user&&!registering){getDoc(doc(db,"users",user.uid)).then(p=>{if(p.exists())route(user);else if(user.emailVerified){$("register").hidden=false;$("login").hidden=true;$("showRegister").hidden=true;$("regEmail").value=user.email;$("status").textContent="E-postanız doğrulandı. Daveti kabul etmek için Kaydol butonuna basın."}})}else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
 $("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);saveEmail($("email").value)}catch(err){$("status").textContent="Giriş başarısız. E-posta ve şifrenizi kontrol edin.";$("submit").disabled=false}finally{$("password").value=""}});
 </script></body></html>
