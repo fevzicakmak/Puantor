@@ -92,7 +92,8 @@ onAuthStateChanged(auth,async user=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
  const m=snap.data();if(m.operatorUid!==user.uid||m.jobReady===false||m.status==="done"){machineData=null;updateControls();showError("Bu makinede size atanmış aktif görev yok.");return}
  const serverUpdated=m.updatedAt?.toMillis?.();
- // Do not treat updatedAt as current server time: it is the time of the last state change.machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
+ // The latest update timestamp is not the current server clock.
+ machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
