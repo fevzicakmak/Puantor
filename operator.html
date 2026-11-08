@@ -35,12 +35,12 @@ const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[];const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
-let serverClockOffset=0;
+
 function renderTime(){
  if(!machineData)return;
  const elapsed=Math.max(0,Number(machineData.elapsedMs)||0);
  const start=machineData.startedAt?.toMillis?.()||0;if(machineData.status==="running"&&!start){$("machineTime").textContent="Sunucu zamanı bekleniyor…";$("liveAmount").textContent="Hesaplanıyor…";return;}
- const delta=machineData.status==="running"&&start?Math.max(0,Date.now()+serverClockOffset-start):0;
+ const delta=machineData.status==="running"&&start?Math.max(0,Date.now()-start):0;
  const totalMs=elapsed+delta;$("machineTime").textContent=fmt(totalMs);const rate=Number(machineData.hourlyRate);$("liveAmount").textContent=machineData.hourlyRate==null||!Number.isFinite(rate)?"Ücret belirlenmemiş":(totalMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});$("rateInfo").textContent="Saatlik ücret: "+(machineData.hourlyRate==null||!Number.isFinite(rate)?"Belirlenmemiş":rate.toLocaleString("tr-TR",{style:"currency",currency:"TRY"}));
 }
 setInterval(renderTime,1000);
@@ -57,7 +57,7 @@ async function changeState(action){
    const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");
    // Use the same server-adjusted clock for display and persistence.
    // A device clock behind Firestore must not erase active working time.
-   const serverNow=Math.max(Date.now()+serverClockOffset,m.updatedAt?.toMillis?.()||0);
+   const serverNow=Math.max(Date.now(),m.updatedAt?.toMillis?.()||0);
    const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
    if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady===false)throw Error("Yeni iş yönetici tarafından açılmadı.");
    if(m.status==="running"&&!start)throw Error("Firebase başlangıç zamanı henüz alınamadı. Birkaç saniye sonra tekrar deneyin.");const previous=Math.max(0,Number(m.elapsedMs)||0);
@@ -92,7 +92,7 @@ onAuthStateChanged(auth,async user=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
  const m=snap.data();if(m.operatorUid!==user.uid||m.jobReady===false||m.status==="done"){machineData=null;updateControls();showError("Bu makinede size atanmış aktif görev yok.");return}
  const serverUpdated=m.updatedAt?.toMillis?.();
- if(serverUpdated && m.status==="running" && Math.abs(serverUpdated-Date.now())<120000){serverClockOffset=serverUpdated-Date.now();}machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
+ // Do not treat updatedAt as current server time: it is the time of the last state change.machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
