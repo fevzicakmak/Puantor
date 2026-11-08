@@ -191,7 +191,7 @@ $("backupAll").addEventListener("click",()=>{
  const btn=$("backupAll");btn.disabled=true;
  try{
   const payload={format:"puantor-manager-backup",version:1,exportedAt:new Date().toISOString(),collections:{
-   machines:cached,operators,customers,jobs:archivedJobs
+   machines:cached,operators,customers,jobs:archivedJobs,payments
   }};
   const json=JSON.stringify(payload,(key,value)=>{
    if(value&&typeof value==="object"&&typeof value.seconds==="number"&&typeof value.nanoseconds==="number"&&typeof value.toDate==="function")return {__timestamp:value.toDate().toISOString()};
@@ -226,6 +226,16 @@ $("backupPreviewFile").addEventListener("change",async e=>{
    }
    lines.push(label+": "+records.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
   }
+  if(data.collections.payments!==undefined){
+   if(!Array.isArray(data.collections.payments))throw Error("Tahsilat listesi geçersiz.");
+   const ids=new Set(),existing=new Set(payments.map(p=>p.id));let matched=0,newCount=0;
+   for(const p of data.collections.payments){
+    if(!p||typeof p.id!=="string"||!p.id.trim()||ids.has(p.id)||typeof p.customerName!=="string"||!Number.isFinite(Number(p.amount)))throw Error("Tahsilat yedeğinde geçersiz veya tekrarlanan kayıt var.");
+    ids.add(p.id);if(existing.has(p.id))matched++;else newCount++;
+   }
+   lines.push("Tahsilatlar: "+data.collections.payments.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+   if(newCount)warnings.push("Eksik tahsilatlar bu ekrandaki arşiv geri yükleme butonuyla yüklenmez; yalnızca ön izlenir.");
+  }else lines.push("Tahsilatlar: Bu eski yedek dosyasında bulunmuyor.");
   if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
   out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+"\nÖN İZLEME: Hiçbir kayıt değiştirilmedi. Geri yükleme henüz etkin değil.";
   validatedArchiveBackup=data.collections.jobs;$("restoreArchives").disabled=!validatedArchiveBackup.some(j=>!archivedJobs.some(x=>x.id===j.id));
