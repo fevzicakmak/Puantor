@@ -388,7 +388,7 @@ $("manageDelete").onclick=async()=>{
 $("addType").addEventListener("change",()=>{for(const [type,id] of [["operator","addOperatorPanel"],["machine","addMachinePanel"],["customer","addCustomerPanel"]])$(id).classList.toggle("hidden",$("addType").value!==type)});
 function refreshTaskLists(){
  const lists=[
- ["taskMachine","Makine seçiniz",cached.map(m=>m.machineName||m.id)],
+ ["taskMachine","Makine seçiniz",cached.filter(m=>m.status==="idle"&&m.jobReady!==true).map(m=>m.machineName||m.id)],
  ["taskOperator","Operatör seçiniz",operators.filter(o=>o.authStatus==="active").map(o=>o.displayName+" (@"+o.username+")")],
  ["taskCustomer","Müşteri seçiniz",customers.map(c=>c.name)]
  ];
