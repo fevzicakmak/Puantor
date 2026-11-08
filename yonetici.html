@@ -54,7 +54,44 @@ function refreshManage(){const type=$("manageType").value,arr=type==="operator"?
 $("manageType").onchange=refreshManage;
 $("manageRename").onclick=async()=>{const type=$("manageType").value,id=$("manageItem").value,name=$("manageName").value.trim();if(!id||!name)return;$("manageResult").textContent="";try{if(type==="job")throw Error("İş kayıtlarının düzenlenmesi için ayrı alanlar gerekiyor.");if(type==="operator"){await updateDoc(doc(db,"operators",id),{displayName:name,updatedAt:serverTimestamp()});$("manageResult").textContent="Operatör güncellendi.";return;}await updateDoc(doc(db,type==="customer"?"customers":"machines",id),{[type==="customer"?"name":"machineName"]:name,updatedAt:serverTimestamp()});$("manageResult").textContent="Güncellendi."}catch(err){$("manageResult").textContent=err.message||err.code}};
 $("manageApprove").onclick=async()=>{const op=operators.find(x=>x.id===$("manageItem").value);if($("manageType").value!=="operator"||!op)return;const uid=op.pendingUid;if(!uid){$("manageResult").textContent="Henüz bu operatör için kayıt başvurusu yok.";return}if(!confirm(op.displayName+" için kayıt başvurusunu doğruladınız mı? Başvuru sahibinin gerçekten bu kişi olduğunu teyit edin."))return;try{await runTransaction(db,async tx=>{const oref=doc(db,"operators",op.id),uref=doc(db,"users",uid);const [os,us]=await Promise.all([tx.get(oref),tx.get(uref)]);if(!os.exists()||!us.exists()||os.data().pendingUid!==uid||us.data().role!=="pending"||us.data().username!==op.username)throw Error("Başvuru geçersiz.");tx.update(oref,{authUid:uid,authStatus:"active",updatedAt:serverTimestamp()});tx.update(uref,{role:"operator",displayName:os.data().displayName,updatedAt:serverTimestamp()})});$("manageResult").textContent="Operatör onaylandı."}catch(err){$("manageResult").textContent=err.message||err.code}};
-$("manageDelete").onclick=async()=>{const type=$("manageType").value,id=$("manageItem").value;if(!id||!confirm("Seçili kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."))return;try{if(type==="operator"){const op=operators.find(x=>x.id===id);const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");if(op.authUid)await deleteDoc(doc(db,"users",op.authUid));if(op.pendingUid&&op.pendingUid!==op.authUid)await deleteDoc(doc(db,"users",op.pendingUid));await deleteDoc(doc(db,"operators",id))}else{const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");await deleteDoc(doc(db,type==="customer"?"customers":type==="machine"?"machines":"jobs",id))}$("manageResult").textContent="Kayıt silindi."}catch(err){$("manageResult").textContent=err.message||err.code}};
+$("manageDelete").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,out=$("manageResult");
+ if(!id)return;
+ out.textContent="";
+ try{
+  const machineBusy=m=>["running","paused","broken"].includes(m.status)||m.jobReady===true;
+  if(type==="operator"){
+   const op=operators.find(x=>x.id===id);if(!op)throw Error("Operatör bulunamadı.");
+   const assigned=cached.filter(m=>m.operatorUid===op.authUid||m.operatorUsername===op.username);
+   if(assigned.length)throw Error("Operatöre bağlı "+assigned.length+" makine/görev var. Önce görevleri güvenli biçimde tamamlayıp bağlantılarını kaldırın. Operatör silinmedi.");
+   if(!confirm(op.displayName+" operatörünü kaldırmak istiyor musunuz? Geçmiş işler korunacak."))return;
+   await runTransaction(db,async tx=>{
+    const opRef=doc(db,"operators",id),uRefs=[...new Set([op.authUid,op.pendingUid].filter(Boolean))].map(uid=>doc(db,"users",uid));
+    const snaps=await Promise.all([tx.get(opRef),...uRefs.map(ref=>tx.get(ref))]);
+    if(!snaps[0].exists())throw Error("Operatör zaten silinmiş.");
+    tx.delete(opRef);for(const ref of uRefs)tx.delete(ref);
+   });
+   out.textContent="Operatörün uygulama erişimi kaldırıldı. Geçmiş işler korundu. Firebase Authentication hesabı ayrıca yönetilmelidir.";
+  }else if(type==="machine"){
+   const m=cached.find(x=>x.id===id);if(!m)throw Error("Makine bulunamadı.");
+   if(machineBusy(m)||m.operatorUid||m.operatorUsername)throw Error("Makineye atanmış operatör veya açık görev var. Önce bağlantıları kaldırın; kayıt silinmedi.");
+   if(!confirm((m.machineName||id)+" makinesini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"machines",id));out.textContent="Makine silindi; geçmiş işler korundu.";
+  }else if(type==="customer"){
+   const c=customers.find(x=>x.id===id);if(!c)throw Error("Müşteri bulunamadı.");
+   if(cached.some(m=>m.customerName===c.name&&(machineBusy(m)||m.operatorUid)))throw Error("Müşterinin açık görevi var. Önce görevi tamamlayın; müşteri silinmedi.");
+   if(!confirm(c.name+" müşterisini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"customers",id));out.textContent="Müşteri silindi; geçmiş işler korundu.";
+  }else{
+   const job=archivedJobs.find(x=>x.id===id);if(!job)throw Error("İş kaydı bulunamadı.");
+   if(!confirm("Bu ARŞİV iş kaydını kalıcı olarak silmek istiyor musunuz? Bu işlem geri alınamaz."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"jobs",id));out.textContent="Arşiv iş kaydı silindi.";
+  }
+ }catch(err){out.textContent="Silinemedi: "+(err.message||err.code)}
+};
 $("addType").addEventListener("change",()=>{for(const [type,id] of [["operator","addOperatorPanel"],["machine","addMachinePanel"],["customer","addCustomerPanel"]])$(id).classList.toggle("hidden",$("addType").value!==type)});
 function refreshTaskLists(){
  const lists=[
