@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puantör Live | Yönetici</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5}*{box-sizing:border-box}body{margin:0;padding:14px;max-width:960px;margin-inline:auto}header{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:23px;margin:12px 0 2px}.muted{color:#64748b;font-size:12px}.card{background:white;border:1px solid #d6e0ed;border-radius:14px;padding:15px;margin:12px 0;box-shadow:0 2px 7px #1420330a}input,select,button{font:inherit;border-radius:9px;padding:12px;width:100%;margin:5px 0;border:1px solid #cbd5e1}button{background:#0f172a;color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.5}button.secondary{background:#e2e8f0;color:#142033}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:14px;background:white;border-radius:12px;text-align:center}.stat b{display:block;font-size:26px}.machine{border-left:5px solid #94a3b8}.machine.running{border-color:#16a34a}.machine.paused{border-color:#eab308}.machine.broken{border-color:#dc2626}.machine.done{border-color:#3b82f6}.tag{border-radius:30px;background:#e2e8f0;padding:5px 9px;font-size:12px;font-weight:700}.top{display:flex;justify-content:space-between;align-items:center;gap:8px}.hidden{display:none!important}#error{color:#b91c1c;white-space:pre-wrap}#status{font-size:12px}small{color:#64748b} .machine p{margin:7px 0;font-size:14px}
+details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-radius:15px;overflow:hidden;box-shadow:0 2px 7px #1420330a}details.toolbox>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:18px 16px;min-height:76px;font-size:19px;font-weight:800;color:#142033;user-select:none}details.toolbox>summary::-webkit-details-marker{display:none}details.toolbox>summary .tool-icon{font-size:28px;width:40px;text-align:center}details.toolbox>summary .tool-arrow{margin-left:auto;color:#64748b;font-size:22px}details.toolbox[open]>summary .tool-arrow{transform:rotate(180deg)}details.toolbox>summary:focus-visible{outline:3px solid #2563eb;outline-offset:-4px}details.toolbox>.tool-content{padding:0 14px 16px}details.toolbox .card{margin:0;box-shadow:none;border:0;padding:8px 0}details.toolbox[open]{border-color:#94a3b8} @media(min-width:700px){.toolbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.toolbox-grid details.toolbox{margin:0}} 
+/* Telefon ekranına taşmayı ve iOS Safari otomatik yakınlaştırmasını önle */
+html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;min-width:0;overflow-x:hidden}main,section,form,details,.tool-content,.card,.grid,.toolbox-grid{min-width:0;max-width:100%}input,select,textarea,button{min-width:0;max-width:100%;font-size:16px}input[type="file"]{overflow:hidden}label{display:block;min-width:0;overflow-wrap:anywhere}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top{flex-wrap:wrap}.top>*{min-width:0}summary{overflow-wrap:anywhere}@media(max-width:480px){body{padding:10px}.toolbox-grid{display:block}.grid{grid-template-columns:minmax(0,1fr)}.stat b{font-size:23px}details.toolbox>.tool-content{padding:0 10px 14px}details.toolbox>summary{font-size:17px;min-height:64px;padding:14px 12px}.card{padding:12px}}
+.manager-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.manager-toolbar button{margin:0;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fff;color:#142033;border:1px solid #cbd5e1;border-radius:15px;font-size:28px;box-shadow:0 2px 7px #1420330a}.manager-toolbar button span{font-size:14px;font-weight:750;text-align:center;line-height:1.2}.manager-toolbar button .toolbar-hint{display:block;font-size:11px;font-weight:500;line-height:1.3;color:#64748b;text-align:center;max-width:100%;padding:0 4px}.manager-toolbar button.active .toolbar-hint{color:#375e9e}.manager-toolbar button.active{background:#dbeafe;border:2px solid #2563eb;color:#1e40af}#managerPanels{display:block}#managerPanels>details.toolbox{display:none;margin:0 0 14px}#managerPanels>details.toolbox.active-panel{display:block}#managerPanels>details.toolbox>summary{display:none}#managerPanels>details.toolbox>.tool-content{padding:14px}@media(max-width:480px){.manager-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.manager-toolbar button{min-height:90px}}.dashboard-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-stats .stat{padding:12px 8px}.dashboard-stats .stat b{font-size:27px}.dashboard-stats .stat small{font-size:12px}@media(min-width:700px){.dashboard-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}</style></head><body>
+<header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
+<div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
+<section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
+<main id="dashboard" class="hidden">
+<div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
+<nav id="managerToolbar" class="manager-toolbar" aria-label="Yönetici araçları"><button type="button" data-panel="0">➕<span>Ekle</span><small class="toolbar-hint">(Operatör, makine, müşteri)</small></button><button type="button" data-panel="1">📌<span>Görev Ekle</span><small class="toolbar-hint">(Operatör görevlendir)</small></button><button type="button" data-panel="2">📋<span>Bitirilen İşler</span><small class="toolbar-hint">(Tamamlanan işler, yedek)</small></button><button type="button" data-panel="3">👷‍♂️👷‍♂️<span>Operatör Hesapları</span><small class="toolbar-hint">(Operatör kayıt, düzenle, sil)</small></button><button type="button" data-panel="4">🚜<span>Makineyi Gör</span><small class="toolbar-hint">(Canlı çalışma takibi)</small></button><button type="button" data-panel="5">🧾<span>Müşteri Ekstresi</span><small class="toolbar-hint">(İşler, tahsilat, bakiye)</small></button><button type="button" data-panel="6">📊<span>Finans Özeti</span><small class="toolbar-hint">(Gelir, alacak, toplam)</small></button></nav><div class="toolbox-grid" id="managerPanels">
+<details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
+<label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
+<div id="addMachinePanel" class="hidden"><form id="machineForm"><label>Makine adı / plaka<input id="newMachine" maxlength="80" required placeholder="35 CJV 827"></label><button type="submit" id="addMachine">Makineyi kaydet</button></form><p id="machineError" role="alert"></p></div>
+<div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><p class="muted">Makine seçimi Görev Ekle bölümünde yapılır. Operatör kendi şifresini oluşturur. Yönetici kaydı onaylayınca görev alabilir.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
+<div id="addCustomerPanel" class="hidden"><form id="customerForm"><label>Müşteri adı<input id="customerName" required maxlength="100" placeholder="Çakmak Yapı"></label><button type="submit" id="customerSave">Müşteriyi kaydet</button></form><p id="customerResult" role="status"></p></div>
+</div></details>
+<details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Görev Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content"><form id="taskForm">
+<label>Makine<select id="taskMachine" required><option value="">Makine seçiniz</option></select></label>
+<label>Operatör<select id="taskOperator" required><option value="">Operatör seçiniz</option></select></label>
+<label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
+<label>Saatlik çalışma ücreti (TL)<input id="taskRate" type="number" min="0" step="0.01" placeholder="Örn. 2400" required></label><button type="submit" id="taskSave">Operatöre Görev Ata</button></form><p id="taskResult" role="status"></p><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
+<section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
+<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><button type="button" id="restoreAll" class="secondary" disabled>Yedekten Geri Yükle</button><div class="hidden"><button type="button" id="restoreArchives" disabled>İşler</button><button type="button" id="restorePayments" disabled>Tahsilatlar</button></div><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Müşteri seçin<select id="historyCustomer"><option value="">Müşteri seçin</option></select></label><label>Tarih sıralaması<select id="historySort"><option value="desc">Yeniden eskiye (Z–A)</option><option value="asc">Eskiden yeniye (A–Z)</option></select></label></div><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div class="stat"><b id="jobAmount">—</b><small>Toplam tutar (TL)</small></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
+<details class="toolbox"><summary><span class="tool-icon">🛠️</span>Kayıt Yönetimi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><label>Kayıt türü<select id="manageType"><option value="operator">Operatör</option><option value="customer">Müşteri</option><option value="machine">Makine</option><option value="job">İş kaydı</option></select></label><label>Kayıt<select id="manageItem"></select></label><label>Yeni ad (operatör adı / müşteri adı / makine adı)<input id="manageName"></label><p class="muted">Operatör şifresini kendisi oluşturur. Kayıt isteğini yalnızca yönetici onaylar.</p><button type="button" id="manageApprove" class="secondary">Operatör kaydını onayla</button><button type="button" id="manageRename" class="secondary">Adı güncelle</button><button type="button" id="manageDelete" style="background:#991b1b">Kaydı sil</button><p id="manageResult" role="status"></p></div></div></details><details class="toolbox"><summary><span class="tool-icon">📡</span>Makine durumları<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div></div></details>
+<details class="toolbox"><summary>🧾 Müşteri Ekstresi</summary><div class="tool-content"><section class="card">
+<label>Müşteri<select id="statementCustomer"><option value="">Müşteri seçin</option></select></label>
+<div class="grid"><div class="stat"><b id="statementCount">0</b><small>İş sayısı</small></div><div class="stat"><b id="statementDuration">00:00:00</b><small>Toplam süre</small></div></div>
+<div class="stat"><b id="statementTotal">₺0,00</b><small>Toplam çalışma bedeli (tahsilatlar hariç)</small></div>
+<div class="grid"><div class="stat"><b id="statementPaid">₺0,00</b><small>Toplam tahsilat</small></div><div class="stat"><b id="statementBalance">₺0,00</b><small>Kalan alacak (bilinen)</small></div></div><p id="statementWarning" class="muted"></p><form id="paymentForm"><strong>Tahsilat ekle</strong><label>Tarih<input id="paymentDate" type="date" required></label><label>Tutar (TL)<input id="paymentAmount" type="number" min="0.01" max="100000000" step="0.01" required></label><label>Açıklama<input id="paymentNote" maxlength="150" placeholder="Örn. Havale"></label><button id="paymentSave" type="submit">Tahsilatı kaydet</button><p id="paymentResult" role="status"></p></form><strong>Tahsilat geçmişi</strong><div id="paymentRows" class="muted">Müşteri seçin.</div><div class="grid"><button type="button" class="secondary" id="statementCsv">Ekstreyi CSV indir</button><button type="button" id="statementPdf">PDF Ekstre Hazırla</button></div>
+<div id="statementRows" class="muted">Müşteri seçildiğinde işler listelenir.</div>
+</section></div></details><details class="toolbox"><summary>📊 Finans Özeti</summary><div class="tool-content"><section class="card"><h3>Müşteri bazında finans özeti</h3><div class="grid"><div class="stat"><b id="financeGross">₺0,00</b><small>İş bedelleri</small></div><div class="stat"><b id="financePaid">₺0,00</b><small>Tahsilatlar</small></div></div><div class="stat"><b id="financeBalance">₺0,00</b><small>Net kalan alacak</small></div><p class="muted" id="financeNote"></p><div id="financeRows"></div></section></div></details></div>
+</main>
+<script>
+window.__puantorReady=false;
+window.addEventListener("DOMContentLoaded",()=>{
+ const panels=[...document.querySelectorAll("#managerPanels>details.toolbox")];
+ const buttons=[...document.querySelectorAll("#managerToolbar button")];
+ buttons.forEach(b=>b.addEventListener("click",()=>{
+  const index=Number(b.dataset.panel);
+  panels.forEach((p,i)=>{p.classList.toggle("active-panel",i===index);p.open=i===index});
+  buttons.forEach((x,i)=>{x.classList.toggle("active",i===index);x.setAttribute("aria-pressed",String(i===index))});
+ }));
+});
+window.addEventListener("error",e=>{const el=document.getElementById("status");if(el)el.textContent="Sayfa hatası: "+(e.message||"JavaScript yüklenemedi")});
+window.addEventListener("unhandledrejection",e=>{const el=document.getElementById("status");if(el)el.textContent="Bağlantı hatası: "+(e.reason?.message||String(e.reason||"Bilinmeyen hata"))});
+setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("status");if(el&&el.textContent.includes("hazırlanıyor"))el.textContent="Firebase başlatılamadı. Safari'de sayfayı yeniden yükleyin; sorun sürerse ekran görüntüsünü gönderin (modül veya ağ bağlantısı hatası)."}},9000);
+</script>
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
+const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
+function message(t){$("status").textContent=t}
+function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+const labels={running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arıza",done:"Tamamlandı",idle:"Hazır"};
+function formatMs(ms){const s=Math.floor(Math.max(0,ms)/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+function jobDate(j){const v=j.completedAt||j.archivedAt;if(typeof v?.toMillis==="function")return v.toMillis();if(typeof v?.seconds==="number")return v.seconds*1000;return 0}
+function filteredJobs(){const customer=$("historyCustomer").value;if(!customer)return [];const dir=$("historySort").value==="asc"?1:-1;return archivedJobs.filter(j=>(j.customerName||"")===customer).sort((a,b)=>dir*(jobDate(a)-jobDate(b)))}
+function updateJobOptions(){
+ const el=$("historyCustomer"),prev=el.value;
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName),...payments.map(p=>p.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ el.replaceChildren(new Option("Müşteri seçin",""),...names.map(n=>new Option(n,n)));
+ if(names.includes(prev))el.value=prev;
+}
+const billedAmount=(ms,rate)=>Math.round(Math.floor(Math.max(0,Number(ms)||0)/1000)*Number(rate)/3600*100)/100;
+const money=n=>new Intl.NumberFormat("tr-TR",{style:"currency",currency:"TRY"}).format(n);
+function renderJobs(){
+ const jobs=filteredJobs();$("jobCount").textContent=jobs.length;$("jobTotal").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
+ const priced=jobs.filter(j=>Number.isFinite(Number(j.hourlyRate))&&j.hourlyRate!==null&&j.hourlyRate!==undefined);$("jobAmount").textContent=money(priced.reduce((sum,j)=>sum+(billedAmount(j.elapsedMs,j.hourlyRate)),0))+(priced.length<jobs.length?" · "+(jobs.length-priced.length)+" iş ücreti eksik":"");
+ const target=$("jobsHistory");
+ if(!$("historyCustomer").value){target.innerHTML='<p class="muted">Çalışma geçmişini görmek için yukarıdan bir müşteri seçin.</p>';return}
+ target.innerHTML=jobs.length?jobs.map(j=>{
+  const dt=j.completedAt?.toDate?.()||j.archivedAt?.toDate?.();
+  const when=dt?dt.toLocaleString("tr-TR"):"Tarih bilinmiyor";const priced=j.hourlyRate!==null&&j.hourlyRate!==undefined&&Number.isFinite(Number(j.hourlyRate));const amount=priced?(Number.isFinite(Number(j.amount))?Number(j.amount):Number(j.elapsedMs||0)/3600000*Number(j.hourlyRate)):null;
+  return '<details class="card"><summary style="cursor:pointer"><strong>🚜 '+safe(j.machineName||j.machineId||"Makine")+'</strong> · '+safe(when)+' · <strong>'+formatMs(Number(j.elapsedMs)||0)+'</strong></summary><div style="padding-top:10px"><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Müşteri: '+safe(j.customerName||"—")+'</p><p>Makine: '+safe(j.machineName||j.machineId||"—")+'</p><p>Toplam çalışma: <strong>'+formatMs(Number(j.elapsedMs)||0)+'</strong></p><p>Saatlik ücret: '+(priced?money(Number(j.hourlyRate)):'Belirtilmemiş')+'</p><p>İş tutarı: <strong>'+(amount===null?'Belirtilmemiş':money(amount))+'</strong></p><p>Tamamlanma: '+safe(when)+'</p><form class="archive-rate-form" data-id="'+safe(j.id)+'"><label>Saatlik ücret (TL)<input name="rate" type="number" min="0" max="100000000" step="0.01" required value="'+(priced?Number(j.hourlyRate):'')+'" placeholder="Saatlik ücret"></label><button type="submit" class="secondary">Ücreti kaydet ve tutarı hesapla</button></form></div></details>';
+ }).join(""):'<p class="muted">Bu müşteriye ait arşivlenmiş çalışma henüz yok.</p>';
+}
+$("historyCustomer").addEventListener("change",renderJobs);
+$("historySort").addEventListener("change",renderJobs);
+function renderFinance(){
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName),...payments.map(p=>p.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ let gross=0,paid=0,missing=0;
+ const data=names.map(name=>{const jobs=archivedJobs.filter(j=>j.customerName===name),receipts=payments.filter(p=>p.customerName===name);const cost=jobs.reduce((n,j)=>{const amount=statementAmount(j);if(amount===null)missing++;return n+(amount??0)},0),received=receipts.reduce((n,p)=>n+(Number(p.amount)||0),0);gross+=cost;paid+=received;return {name,cost,received,balance:cost-received,jobs:jobs.length}});
+ $("financeGross").textContent=money(gross);$("financePaid").textContent=money(paid);$("financeBalance").textContent=money(gross-paid);
+ $("financeNote").textContent=missing?missing+" işin saatlik ücreti eksik; tutarlar yalnızca ücretlendirilmiş işleri kapsıyor.":"Kalan alacak, kayıtlı iş bedellerinden tahsilatlar düşülerek hesaplanır.";
+ $("financeRows").innerHTML=data.length?data.map(x=>'<div class="card"><strong>'+safe(x.name)+'</strong><p>'+x.jobs+' iş · İş bedeli: '+money(x.cost)+'</p><p>Tahsilat: '+money(x.received)+' · <strong>Kalan: '+money(x.balance)+'</strong></p><button type="button" class="secondary" data-finance-customer="'+safe(x.name)+'">Ekstreyi aç</button></div>').join(""):'<p class="muted">Henüz müşteri kaydı bulunmuyor.</p>';
+}
+$("financeRows").addEventListener("click",e=>{
+ const btn=e.target.closest("[data-finance-customer]");if(!btn)return;
+ const name=btn.dataset.financeCustomer;const selector=$("statementCustomer");selector.value=name;renderStatement();
+ const panels=[...document.querySelectorAll("#managerPanels>details.toolbox")],buttons=[...document.querySelectorAll("#managerToolbar button")];
+ panels.forEach((p,i)=>{p.classList.toggle("active-panel",i===5);p.open=i===5});
+ buttons.forEach((b,i)=>{b.classList.toggle("active",i===5);b.setAttribute("aria-pressed",String(i===5))});
+ selector.scrollIntoView({behavior:"smooth",block:"start"});
+});
+function updateStatementOptions(){
+ const el=$("statementCustomer"),previous=el.value;
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ el.replaceChildren(new Option("Müşteri seçin",""),...names.map(n=>new Option(n,n)));
+ if(names.includes(previous))el.value=previous;
+ renderStatement();renderFinance();
+}
+function statementJobs(){const name=$("statementCustomer").value;return name?archivedJobs.filter(j=>j.customerName===name).sort((a,b)=>jobDate(a)-jobDate(b)):[]}
+function statementAmount(j){return j.hourlyRate==null||!Number.isFinite(Number(j.hourlyRate))?null:billedAmount(j.elapsedMs,j.hourlyRate)}
+function renderStatement(){
+ const jobs=statementJobs(),missing=jobs.filter(j=>statementAmount(j)===null).length;const selected=$("statementCustomer").value;const received=payments.filter(p=>p.customerName===selected);const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0);const paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ $("statementCount").textContent=jobs.length;
+ $("statementDuration").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
+ $("statementTotal").textContent=money(jobs.reduce((n,j)=>n+(statementAmount(j)??0),0));
+ $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = kayıtlı çalışma bedeli − tahsilatlar.";
+ $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p><div class="grid"><button type="button" class="secondary" data-pay-edit="'+safe(p.id)+'">Düzenle</button><button type="button" class="secondary" data-pay-delete="'+safe(p.id)+'">Sil</button></div></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
+ $("statementRows").innerHTML=$("statementCustomer").value?(jobs.length?jobs.map(j=>'<div class="card"><strong>'+safe(j.machineName||j.machineId||"Makine")+'</strong><p>'+safe((j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"Tarih bilinmiyor")+' · '+formatMs(j.elapsedMs)+'</p><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Saatlik: '+(statementAmount(j)===null?"Belirtilmemiş":money(Number(j.hourlyRate)))+' · Tutar: <strong>'+(statementAmount(j)===null?"Belirtilmemiş":money(statementAmount(j)))+'</strong></p></div>').join(""):'<p>Bu müşterinin arşivlenmiş işi yok.</p>'):'<p>Müşteri seçin.</p>';
+}
+$("paymentRows").addEventListener("click",async e=>{
+ const edit=e.target.closest("[data-pay-edit]"),del=e.target.closest("[data-pay-delete]");if(!edit&&!del)return;
+ const id=(edit||del).dataset[edit?"payEdit":"payDelete"],p=payments.find(x=>x.id===id);if(!p)return;
+ if(del){if(!confirm(p.customerName+" müşterisinin "+money(p.amount)+" tahsilatını kalıcı olarak silmek istiyor musunuz?"))return;
+  try{await deleteDoc(doc(db,"payments",id));$("paymentResult").textContent="Tahsilat silindi."}catch(err){$("paymentResult").textContent="Silinemedi: "+(err.message||err.code)}}else{
+ const date=prompt("Tahsilat tarihi (YYYY-AA-GG)",p.date);if(date===null)return;
+ const amountRaw=prompt("Tahsilat tutarı (TL)",String(p.amount));if(amountRaw===null)return;
+ const amount=Number(amountRaw.replace(",","."));const note=prompt("Açıklama",p.note||"");if(note===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(amount)||amount<=0||amount>100000000||note.length>150){$("paymentResult").textContent="Tarih, tutar veya açıklama geçersiz.";return}
+ if(!confirm("Tahsilat "+money(amount)+" olarak güncellensin mi?"))return;
+ try{await updateDoc(doc(db,"payments",id),{date,amount:Math.round(amount*100)/100,note});$("paymentResult").textContent="Tahsilat güncellendi."}catch(err){$("paymentResult").textContent="Düzenlenemedi: "+(err.message||err.code)}
+ }
+});
+$("statementCustomer").addEventListener("change",renderStatement);
+$("paymentDate").value=new Date().toLocaleDateString("en-CA");
+$("paymentForm").addEventListener("submit",async e=>{
+ e.preventDefault();const customerName=$("statementCustomer").value,amount=Number($("paymentAmount").value),date=$("paymentDate").value,note=$("paymentNote").value.trim(),out=$("paymentResult"),btn=$("paymentSave");
+ if(!customerName){out.textContent="Önce müşteri seçin.";return}
+ if(!Number.isFinite(amount)||amount<=0||amount>100000000||!/^\d{4}-\d{2}-\d{2}$/.test(date)){out.textContent="Geçerli tarih ve tutar girin.";return}
+ if(!confirm(customerName+" için "+money(amount)+" tahsilat kaydedilsin mi?"))return;
+ btn.disabled=true;out.textContent="Kaydediliyor…";
+ try{await addDoc(collection(db,"payments"),{customerName,amount:Math.round(amount*100)/100,date,note,createdAt:serverTimestamp()});out.textContent="Tahsilat kaydedildi.";$("paymentAmount").value="";$("paymentNote").value=""}
+ catch(err){out.textContent="Tahsilat kaydedilemedi: "+(err.message||err.code)+". Firebase yetkisi kontrol edilmeli."}
+ finally{btn.disabled=false}
+});
+
+$("statementPdf").addEventListener("click",()=>{
+ const customer=$("statementCustomer").value;if(!customer){message("PDF ekstre için önce müşteri seçin.");return}
+ const jobs=statementJobs(),received=payments.filter(p=>p.customerName===customer),missing=jobs.filter(j=>statementAmount(j)===null).length;
+ const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ const records=[];
+ for(const j of jobs){const d=j.completedAt?.toDate?.()||j.archivedAt?.toDate?.();records.push({sort:d?.getTime()||0,date:d?.toLocaleDateString("tr-TR")||"—",kind:"Çalışma",detail:(j.machineName||j.machineId||"Makine")+" · "+(j.operatorName||"Operatör yok"),duration:formatMs(j.elapsedMs),rate:statementAmount(j)===null?"—":money(Number(j.hourlyRate)),debit:statementAmount(j)===null?"Belirsiz":money(statementAmount(j)),credit:"—"})}
+ for(const p of received){const t=Date.parse(p.date+"T12:00:00");records.push({sort:Number.isFinite(t)?t:0,date:p.date?.split("-").reverse().join(".")||"—",kind:"Tahsilat",detail:p.note||"Ödeme",duration:"—",rate:"—",debit:"—",credit:money(Number(p.amount)||0)})}
+ records.sort((a,b)=>a.sort-b.sort);
+ const lines=records.map(x=>"<tr><td>"+safe(x.date)+"</td><td>"+safe(x.kind)+"</td><td>"+safe(x.detail)+"</td><td>"+safe(x.duration)+"</td><td>"+safe(x.rate)+"</td><td>"+safe(x.debit)+"</td><td>"+safe(x.credit)+"</td></tr>").join("");
+ const html='<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+safe(customer)+' - Puantör Ekstre</title><style>@page{size:A4 landscape;margin:13mm}body{font-family:Arial,sans-serif;color:#152238;margin:20px}h1{margin:0 0 5px}h2{font-size:17px;margin:18px 0 8px}.sub{color:#64748b;font-size:12px}.summary{display:flex;gap:12px;margin:20px 0}.summary div{flex:1;background:#f1f5f9;padding:12px;border-radius:8px}.summary strong{display:block;font-size:20px;margin-top:5px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:8px 5px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{background:#e2e8f0}tr{break-inside:avoid}.warning{margin-top:15px;font-size:12px;color:#8a4b0b}.print{margin:12px 0;padding:12px;background:#0f172a;color:white;border:0;border-radius:8px;font-weight:bold}@media print{.print{display:none}body{margin:0}.summary div{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><button class="print" onclick="window.print()">Yazdır / PDF olarak kaydet</button><h1>PUANTÖR | Müşteri Hesap Ekstresi</h1><div class="sub">Müşteri: '+safe(customer)+' · Rapor tarihi: '+new Date().toLocaleDateString("tr-TR")+'</div><div class="summary"><div>Toplam iş bedeli<strong>'+safe(money(total))+'</strong></div><div>Toplam tahsilat<strong>'+safe(money(paid))+'</strong></div><div>Kalan alacak<strong>'+safe(money(total-paid))+'</strong></div></div><h2>İşlemler</h2><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Makine / Açıklama</th><th>Süre</th><th>Saatlik ücret</th><th>İş bedeli</th><th>Tahsilat</th></tr></thead><tbody>'+(lines||'<tr><td colspan="7">Henüz işlem yok</td></tr>')+'</tbody></table>'+(missing?'<p class="warning">Uyarı: '+missing+' işin saatlik ücreti eksik. Kalan alacak kesin değildir.</p>':'')+'<p class="sub">Bu rapor uygulamada kayıtlı iş ve tahsilatlardan oluşturulmuştur.</p></body></html>';
+ const w=window.open("","_blank");if(!w){message("Rapor penceresi engellendi. Safari açılır pencere iznini kontrol edin.");return}w.document.open();w.document.write(html);w.document.close();
+});
+$("statementCsv").addEventListener("click",()=>{
+ const customer=$("statementCustomer").value;if(!customer){message("Ekstre için müşteri seçin.");return}
+ const jobs=statementJobs(),received=payments.filter(p=>p.customerName===customer);
+ const rows=[["Tarih","İşlem","Makine / Açıklama","Operatör","Süre","Saatlik ücret TL","Borç TL","Tahsilat TL"]];
+ for(const j of jobs){const date=(j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"";rows.push([date,"Çalışma",j.machineName||j.machineId||"",j.operatorName||"",formatMs(j.elapsedMs),statementAmount(j)===null?"":Number(j.hourlyRate).toFixed(2),statementAmount(j)===null?"":statementAmount(j).toFixed(2),""])}
+ for(const p of received)rows.push([p.date,"Tahsilat",p.note||"","", "","","",Number(p.amount).toFixed(2)]);
+ const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ rows.push(["","TOPLAM","","","","",total.toFixed(2),paid.toFixed(2)]);
+ rows.push(["","KALAN ALACAK","","","","",(total-paid).toFixed(2),""]);
+ const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="puantor-musteri-ekstresi.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+
+$("jobsHistory").addEventListener("submit",async e=>{
+ const form=e.target.closest("form.archive-rate-form");if(!form)return;e.preventDefault();
+ const id=form.dataset.id,job=archivedJobs.find(j=>j.id===id),button=form.querySelector('button[type="submit"]');
+ if(!job)return;
+ const raw=form.elements.rate.value,rate=Number(raw);
+ if(raw.trim()===""||!Number.isFinite(rate)||rate<0||rate>100000000){message("Geçerli saatlik ücret girin.");return}
+ const amount=Math.round(Math.floor(Math.max(0,Number(job.elapsedMs)||0)/1000)*rate/3600*100)/100;
+ if(!confirm("Bu arşiv kaydı için saatlik "+money(rate)+" ve toplam "+money(amount)+" kaydedilsin mi? Çalışma süresi değişmeyecek."))return;
+ button.disabled=true;
+ try{
+  await updateDoc(doc(db,"jobs",id),{hourlyRate:rate,amount,rateUpdatedAt:serverTimestamp()});
+  message("Arşiv işinin tutarı güncellendi: "+money(amount));
+ }catch(err){message("Ücret kaydedilemedi: "+(err.message||err.code))}
+ finally{button.disabled=false}
+});
+
+$("exportJobs").addEventListener("click",()=>{const jobs=filteredJobs();if(!jobs.length){message("İndirilecek geçmiş kayıt yok.");return}const rows=[["Makine","Operatör","Müşteri","Süre (saat:dakika:saniye)","Tamamlanma"]];for(const j of jobs)rows.push([j.machineName||j.machineId||"",j.operatorName||"",j.customerName||"",duration({...j,status:"done"}),j.completedAt?.toDate?.().toLocaleString("tr-TR")||""]);const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="puantor-filtreli-calisma-gecmisi.csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+$("backupAll").addEventListener("click",()=>{
+ const btn=$("backupAll");btn.disabled=true;
+ try{
+  const payload={format:"puantor-manager-backup",version:1,exportedAt:new Date().toISOString(),collections:{
+   machines:cached,operators,customers,jobs:archivedJobs,payments
+  }};
+  const json=JSON.stringify(payload,(key,value)=>{
+   if(value&&typeof value==="object"&&typeof value.seconds==="number"&&typeof value.nanoseconds==="number"&&typeof value.toDate==="function")return {__timestamp:value.toDate().toISOString()};
+   return value;
+  },2);
+  const blob=new Blob([json],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="puantor-yedek-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  message("JSON yedek hazırlandı. İndirilenler bölümünü kontrol edin; bu dosya hesap bilgileri içerebilir, güvenli saklayın.");
+ }catch(err){message("Yedek oluşturulamadı: "+(err.message||err))}
+ finally{btn.disabled=false}
+});
+$("backupPreviewFile").addEventListener("change",async e=>{
+ const file=e.target.files?.[0],out=$("backupPreviewResult");validatedArchiveBackup=null;validatedPaymentBackup=null;$("restoreArchives").disabled=true;$("restorePayments").disabled=true;$("restoreAll").disabled=true;
+ if(!file)return;
+ out.textContent="Yedek inceleniyor…";
+ try{
+  if(file.size>15*1024*1024)throw Error("15 MB üzerindeki dosyalar bu ekranda incelenemez.");
+  const data=JSON.parse(await file.text());
+  if(data?.format!=="puantor-manager-backup"||data?.version!==1||!data.collections||typeof data.collections!=="object")throw Error("Bu dosya Puantör v1 JSON yedeği değil.");
+  const groups=[["machines","Makineler",cached],["operators","Operatörler",operators],["customers","Müşteriler",customers],["jobs","Arşiv işleri",archivedJobs]];
+  const lines=[],warnings=[];
+  for(const [key,label,current] of groups){
+   const records=data.collections[key];
+   if(!Array.isArray(records))throw Error(label+" listesi geçersiz.");
+   const ids=new Set(),existing=new Set(current.map(x=>x.id));let newCount=0,matched=0;
+   for(const record of records){
+    if(!record||typeof record!=="object"||typeof record.id!=="string"||!record.id.trim())throw Error(label+" içinde kimliği eksik kayıt var.");
+    if(ids.has(record.id))throw Error(label+" içinde tekrarlanan kayıt kimliği var: "+record.id);
+    ids.add(record.id);if(existing.has(record.id))matched++;else newCount++;
+   }
+   lines.push(label+": "+records.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+  }
+  if(data.collections.payments!==undefined){
+   if(!Array.isArray(data.collections.payments))throw Error("Tahsilat listesi geçersiz.");
+   const ids=new Set(),existing=new Set(payments.map(p=>p.id));let matched=0,newCount=0;
+   for(const p of data.collections.payments){
+    if(!p||typeof p.id!=="string"||!p.id.trim()||ids.has(p.id)||typeof p.customerName!=="string"||!Number.isFinite(Number(p.amount)))throw Error("Tahsilat yedeğinde geçersiz veya tekrarlanan kayıt var.");
+    ids.add(p.id);if(existing.has(p.id))matched++;else newCount++;
+   }
+   lines.push("Tahsilatlar: "+data.collections.payments.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+   validatedPaymentBackup=data.collections.payments;$("restorePayments").disabled=newCount===0;
+  }else lines.push("Tahsilatlar: Bu eski yedek dosyasında bulunmuyor.");
+  if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
+  out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+(($("restoreArchives").disabled&&$("restorePayments").disabled)?"\nYedek kontrol edildi. Tüm kayıtlar sistemde mevcut. Geri yükleme gerekmiyor.":"\nYedek kontrol edildi. Geri getirilebilecek kayıtlar var. Mevcut kayıtlar korunacaktır.");
+  validatedArchiveBackup=data.collections.jobs;$("restoreArchives").disabled=!validatedArchiveBackup.some(j=>!archivedJobs.some(x=>x.id===j.id));
+  $("restoreAll").disabled=$("restoreArchives").disabled&&$("restorePayments").disabled;
+  out.style.whiteSpace="pre-line";
+ }catch(err){out.textContent="Yedek incelenemedi: "+(err.message||String(err));out.style.whiteSpace="pre-line"}
+});
+function restoreTimestamp(v){
+ if(v&&typeof v==="object"&&!Array.isArray(v)){
+  if(typeof v.__timestamp==="string"){const ms=Date.parse(v.__timestamp);if(!Number.isFinite(ms))throw Error("Geçersiz zaman damgası.");return Timestamp.fromMillis(ms)}
+  if(typeof v.seconds==="number"&&typeof v.nanoseconds==="number"&&Object.keys(v).every(k=>["seconds","nanoseconds"].includes(k)))return new Timestamp(v.seconds,v.nanoseconds);
+  return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,restoreTimestamp(x)]));
+ }
+ if(Array.isArray(v))return v.map(restoreTimestamp);
+ return v;
+}
+$("restoreArchives").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restoreArchives"),records=validatedArchiveBackup;
+ if(!records)return;
+ const missing=records.filter(j=>!archivedJobs.some(x=>x.id===j.id));
+ if(!missing.length){out.textContent="Eksik arşiv kaydı bulunmuyor.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 arşiv kaydı yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik arşiv kaydını eklemek istiyor musunuz? Mevcut kayıtların üzerine yazılmayacak. Makine, operatör ve müşteri kayıtları değişmeyecek."))return;
+ btn.disabled=true;out.textContent="Arşiv kayıtları kontrol edilip ekleniyor…";
+ try{
+  const refs=missing.map(j=>doc(db,"jobs",j.id));
+  let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(raw.status!=="done"||!Number.isFinite(Number(raw.elapsedMs))||Number(raw.elapsedMs)<0)throw Error("Tamamlanmamış veya geçersiz iş kaydı geri yüklenemez.");
+    tx.set(refs[i],restoreTimestamp(raw));added++;
+   }
+  });
+  out.textContent="Geri yükleme tamamlandı: "+added+" arşiv kaydı eklendi, "+existing+" kayıt zaten vardı. Canlı işler değiştirilmedi.";
+  validatedArchiveBackup=null;$("restoreAll").disabled=true;
+ }catch(err){out.textContent="Geri yükleme yapılamadı: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
+});
+$("restoreAll").addEventListener("click",()=>{
+ const jobsReady=!$("restoreArchives").disabled,paymentsReady=!$("restorePayments").disabled;
+ if(!jobsReady&&!paymentsReady){$("backupPreviewResult").textContent="Geri getirilecek yeni kayıt bulunmuyor.";return}
+ if(jobsReady&&paymentsReady){
+  const choice=prompt("Yedekten neyi geri getirmek istiyorsunuz?\\n1 - Çalışma geçmişi\\n2 - Tahsilatlar\\nÖnce birini seçin (1 veya 2).");
+  if(choice==="1")$("restoreArchives").click();
+  else if(choice==="2")$("restorePayments").click();
+ }else if(jobsReady)$("restoreArchives").click();
+ else $("restorePayments").click();
+});
+$("restorePayments").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restorePayments"),records=validatedPaymentBackup;
+ if(!records)return;
+ const missing=records.filter(p=>!payments.some(x=>x.id===p.id));
+ if(!missing.length){out.textContent="Eksik tahsilat kaydı yok.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 tahsilat kaydı geri yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik tahsilatı geri yüklemek istiyor musunuz? Mevcut tahsilatlar değiştirilmeyecek."))return;
+ btn.disabled=true;out.textContent="Tahsilatlar kontrol ediliyor…";
+ try{
+  const refs=missing.map(p=>doc(db,"payments",p.id));let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(typeof raw.customerName!=="string"||!raw.customerName.trim()||!Number.isFinite(Number(raw.amount))||Number(raw.amount)<=0||Number(raw.amount)>100000000||typeof raw.date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)||typeof raw.note!=="string"||raw.note.length>150)throw Error("Yedekte geçersiz tahsilat var.");
+    const createdAt=raw.createdAt?restoreTimestamp(raw.createdAt):serverTimestamp();
+    tx.set(refs[i],{customerName:raw.customerName,amount:Number(raw.amount),date:raw.date,note:raw.note,createdAt});added++;
+   }
+  });
+  out.textContent="Tahsilat geri yükleme tamamlandı: "+added+" eklendi, "+existing+" kayıt zaten vardı.";
+  validatedPaymentBackup=null;$("restoreAll").disabled=true;
+ }catch(err){out.textContent="Tahsilatlar geri yüklenemedi: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
+});
+const customers=[];const operators=[];const operatorLookup=new Map();
+function refreshManage(){const type=$("manageType").value,arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const selected=$("manageItem").value;$("manageItem").replaceChildren(...arr.map(x=>new Option(type==="operator"?x.displayName+" (@"+x.username+")":type==="customer"?x.name:type==="machine"?(x.machineName||x.id):((x.machineName||"İş")+" · "+(x.operatorName||"")),x.id)));if(arr.some(x=>x.id===selected))$("manageItem").value=selected;fillManageName();}
+function fillManageName(){const type=$("manageType").value,id=$("manageItem").value;const arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const item=arr.find(x=>x.id===id);$("manageName").value=item?(type==="operator"?item.displayName||"":type==="customer"?item.name||"":type==="machine"?item.machineName||item.plaka||item.id:""):"";}
+$("manageType").onchange=()=>{refreshManage();fillManageName()};
+$("manageItem").onchange=fillManageName;
+$("manageRename").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,name=$("manageName").value.trim(),out=$("manageResult");
+ if(!id||!name)return;out.textContent="";
+ const btn=$("manageRename");btn.disabled=true;
+ try{
+  if(type==="job")throw Error("Geçmiş iş kayıtlarının isimleri tarihsel doğruluk için değiştirilmez.");
+  const source=type==="operator"?operators:type==="customer"?customers:cached;
+  const item=source.find(x=>x.id===id);if(!item)throw Error("Kayıt bulunamadı.");
+  const oldName=type==="operator"?item.displayName:type==="customer"?item.name:item.machineName;
+  if(oldName===name){out.textContent="Ad zaten aynı.";return}
+  const ref=doc(db,type==="operator"?"operators":type==="customer"?"customers":"machines",id);
+  const linked=type==="operator"?cached.filter(m=>m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):type==="customer"?cached.filter(m=>m.customerName===oldName):[];
+  if(linked.length>100)throw Error("Bağlı makine sayısı çok yüksek. İşlem güvenli sınırı aşıyor.");
+  const refs=linked.map(m=>doc(db,"machines",m.id));
+  await runTransaction(db,async tx=>{
+   const main=await tx.get(ref);if(!main.exists())throw Error("Kayıt artık mevcut değil.");
+   const snaps=[];for(const linkedRef of refs)snaps.push(await tx.get(linkedRef));
+   const field=type==="operator"?"displayName":type==="customer"?"name":"machineName";
+   tx.update(ref,{[field]:name,updatedAt:serverTimestamp()});
+   for(let i=0;i<refs.length;i++){
+    if(!snaps[i].exists())continue;
+    const m=snaps[i].data();
+    const valid=type==="operator"?(m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):m.customerName===oldName;
+    if(valid)tx.update(refs[i],{[type==="operator"?"operatorName":"customerName"]:name,updatedAt:serverTimestamp()});
+   }
+  });
+  out.textContent="Ad güncellendi. "+linked.length+" bağlı makine kontrol edildi. Eski arşiv kayıtları korunuyor.";
+ }catch(err){out.textContent="Güncellenemedi: "+(err.message||err.code)}
+ finally{btn.disabled=false}
+};
+$("manageApprove").onclick=async()=>{const op=operators.find(x=>x.id===$("manageItem").value);if($("manageType").value!=="operator"||!op)return;const uid=op.pendingUid;if(!uid){$("manageResult").textContent="Henüz bu operatör için kayıt başvurusu yok.";return}if(!confirm(op.displayName+" için kayıt başvurusunu doğruladınız mı? Başvuru sahibinin gerçekten bu kişi olduğunu teyit edin."))return;try{await runTransaction(db,async tx=>{const oref=doc(db,"operators",op.id),uref=doc(db,"users",uid);const [os,us]=await Promise.all([tx.get(oref),tx.get(uref)]);if(!os.exists()||!us.exists()||os.data().pendingUid!==uid||us.data().role!=="pending"||us.data().username!==op.username)throw Error("Başvuru geçersiz.");tx.update(oref,{authUid:uid,authStatus:"active",updatedAt:serverTimestamp()});tx.update(uref,{role:"operator",displayName:os.data().displayName,updatedAt:serverTimestamp()})});$("manageResult").textContent="Operatör onaylandı."}catch(err){$("manageResult").textContent=err.message||err.code}};
+$("manageDelete").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,out=$("manageResult");
+ if(!id)return;
+ out.textContent="";
+ try{
+  const machineBusy=m=>["running","paused","broken"].includes(m.status)||m.jobReady===true;
+  if(type==="operator"){
+   const op=operators.find(x=>x.id===id);if(!op)throw Error("Operatör bulunamadı.");
+   const assigned=cached.filter(m=>m.operatorUid===op.authUid||m.operatorUsername===op.username);
+   if(assigned.length)throw Error("Operatöre bağlı "+assigned.length+" makine/görev var. Önce görevleri güvenli biçimde tamamlayıp bağlantılarını kaldırın. Operatör silinmedi.");
+   if(!confirm(op.displayName+" operatörünü kaldırmak istiyor musunuz? Geçmiş işler korunacak."))return;
+   await runTransaction(db,async tx=>{
+    const opRef=doc(db,"operators",id),uRefs=[...new Set([op.authUid,op.pendingUid].filter(Boolean))].map(uid=>doc(db,"users",uid));
+    const snaps=await Promise.all([tx.get(opRef),...uRefs.map(ref=>tx.get(ref))]);
+    if(!snaps[0].exists())throw Error("Operatör zaten silinmiş.");
+    tx.delete(opRef);for(const ref of uRefs)tx.delete(ref);
+   });
+   out.textContent="Operatörün uygulama erişimi kaldırıldı. Geçmiş işler korundu. Firebase Authentication hesabı ayrıca yönetilmelidir.";
+  }else if(type==="machine"){
+   const m=cached.find(x=>x.id===id);if(!m)throw Error("Makine bulunamadı.");
+   if(machineBusy(m)||m.operatorUid||m.operatorUsername)throw Error("Makineye atanmış operatör veya açık görev var. Önce bağlantıları kaldırın; kayıt silinmedi.");
+   if(!confirm((m.machineName||id)+" makinesini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"machines",id));out.textContent="Makine silindi; geçmiş işler korundu.";
+  }else if(type==="customer"){
+   const c=customers.find(x=>x.id===id);if(!c)throw Error("Müşteri bulunamadı.");
+   if(cached.some(m=>m.customerName===c.name&&(machineBusy(m)||m.operatorUid)))throw Error("Müşterinin açık görevi var. Önce görevi tamamlayın; müşteri silinmedi.");
+   if(!confirm(c.name+" müşterisini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"customers",id));out.textContent="Müşteri silindi; geçmiş işler korundu.";
+  }else{
+   const job=archivedJobs.find(x=>x.id===id);if(!job)throw Error("İş kaydı bulunamadı.");
+   if(!confirm("Bu ARŞİV iş kaydını kalıcı olarak silmek istiyor musunuz? Bu işlem geri alınamaz."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"jobs",id));out.textContent="Arşiv iş kaydı silindi.";
+  }
+ }catch(err){out.textContent="Silinemedi: "+(err.message||err.code)}
+};
+$("addType").addEventListener("change",()=>{for(const [type,id] of [["operator","addOperatorPanel"],["machine","addMachinePanel"],["customer","addCustomerPanel"]])$(id).classList.toggle("hidden",$("addType").value!==type)});
+function refreshTaskLists(){
+ const lists=[
+ ["taskMachine","Makine seçiniz",cached.map(m=>m.machineName||m.id)],
+ ["taskOperator","Operatör seçiniz",operators.filter(o=>o.authStatus==="active").map(o=>o.displayName+" (@"+o.username+")")],
+ ["taskCustomer","Müşteri seçiniz",customers.map(c=>c.name)]
+ ];
+ for(const [id,label,values] of lists){const el=$(id),previous=el.value;el.replaceChildren(new Option(label,""),...values.map(v=>new Option(v,v)));if(values.includes(previous))el.value=previous;}
+}
+$("customerForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("customerSave");b.disabled=true;try{const name=$("customerName").value.trim();if(!name)throw Error("Müşteri adı gerekli");if(customers.some(c=>c.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr")))throw Error("Bu müşteri zaten kayıtlı");await addDoc(collection(db,"customers"),{name,createdAt:serverTimestamp()});$("customerForm").reset();$("customerResult").textContent="Müşteri kaydedildi."}catch(err){$("customerResult").textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
+$("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("taskSave");b.disabled=true;const out=$("taskResult");out.textContent="";try{
+ const machineName=$("taskMachine").value.trim(),operatorText=$("taskOperator").value.trim(),customerName=$("taskCustomer").value.trim();
+ const machine=cached.find(m=>(m.machineName||m.id)===machineName);
+ const operator=operators.find(o=>o.displayName+" (@"+o.username+")"===operatorText);
+ const customer=customers.find(c=>c.name===customerName);
+ if(!machine||!operator||!customer)throw Error("Lütfen listeden kayıtlı makine, operatör ve müşteri seçin.");if(!operator.authUid||operator.authStatus!=="active")throw Error("Operatör henüz yönetici tarafından onaylanmadı.");
+ await runTransaction(db,async tx=>{const machineRef=doc(db,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"operators",operator.id);
+ const [ms,us,os]=await Promise.all([tx.get(machineRef),tx.get(userRef),tx.get(opRef)]);
+ if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="operator")throw Error("Makine veya operatör yetkisi bulunamadı.");
+ const m=ms.data();if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
+ tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username,operatorName:operator.displayName,customerName:customer.name,hourlyRate:Number($("taskRate").value),jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
+ tx.update(userRef,{machineIds:[machine.id],updatedAt:serverTimestamp()});
+ tx.update(opRef,{machineIds:[machine.id],updatedAt:serverTimestamp()});
+ });out.textContent="Görev oluşturuldu. Operatör artık bu görevi başlatabilir.";$("taskForm").reset();
+ }catch(err){out.textContent="Görev oluşturulamadı: "+(err.message||err.code)}finally{b.disabled=false}});
+function refreshSuggestions(){
+ const select=$("opMachine");if(!select)return;const previous=select.value;
+ select.replaceChildren(new Option("Makine seçin",""));
+ for(const m of cached)select.add(new Option(m.machineName||m.plaka||m.id,m.id));
+ if(cached.some(m=>m.id===previous))select.value=previous;
+ const names=[...new Set([...cached.map(m=>m.operatorUsername),...operators.map(o=>o.username)].filter(Boolean))];
+ $("operatorSuggestions").replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
+}
+function render(){
+ $("total").textContent=cached.length;$("running").textContent=cached.filter(m=>m.status==="running").length;$("paused").textContent=cached.filter(m=>m.status==="paused").length;$("broken").textContent=cached.filter(m=>m.status==="broken").length;
+ $("machines").innerHTML=cached.length?cached.map(m=>'<article class="card machine '+safe(["running","paused","broken","done"].includes(m.status)?m.status:"")+'"><div class="top"><strong>🚜 '+safe(m.machineName||m.plaka||m.id)+'</strong><span class="tag">'+safe(labels[m.status]||"Bilinmiyor")+'</span></div><p>Operatör: '+safe(m.operatorName||"Atanmadı")+(m.operatorUsername?" (@"+safe(m.operatorUsername)+")":"")+'</p><p>Müşteri: '+safe(m.customerName||"Atanmadı")+'</p><p>Çalışma süresi: <strong>'+duration(m)+'</strong></p>'+(m.status==="broken"?'<p style="color:#b91c1c">Arıza: '+safe(m.faultReason||"Açıklama yok")+'</p>':"")+'<small>Son güncelleme: '+safe(m.updatedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small><button type="button" class="secondary edit-machine" data-id="'+safe(m.id)+'">Makineyi düzenle</button>'+(m.status==="done"?'<button type="button" class="reset-machine" data-id="'+safe(m.id)+'">Bitirilen İşi Arşivle</button>':"")+'</article>').join(""):'<p class="muted">Henüz makine kaydı yok. Operatör bağlantısı kurulduğunda burada görünecek.</p>';
+}
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("error").textContent="";try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value)}catch(err){$("error").textContent="Giriş başarısız: "+err.code}});
+$("machineForm").addEventListener("submit",async e=>{e.preventDefault();const button=$("addMachine");button.disabled=true;$("machineError").textContent="";try{const name=$("newMachine").value.trim();if(!name)throw new Error("Makine adı gerekli");await addDoc(collection(db,"machines"),{machineName:name,operatorName:"",operatorUsername:"",customerName:"",status:"idle",jobReady:false,elapsedMs:0,startedAt:null,updatedAt:serverTimestamp(),faultReason:""});$("machineForm").reset();message("Makine eklendi · Canlı veri izleniyor")}catch(err){$("machineError").textContent="Makine eklenemedi: "+(err.code||err.message)}finally{button.disabled=false}});
+$("operatorForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("opSave"),out=$("opResult");b.disabled=true;out.textContent="";try{
+ const username=$("opUsername").value.trim().toLowerCase(),displayName=$("opName").value.trim();
+ if(!/^[a-z0-9._-]{3,32}$/.test(username)||!displayName)throw Error("Geçerli kullanıcı adı ve ad girin.");
+ await setDoc(doc(db,"operators",username),{username,displayName,authStatus:"pending",machineIds:[],createdAt:serverTimestamp()});
+ out.textContent="Operatör tanımlandı. Kullanıcı adını operatöre söyleyin; kendi şifresini oluşturup onayınızı bekleyecek.";$("operatorForm").reset();
+ }catch(err){out.textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
+$("machines").addEventListener("click",e=>{const b=e.target.closest("button.edit-machine");if(!b)return;const m=cached.find(x=>x.id===b.dataset.id);if(!m)return;$("editId").value=m.id;$("editMachine").value=m.machineName||m.plaka||"";$("editOperator").value=m.operatorName||"";$("editUsername").value=m.operatorUsername||"";$("editCustomer").value=m.customerName||"";$("editError").textContent="";$("editSection").classList.remove("hidden");$("editSection").scrollIntoView({behavior:"smooth",block:"start"})});
+$("machines").addEventListener("click",async e=>{const b=e.target.closest("button.reset-machine");if(!b)return;const id=b.dataset.id;if(!confirm("Tamamlanan çalışmayı geçmişe kaydedip yeni çalışmayı sıfırdan hazırlamak istiyor musunuz?"))return;b.disabled=true;try{await runTransaction(db,async tx=>{const ref=doc(db,"machines",id),snap=await tx.get(ref);if(!snap.exists()||snap.data().status!=="done")throw Error("Makine tamamlandı durumunda değil.");const old=snap.data();const historyRef=doc(db,"jobs",id+"_"+String(old.updatedAt?.toMillis?.()||Date.now()));tx.set(historyRef,{machineId:id,machineName:old.machineName||"",operatorName:old.operatorName||"",operatorUsername:old.operatorUsername||"",customerName:old.customerName||"",elapsedMs:old.elapsedMs||0,hourlyRate:old.hourlyRate??null,amount:old.hourlyRate==null?null:Math.round(Math.floor(Math.max(0,Number(old.elapsedMs)||0)/1000)*Number(old.hourlyRate)/3600*100)/100,status:"done",completedAt:old.updatedAt||null,archivedAt:serverTimestamp(),operatorUid:old.operatorUid||null});tx.update(ref,{status:"idle",jobReady:false,elapsedMs:0,hourlyRate:null,startedAt:null,faultReason:"",updatedAt:serverTimestamp()})});message("İş geçmişe kaydedildi. Yeni çalışma için Görev Ekle bölümünden operatöre görev atayın.")}catch(err){message("Yeni çalışma hazırlanamadı: "+(err.message||err.code))}finally{b.disabled=false}});
+$("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editForm").reset()};
+$("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");await updateDoc(doc(db,"machines",id),{machineName:$("editMachine").value.trim(),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
+$("logout").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async user=>{
+ if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(unsubscribeCustomers){unsubscribeCustomers();unsubscribeCustomers=null}if(unsubscribeOperators){unsubscribeOperators();unsubscribeOperators=null}if(ticker){clearInterval(ticker);ticker=null}
+ $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
+ if(!user){location.replace("./giris.html");return}
+ $("login").classList.add("hidden");
+ try{
+  const profile=await getDoc(doc(db,"users",user.uid));
+  if(!profile.exists()||profile.data().role!=="admin"){location.replace("./giris.html");return}
+  $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
+  unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
+  unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
+  unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
+  unsubscribePayments=onSnapshot(collection(db,"payments"),snap=>{payments=snap.docs.map(d=>({id:d.id,...d.data()}));updateStatementOptions()},err=>{$("paymentResult").textContent="Tahsilat kayıtları okunamadı: "+(err.code||err.message)+". Firebase erişim kuralları kontrol edilmeli."});
+  unsubscribeOperators=onSnapshot(collection(db,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));refreshTaskLists();refreshManage()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
+  ticker=setInterval(render,1000);
+ }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
+});
+</script></body></html>
