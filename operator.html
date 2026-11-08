@@ -21,7 +21,7 @@ a{color:#1d4ed8}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 25 · Tanılama açık</p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 26 · Sunucu doğrulaması</p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
 <div class="notice">Makine çalışma kontrolleri yalnızca yetkili operatör tarafından kullanılabilir.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
@@ -29,7 +29,7 @@ a{color:#1d4ed8}
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,getDocFromServer,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
@@ -55,9 +55,10 @@ async function changeState(action){
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
    tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp()});
   });
-  const verified=await getDoc(doc(db,"machines",machineId));
+  const verified=await getDocFromServer(doc(db,"machines",machineId));
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-  if(!verified.exists()||verified.data().status!==expected)throw Error("İşlem kaydı doğrulanamadı. Sayfayı yenileyip tekrar kontrol edin.");
+  if(!verified.exists())throw Error("Makine kaydı bulunamadı.");
+  if(verified.data().status!==expected){$("controlInfo").textContent="Sunucu durumu: "+verified.data().status+". Canlı durum izleniyor.";machineData=verified.data();updateControls();renderTime();return;}
   machineData=verified.data();$("controlInfo").textContent="İşlem başarılı: "+expected+". Çalışma kaydı güncellendi.";
   if(action==="finish"){runningAnchor=0;showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");}
   updateControls();renderTime();
