@@ -32,7 +32,7 @@ import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "htt
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
-let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[];catch(e){}}const controls=["start","pause","fault","finish"];
+let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[];const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
 
