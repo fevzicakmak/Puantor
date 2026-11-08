@@ -25,7 +25,7 @@ html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;
 <label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
 <label>Saatlik çalışma ücreti (TL)<input id="taskRate" type="number" min="0" step="0.01" placeholder="Örn. 2400" required></label><button type="submit" id="taskSave">Görevi oluştur</button></form><p id="taskResult" role="status"></p><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
-<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><button type="button" id="restoreArchives" class="secondary" disabled>Eksik arşiv kayıtlarını geri yükle</button><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Müşteri seçin<select id="historyCustomer"><option value="">Müşteri seçin</option></select></label><label>Tarih sıralaması<select id="historySort"><option value="desc">Yeniden eskiye (Z–A)</option><option value="asc">Eskiden yeniye (A–Z)</option></select></label></div><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div class="stat"><b id="jobAmount">—</b><small>Toplam tutar (TL)</small></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
+<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><button type="button" id="restoreArchives" class="secondary" disabled>Eksik arşiv kayıtlarını geri yükle</button><button type="button" id="restorePayments" class="secondary" disabled>Eksik tahsilatları geri yükle</button><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Müşteri seçin<select id="historyCustomer"><option value="">Müşteri seçin</option></select></label><label>Tarih sıralaması<select id="historySort"><option value="desc">Yeniden eskiye (Z–A)</option><option value="asc">Eskiden yeniye (A–Z)</option></select></label></div><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div class="stat"><b id="jobAmount">—</b><small>Toplam tutar (TL)</small></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
 <details class="toolbox"><summary><span class="tool-icon">🛠️</span>Kayıt Yönetimi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><label>Kayıt türü<select id="manageType"><option value="operator">Operatör</option><option value="customer">Müşteri</option><option value="machine">Makine</option><option value="job">İş kaydı</option></select></label><label>Kayıt<select id="manageItem"></select></label><label>Yeni ad (operatör adı / müşteri adı / makine adı)<input id="manageName"></label><p class="muted">Operatör şifresini kendisi oluşturur. Kayıt isteğini yalnızca yönetici onaylar.</p><button type="button" id="manageApprove" class="secondary">Operatör kaydını onayla</button><button type="button" id="manageRename" class="secondary">Adı güncelle</button><button type="button" id="manageDelete" style="background:#991b1b">Kaydı sil</button><p id="manageResult" role="status"></p></div></div></details><details class="toolbox"><summary><span class="tool-icon">📡</span>Makine durumları<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div></div></details>
 <details class="toolbox"><summary>🧾 Müşteri Ekstresi</summary><div class="tool-content"><section class="card">
 <label>Müşteri<select id="statementCustomer"><option value="">Müşteri seçin</option></select></label>
@@ -56,7 +56,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
-const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
+const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
@@ -206,7 +206,7 @@ $("backupAll").addEventListener("click",()=>{
  finally{btn.disabled=false}
 });
 $("backupPreviewFile").addEventListener("change",async e=>{
- const file=e.target.files?.[0],out=$("backupPreviewResult");validatedArchiveBackup=null;$("restoreArchives").disabled=true;
+ const file=e.target.files?.[0],out=$("backupPreviewResult");validatedArchiveBackup=null;validatedPaymentBackup=null;$("restoreArchives").disabled=true;$("restorePayments").disabled=true;
  if(!file)return;
  out.textContent="Yedek inceleniyor…";
  try{
@@ -234,7 +234,7 @@ $("backupPreviewFile").addEventListener("change",async e=>{
     ids.add(p.id);if(existing.has(p.id))matched++;else newCount++;
    }
    lines.push("Tahsilatlar: "+data.collections.payments.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
-   if(newCount)warnings.push("Eksik tahsilatlar bu ekrandaki arşiv geri yükleme butonuyla yüklenmez; yalnızca ön izlenir.");
+   validatedPaymentBackup=data.collections.payments;$("restorePayments").disabled=newCount===0;
   }else lines.push("Tahsilatlar: Bu eski yedek dosyasında bulunmuyor.");
   if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
   out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+"\nÖN İZLEME: Hiçbir kayıt değiştirilmedi. Geri yükleme henüz etkin değil.";
@@ -274,6 +274,30 @@ $("restoreArchives").addEventListener("click",async()=>{
   out.textContent="Geri yükleme tamamlandı: "+added+" arşiv kaydı eklendi, "+existing+" kayıt zaten vardı. Canlı işler değiştirilmedi.";
   validatedArchiveBackup=null;
  }catch(err){out.textContent="Geri yükleme yapılamadı: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
+});
+$("restorePayments").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restorePayments"),records=validatedPaymentBackup;
+ if(!records)return;
+ const missing=records.filter(p=>!payments.some(x=>x.id===p.id));
+ if(!missing.length){out.textContent="Eksik tahsilat kaydı yok.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 tahsilat kaydı geri yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik tahsilatı geri yüklemek istiyor musunuz? Mevcut tahsilatlar değiştirilmeyecek."))return;
+ btn.disabled=true;out.textContent="Tahsilatlar kontrol ediliyor…";
+ try{
+  const refs=missing.map(p=>doc(db,"payments",p.id));let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(typeof raw.customerName!=="string"||!raw.customerName.trim()||!Number.isFinite(Number(raw.amount))||Number(raw.amount)<=0||Number(raw.amount)>100000000||typeof raw.date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)||typeof raw.note!=="string"||raw.note.length>150)throw Error("Yedekte geçersiz tahsilat var.");
+    const createdAt=raw.createdAt?restoreTimestamp(raw.createdAt):serverTimestamp();
+    tx.set(refs[i],{customerName:raw.customerName,amount:Number(raw.amount),date:raw.date,note:raw.note,createdAt});added++;
+   }
+  });
+  out.textContent="Tahsilat geri yükleme tamamlandı: "+added+" eklendi, "+existing+" kayıt zaten vardı.";
+  validatedPaymentBackup=null;
+ }catch(err){out.textContent="Tahsilatlar geri yüklenemedi: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
 });
 const customers=[];const operators=[];const operatorLookup=new Map();
 function refreshManage(){const type=$("manageType").value,arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const selected=$("manageItem").value;$("manageItem").replaceChildren(...arr.map(x=>new Option(type==="operator"?x.displayName+" (@"+x.username+")":type==="customer"?x.name:type==="machine"?(x.machineName||x.id):((x.machineName||"İş")+" · "+(x.operatorName||"")),x.id)));if(arr.some(x=>x.id===selected))$("manageItem").value=selected;fillManageName();}
