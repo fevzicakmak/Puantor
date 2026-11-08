@@ -12,7 +12,7 @@ button{width:100%;border:0;border-radius:10px;background:#0f172a;color:white;pad
 #error{color:#9a3412;font-weight:650;min-height:1.5em}
 a{color:#1d4ed8}
 </style></head><body><main>
-<h1>🚜 Puantör | Operatör</h1>
+<h1>🚜 Puantör | Operatör</h1><div id="clockWarning" role="alert" hidden style="background:#fff4d6;border:1px solid #e8a93c;padding:12px;border-radius:10px;margin:14px 0;color:#713f12"><strong>Telefonun saatini kontrol edin</strong><p id="clockWarningText" style="color:#713f12;margin:8px 0">Telefon saati sunucu saatiyle uyuşmuyor. Ayarlar → Tarih ve saat → Otomatik tarih ve saat seçeneğini açın.</p><button type="button" id="retryClock" style="margin-top:6px">Saat kontrolünü tekrar yap</button></div>
 
 <form id="operatorLogin" autocomplete="off">
 <label for="username">Operatör kullanıcı adı</label>
@@ -32,7 +32,7 @@ import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "htt
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
-let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[];const controls=["start","pause","fault","finish"];
+let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[],clockMismatch=false;async function checkDeviceClock(){try{const t0=Date.now();const res=await fetch("./operator.html?timecheck="+Date.now(),{method:"HEAD",cache:"no-store"});const t1=Date.now();const date=res.headers.get("Date");if(!date) return;const server=Date.parse(date);if(!Number.isFinite(server))return;clockMismatch=Math.abs(server-(t0+t1)/2)>30000;$("clockWarning").hidden=!clockMismatch;if(clockMismatch)$("clockWarningText").textContent="Telefon saati sunucu saatinden 30 saniyeden fazla farklı. Ayarlar → Tarih ve saat → Otomatik tarih ve saat seçeneğini açın ve tekrar kontrol edin.";updateControls();}catch(e){}}$("retryClock").addEventListener("click",checkDeviceClock);checkDeviceClock();const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
 
@@ -44,9 +44,9 @@ function renderTime(){
  const totalMs=elapsed+delta;$("machineTime").textContent=fmt(totalMs);const rate=Number(machineData.hourlyRate);$("liveAmount").textContent=machineData.hourlyRate==null||!Number.isFinite(rate)?"Ücret belirlenmemiş":(totalMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});$("rateInfo").textContent="Saatlik ücret: "+(machineData.hourlyRate==null||!Number.isFinite(rate)?"Belirlenmemiş":rate.toLocaleString("tr-TR",{style:"currency",currency:"TRY"}));
 }
 setInterval(renderTime,1000);
-function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&machineData.jobReady===false)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
+function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&clockMismatch)||(id==="start"&&machineData.jobReady===false)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
- if(!machineId||busy){$("controlInfo").textContent="Başlatma engellendi: "+(!machineId?"makine bulunamadı":"işlem devam ediyor");return}let reason="";
+ if(action==="start"){await checkDeviceClock();if(clockMismatch){$("controlInfo").textContent="Telefon saati yanlış. Otomatik tarih ve saati açıp tekrar deneyin.";return}}if(!machineId||busy){$("controlInfo").textContent="Başlatma engellendi: "+(!machineId?"makine bulunamadı":"işlem devam ediyor");return}let reason="";
  if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
  if(action==="finish"&&!confirm("Bu makinenin çalışmasını bitirmek istiyor musunuz?"))return;
  busy=true;updateControls();showError("");$("controlInfo").textContent="İşlem gönderiliyor: "+action+"…";
