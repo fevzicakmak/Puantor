@@ -237,7 +237,7 @@ $("backupPreviewFile").addEventListener("change",async e=>{
    validatedPaymentBackup=data.collections.payments;$("restorePayments").disabled=newCount===0;
   }else lines.push("Tahsilatlar: Bu eski yedek dosyasında bulunmuyor.");
   if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
-  out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+"\nÖN İZLEME: Hiçbir kayıt değiştirilmedi. Geri yükleme henüz etkin değil.";
+  out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+(($("restoreArchives").disabled&&$("restorePayments").disabled)?"\nYedek kontrol edildi. Tüm kayıtlar sistemde mevcut. Geri yükleme gerekmiyor.":"\nYedek kontrol edildi. Geri getirilebilecek kayıtlar var. Mevcut kayıtlar korunacaktır.");
   validatedArchiveBackup=data.collections.jobs;$("restoreArchives").disabled=!validatedArchiveBackup.some(j=>!archivedJobs.some(x=>x.id===j.id));
   $("restoreAll").disabled=$("restoreArchives").disabled&&$("restorePayments").disabled;
   out.style.whiteSpace="pre-line";
