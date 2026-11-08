@@ -31,7 +31,7 @@ html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;
 <label>Müşteri<select id="statementCustomer"><option value="">Müşteri seçin</option></select></label>
 <div class="grid"><div class="stat"><b id="statementCount">0</b><small>İş sayısı</small></div><div class="stat"><b id="statementDuration">00:00:00</b><small>Toplam süre</small></div></div>
 <div class="stat"><b id="statementTotal">₺0,00</b><small>Toplam çalışma bedeli (tahsilatlar hariç)</small></div>
-<p id="statementWarning" class="muted"></p><button type="button" class="secondary" id="statementCsv">Ekstreyi CSV indir</button>
+<div class="grid"><div class="stat"><b id="statementPaid">₺0,00</b><small>Toplam tahsilat</small></div><div class="stat"><b id="statementBalance">₺0,00</b><small>Kalan alacak (bilinen)</small></div></div><p id="statementWarning" class="muted"></p><form id="paymentForm"><strong>Tahsilat ekle</strong><label>Tarih<input id="paymentDate" type="date" required></label><label>Tutar (TL)<input id="paymentAmount" type="number" min="0.01" max="100000000" step="0.01" required></label><label>Açıklama<input id="paymentNote" maxlength="150" placeholder="Örn. Havale"></label><button id="paymentSave" type="submit">Tahsilatı kaydet</button><p id="paymentResult" role="status"></p></form><strong>Tahsilat geçmişi</strong><div id="paymentRows" class="muted">Müşteri seçin.</div><button type="button" class="secondary" id="statementCsv">Ekstreyi CSV indir</button>
 <div id="statementRows" class="muted">Müşteri seçildiğinde işler listelenir.</div>
 </section></div></details></div>
 </main>
@@ -56,7 +56,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
-const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;
+const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
@@ -66,7 +66,7 @@ function jobDate(j){const v=j.completedAt||j.archivedAt;if(typeof v?.toMillis===
 function filteredJobs(){const customer=$("historyCustomer").value;if(!customer)return [];const dir=$("historySort").value==="asc"?1:-1;return archivedJobs.filter(j=>(j.customerName||"")===customer).sort((a,b)=>dir*(jobDate(a)-jobDate(b)))}
 function updateJobOptions(){
  const el=$("historyCustomer"),prev=el.value;
- const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName),...payments.map(p=>p.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
  el.replaceChildren(new Option("Müşteri seçin",""),...names.map(n=>new Option(n,n)));
  if(names.includes(prev))el.value=prev;
 }
@@ -95,14 +95,27 @@ function updateStatementOptions(){
 function statementJobs(){const name=$("statementCustomer").value;return name?archivedJobs.filter(j=>j.customerName===name).sort((a,b)=>jobDate(a)-jobDate(b)):[]}
 function statementAmount(j){return j.hourlyRate==null||!Number.isFinite(Number(j.hourlyRate))?null:billedAmount(j.elapsedMs,j.hourlyRate)}
 function renderStatement(){
- const jobs=statementJobs(),missing=jobs.filter(j=>statementAmount(j)===null).length;
+ const jobs=statementJobs(),missing=jobs.filter(j=>statementAmount(j)===null).length;const selected=$("statementCustomer").value;const received=payments.filter(p=>p.customerName===selected);const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0);const paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
  $("statementCount").textContent=jobs.length;
  $("statementDuration").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
  $("statementTotal").textContent=money(jobs.reduce((n,j)=>n+(statementAmount(j)??0),0));
- $("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik. Gösterilen toplam yalnızca ücretlendirilmiş işleri kapsar.":"Bu tutar çalışma bedelidir; tahsilatlar henüz düşülmemiştir.";
+ $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = kayıtlı çalışma bedeli − tahsilatlar.";
+ $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
  $("statementRows").innerHTML=$("statementCustomer").value?(jobs.length?jobs.map(j=>'<div class="card"><strong>'+safe(j.machineName||j.machineId||"Makine")+'</strong><p>'+safe((j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"Tarih bilinmiyor")+' · '+formatMs(j.elapsedMs)+'</p><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Saatlik: '+(statementAmount(j)===null?"Belirtilmemiş":money(Number(j.hourlyRate)))+' · Tutar: <strong>'+(statementAmount(j)===null?"Belirtilmemiş":money(statementAmount(j)))+'</strong></p></div>').join(""):'<p>Bu müşterinin arşivlenmiş işi yok.</p>'):'<p>Müşteri seçin.</p>';
 }
 $("statementCustomer").addEventListener("change",renderStatement);
+$("paymentDate").value=new Date().toLocaleDateString("en-CA");
+$("paymentForm").addEventListener("submit",async e=>{
+ e.preventDefault();const customerName=$("statementCustomer").value,amount=Number($("paymentAmount").value),date=$("paymentDate").value,note=$("paymentNote").value.trim(),out=$("paymentResult"),btn=$("paymentSave");
+ if(!customerName){out.textContent="Önce müşteri seçin.";return}
+ if(!Number.isFinite(amount)||amount<=0||amount>100000000||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)){out.textContent="Geçerli tarih ve tutar girin.";return}
+ if(!confirm(customerName+" için "+money(amount)+" tahsilat kaydedilsin mi?"))return;
+ btn.disabled=true;out.textContent="Kaydediliyor…";
+ try{await addDoc(collection(db,"payments"),{customerName,amount:Math.round(amount*100)/100,date,note,createdAt:serverTimestamp()});out.textContent="Tahsilat kaydedildi.";$("paymentAmount").value="";$("paymentNote").value=""}
+ catch(err){out.textContent="Tahsilat kaydedilemedi: "+(err.message||err.code)+". Firebase yetkisi kontrol edilmeli."}
+ finally{btn.disabled=false}
+});
+
 $("statementCsv").addEventListener("click",()=>{
  const jobs=statementJobs();if(!$("statementCustomer").value||!jobs.length){message("Ekstre için iş kaydı bulunan bir müşteri seçin.");return}
  const rows=[["Tarih","Makine","Operatör","Çalışma süresi","Saatlik ücret TL","Tutar TL"]];
@@ -342,6 +355,7 @@ onAuthStateChanged(auth,async user=>{
   unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
   unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
   unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
+  unsubscribePayments=onSnapshot(collection(db,"payments"),snap=>{payments=snap.docs.map(d=>({id:d.id,...d.data()}));updateStatementOptions()},err=>{$("paymentResult").textContent="Tahsilat kayıtları okunamadı: "+(err.code||err.message)+". Firebase erişim kuralları kontrol edilmeli."});
   unsubscribeOperators=onSnapshot(collection(db,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));refreshTaskLists();refreshManage()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
   ticker=setInterval(render,1000);
  }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
