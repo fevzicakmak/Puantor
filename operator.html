@@ -84,7 +84,7 @@ onAuthStateChanged(auth,async user=>{
  if(!profile.exists()||profile.data().role!=="operator"){location.replace("./giris.html");return}
  const ids=profile.data().machineIds;
  if(!Array.isArray(ids)||!ids.length){showError("Makine ataması henüz tamamlanmadı.");return}
- assignedIds=ids;const selector=$("machineSelect");selector.innerHTML="";for(const id of ids){const opt=document.createElement("option");opt.value=id;opt.textContent=id;selector.appendChild(opt)}
+ assignedIds=ids;const selector=$("machineSelect");selector.innerHTML="";for(const id of ids){const opt=document.createElement("option");opt.value=id;opt.textContent="Makine yükleniyor…";selector.appendChild(opt)}await Promise.all(ids.map(async id=>{try{const snap=await getDoc(doc(db,"machines",id));const m=snap.exists()?snap.data():null;const opt=Array.from(selector.options).find(o=>o.value===id);if(opt)opt.textContent=m?(m.machineName||m.plaka||m.plate||id):"Bulunamadı: "+id}catch(e){const opt=Array.from(selector.options).find(o=>o.value===id);if(opt)opt.textContent="Makine bilgisi okunamadı: "+id}}));
  const selected=ids.includes(sessionStorage.getItem("puantor-selected-machine"))?sessionStorage.getItem("puantor-selected-machine"):ids[0];selector.value=selected;
  function subscribeMachine(id){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=id;machineData=null;updateControls();showError("");$("machine").textContent=id;sessionStorage.setItem("puantor-selected-machine",id);unsubscribe=onSnapshot(doc(db,"machines",id),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
