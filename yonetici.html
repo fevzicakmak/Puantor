@@ -22,7 +22,7 @@ details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-ra
 <label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
 <button type="submit" id="taskSave">Görevi oluştur</button></form><p id="taskResult" role="status"></p><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
-<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><div class="grid"><label>Başlangıç tarihi<input type="date" id="filterFrom"></label><label>Bitiş tarihi<input type="date" id="filterTo"></label><label>Makine<select id="filterMachine"><option value="">Tüm makineler</option></select></label><label>Operatör<select id="filterOperator"><option value="">Tüm operatörler</option></select></label></div><button type="button" id="clearFilters" class="secondary">Filtreleri temizle</button><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
+<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Başlangıç tarihi<input type="date" id="filterFrom"></label><label>Bitiş tarihi<input type="date" id="filterTo"></label><label>Makine<select id="filterMachine"><option value="">Tüm makineler</option></select></label><label>Operatör<select id="filterOperator"><option value="">Tüm operatörler</option></select></label></div><button type="button" id="clearFilters" class="secondary">Filtreleri temizle</button><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
 <details class="toolbox"><summary><span class="tool-icon">🛠️</span>Kayıt Yönetimi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><label>Kayıt türü<select id="manageType"><option value="operator">Operatör</option><option value="customer">Müşteri</option><option value="machine">Makine</option><option value="job">İş kaydı</option></select></label><label>Kayıt<select id="manageItem"></select></label><label>Yeni ad (operatör adı / müşteri adı / makine adı)<input id="manageName"></label><p class="muted">Operatör şifresini kendisi oluşturur. Kayıt isteğini yalnızca yönetici onaylar.</p><button type="button" id="manageApprove" class="secondary">Operatör kaydını onayla</button><button type="button" id="manageRename" class="secondary">Adı güncelle</button><button type="button" id="manageDelete" style="background:#991b1b">Kaydı sil</button><p id="manageResult" role="status"></p></div></div></details><details class="toolbox"><summary><span class="tool-icon">📡</span>Makine durumları<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div></div></details></div>
 </main>
 <script>
@@ -66,6 +66,32 @@ $("backupAll").addEventListener("click",()=>{
   message("JSON yedek hazırlandı. İndirilenler bölümünü kontrol edin; bu dosya hesap bilgileri içerebilir, güvenli saklayın.");
  }catch(err){message("Yedek oluşturulamadı: "+(err.message||err))}
  finally{btn.disabled=false}
+});
+$("backupPreviewFile").addEventListener("change",async e=>{
+ const file=e.target.files?.[0],out=$("backupPreviewResult");
+ if(!file)return;
+ out.textContent="Yedek inceleniyor…";
+ try{
+  if(file.size>15*1024*1024)throw Error("15 MB üzerindeki dosyalar bu ekranda incelenemez.");
+  const data=JSON.parse(await file.text());
+  if(data?.format!=="puantor-manager-backup"||data?.version!==1||!data.collections||typeof data.collections!=="object")throw Error("Bu dosya Puantör v1 JSON yedeği değil.");
+  const groups=[["machines","Makineler",cached],["operators","Operatörler",operators],["customers","Müşteriler",customers],["jobs","Arşiv işleri",archivedJobs]];
+  const lines=[],warnings=[];
+  for(const [key,label,current] of groups){
+   const records=data.collections[key];
+   if(!Array.isArray(records))throw Error(label+" listesi geçersiz.");
+   const ids=new Set(),existing=new Set(current.map(x=>x.id));let newCount=0,matched=0;
+   for(const record of records){
+    if(!record||typeof record!=="object"||typeof record.id!=="string"||!record.id.trim())throw Error(label+" içinde kimliği eksik kayıt var.");
+    if(ids.has(record.id))throw Error(label+" içinde tekrarlanan kayıt kimliği var: "+record.id);
+    ids.add(record.id);if(existing.has(record.id))matched++;else newCount++;
+   }
+   lines.push(label+": "+records.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+  }
+  if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
+  out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+"\nÖN İZLEME: Hiçbir kayıt değiştirilmedi. Geri yükleme henüz etkin değil.";
+  out.style.whiteSpace="pre-line";
+ }catch(err){out.textContent="Yedek incelenemedi: "+(err.message||String(err));out.style.whiteSpace="pre-line"}
 });
 const customers=[];const operators=[];const operatorLookup=new Map();
 function refreshManage(){const type=$("manageType").value,arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const selected=$("manageItem").value;$("manageItem").replaceChildren(...arr.map(x=>new Option(type==="operator"?x.displayName+" (@"+x.username+")":type==="customer"?x.name:type==="machine"?(x.machineName||x.id):((x.machineName||"İş")+" · "+(x.operatorName||"")),x.id)));if(arr.some(x=>x.id===selected))$("manageItem").value=selected;fillManageName();}
