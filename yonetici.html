@@ -108,7 +108,7 @@ $("paymentDate").value=new Date().toLocaleDateString("en-CA");
 $("paymentForm").addEventListener("submit",async e=>{
  e.preventDefault();const customerName=$("statementCustomer").value,amount=Number($("paymentAmount").value),date=$("paymentDate").value,note=$("paymentNote").value.trim(),out=$("paymentResult"),btn=$("paymentSave");
  if(!customerName){out.textContent="Önce müşteri seçin.";return}
- if(!Number.isFinite(amount)||amount<=0||amount>100000000||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)){out.textContent="Geçerli tarih ve tutar girin.";return}
+ if(!Number.isFinite(amount)||amount<=0||amount>100000000||!/^\d{4}-\d{2}-\d{2}$/.test(date)){out.textContent="Geçerli tarih ve tutar girin.";return}
  if(!confirm(customerName+" için "+money(amount)+" tahsilat kaydedilsin mi?"))return;
  btn.disabled=true;out.textContent="Kaydediliyor…";
  try{await addDoc(collection(db,"payments"),{customerName,amount:Math.round(amount*100)/100,date,note,createdAt:serverTimestamp()});out.textContent="Tahsilat kaydedildi.";$("paymentAmount").value="";$("paymentNote").value=""}
