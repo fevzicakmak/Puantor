@@ -15,13 +15,13 @@ a{color:#1d4ed8}
 <h1>🚜 Puantör | Operatör</h1>
 <p>Makine çalışma takibi</p>
 <form id="operatorLogin" autocomplete="off">
-<label for="username">E-posta</label>
-<input id="username" name="username" type="email" required autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="E-posta adresiniz">
+<label for="username">Operatör kullanıcı adı</label>
+<input id="username" name="username" type="text" required autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="Kullanıcı adınız">
 <label for="pin">Parola</label>
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 26 · Sunucu doğrulaması</p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 27 · Canlı senkronizasyon</p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
 <div class="notice">Makine çalışma kontrolleri yalnızca yetkili operatör tarafından kullanılabilir.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
@@ -29,7 +29,7 @@ a{color:#1d4ed8}
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,getDocFromServer,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
@@ -51,17 +51,13 @@ async function changeState(action){
    const m=snap.data(),now=Timestamp.now(),start=m.startedAt?.toMillis?.()||0;
    const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
    if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady===false)throw Error("Yeni iş yönetici tarafından açılmadı.");
-   const elapsed=Math.max(0,Number(m.elapsedMs)||0)+(m.status==="running"&&start?Math.max(0,now.toMillis()-start):0);
+   const previous=Math.max(0,Number(m.elapsedMs)||0);const elapsed=previous+(m.status==="running"&&start?Math.max(0,now.toMillis()-start):0);
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
    tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp()});
   });
-  const verified=await getDocFromServer(doc(db,"machines",machineId));
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-  if(!verified.exists())throw Error("Makine kaydı bulunamadı.");
-  if(verified.data().status!==expected){$("controlInfo").textContent="Sunucu durumu: "+verified.data().status+". Canlı durum izleniyor.";machineData=verified.data();updateControls();renderTime();return;}
-  machineData=verified.data();$("controlInfo").textContent="İşlem başarılı: "+expected+". Çalışma kaydı güncellendi.";
-  if(action==="finish"){runningAnchor=0;showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");}
-  updateControls();renderTime();
+  $("controlInfo").textContent="Firebase işlemi kaydetti: "+expected+". Canlı veri bekleniyor.";
+  if(action==="finish")showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");
  }catch(e){showError("İşlem başarısız ["+(e.code||"hata")+"]: "+(e.message||"Bilinmeyen hata"))}
  finally{busy=false;updateControls()}
 }
@@ -81,13 +77,14 @@ onAuthStateChanged(auth,async user=>{
  const m=snap.data();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
+ if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
  if(m.status==="done"||m.jobReady===false)showError("Yeni çalışma için yönetici bekleniyor.");
  },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
 $("operatorLogin").addEventListener("submit",async e=>{
  e.preventDefault();showError("");const b=e.target.querySelector("button");b.disabled=true;
- try{await signInWithEmailAndPassword(auth,$("username").value.trim(),$("pin").value)}
+ try{await signInWithEmailAndPassword(auth,$("username").value.trim().toLowerCase().includes("@")?$("username").value.trim().toLowerCase():$("username").value.trim().toLowerCase()+"@operators.puantor.invalid",$("pin").value)}
  catch(err){showError("Giriş başarısız. E-posta ve parolayı kontrol edin.")}
  finally{$("pin").value="";b.disabled=false}
 });
