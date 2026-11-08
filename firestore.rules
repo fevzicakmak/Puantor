@@ -11,13 +11,35 @@ service cloud.firestore {
   }
   match /users/{uid} {
    allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-   allow create, update, delete: if isAdmin();
+   allow create: if isAdmin() || (
+     signedIn() && request.auth.token.email == request.resource.data.username + "@operators.puantor.invalid" &&
+     request.resource.data.keys().hasOnly(["role","username","email","machineIds","createdAt"]) &&
+     request.resource.data.role == "pending" &&
+     request.resource.data.email == request.auth.token.email &&
+     request.resource.data.machineIds == [] &&
+     request.resource.data.createdAt == request.time &&
+     request.auth.uid == uid &&
+     getAfter(/databases/$(database)/documents/operators/$(request.resource.data.username)).data.pendingUid == uid
+   );
+   allow update, delete: if isAdmin();
   }
   match /customers/{customerId} {
    allow read, write: if isAdmin();
   }
   match /operators/{operatorId} {
-   allow read, write: if isAdmin();
+   allow read: if isAdmin();
+   allow create, delete: if isAdmin();
+   allow update: if isAdmin() || (
+     signedIn() &&
+     request.auth.token.email == operatorId + "@operators.puantor.invalid" &&
+     resource.data.authStatus == "pending" &&
+     !("pendingUid" in resource.data) &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(["pendingUid","updatedAt"]) &&
+     request.resource.data.pendingUid == request.auth.uid &&
+     request.resource.data.updatedAt == request.time &&
+     getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "pending" &&
+     getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == operatorId
+   );
   }
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
