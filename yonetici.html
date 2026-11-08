@@ -22,7 +22,7 @@ details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-ra
 <label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
 <button type="submit" id="taskSave">Görevi oluştur</button></form><p id="taskResult" role="status"></p><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
-<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Başlangıç tarihi<input type="date" id="filterFrom"></label><label>Bitiş tarihi<input type="date" id="filterTo"></label><label>Makine<select id="filterMachine"><option value="">Tüm makineler</option></select></label><label>Operatör<select id="filterOperator"><option value="">Tüm operatörler</option></select></label></div><button type="button" id="clearFilters" class="secondary">Filtreleri temizle</button><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
+<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><button type="button" id="restoreArchives" class="secondary" disabled>Eksik arşiv kayıtlarını geri yükle</button><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Başlangıç tarihi<input type="date" id="filterFrom"></label><label>Bitiş tarihi<input type="date" id="filterTo"></label><label>Makine<select id="filterMachine"><option value="">Tüm makineler</option></select></label><label>Operatör<select id="filterOperator"><option value="">Tüm operatörler</option></select></label></div><button type="button" id="clearFilters" class="secondary">Filtreleri temizle</button><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
 <details class="toolbox"><summary><span class="tool-icon">🛠️</span>Kayıt Yönetimi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><label>Kayıt türü<select id="manageType"><option value="operator">Operatör</option><option value="customer">Müşteri</option><option value="machine">Makine</option><option value="job">İş kaydı</option></select></label><label>Kayıt<select id="manageItem"></select></label><label>Yeni ad (operatör adı / müşteri adı / makine adı)<input id="manageName"></label><p class="muted">Operatör şifresini kendisi oluşturur. Kayıt isteğini yalnızca yönetici onaylar.</p><button type="button" id="manageApprove" class="secondary">Operatör kaydını onayla</button><button type="button" id="manageRename" class="secondary">Adı güncelle</button><button type="button" id="manageDelete" style="background:#991b1b">Kaydı sil</button><p id="manageResult" role="status"></p></div></div></details><details class="toolbox"><summary><span class="tool-icon">📡</span>Makine durumları<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div></div></details></div>
 </main>
 <script>
@@ -35,9 +35,9 @@ setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("sta
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,runTransaction,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
-const $=id=>document.getElementById(id);let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;
+const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
@@ -68,7 +68,7 @@ $("backupAll").addEventListener("click",()=>{
  finally{btn.disabled=false}
 });
 $("backupPreviewFile").addEventListener("change",async e=>{
- const file=e.target.files?.[0],out=$("backupPreviewResult");
+ const file=e.target.files?.[0],out=$("backupPreviewResult");validatedArchiveBackup=null;$("restoreArchives").disabled=true;
  if(!file)return;
  out.textContent="Yedek inceleniyor…";
  try{
@@ -90,8 +90,42 @@ $("backupPreviewFile").addEventListener("change",async e=>{
   }
   if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
   out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+"\nÖN İZLEME: Hiçbir kayıt değiştirilmedi. Geri yükleme henüz etkin değil.";
+  validatedArchiveBackup=data.collections.jobs;$("restoreArchives").disabled=!validatedArchiveBackup.some(j=>!archivedJobs.some(x=>x.id===j.id));
   out.style.whiteSpace="pre-line";
  }catch(err){out.textContent="Yedek incelenemedi: "+(err.message||String(err));out.style.whiteSpace="pre-line"}
+});
+function restoreTimestamp(v){
+ if(v&&typeof v==="object"&&!Array.isArray(v)){
+  if(typeof v.__timestamp==="string"){const ms=Date.parse(v.__timestamp);if(!Number.isFinite(ms))throw Error("Geçersiz zaman damgası.");return Timestamp.fromMillis(ms)}
+  if(typeof v.seconds==="number"&&typeof v.nanoseconds==="number"&&Object.keys(v).every(k=>["seconds","nanoseconds"].includes(k)))return new Timestamp(v.seconds,v.nanoseconds);
+  return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,restoreTimestamp(x)]));
+ }
+ if(Array.isArray(v))return v.map(restoreTimestamp);
+ return v;
+}
+$("restoreArchives").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restoreArchives"),records=validatedArchiveBackup;
+ if(!records)return;
+ const missing=records.filter(j=>!archivedJobs.some(x=>x.id===j.id));
+ if(!missing.length){out.textContent="Eksik arşiv kaydı bulunmuyor.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 arşiv kaydı yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik arşiv kaydını eklemek istiyor musunuz? Mevcut kayıtların üzerine yazılmayacak. Makine, operatör ve müşteri kayıtları değişmeyecek."))return;
+ btn.disabled=true;out.textContent="Arşiv kayıtları kontrol edilip ekleniyor…";
+ try{
+  const refs=missing.map(j=>doc(db,"jobs",j.id));
+  let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(raw.status!=="done"||!Number.isFinite(Number(raw.elapsedMs))||Number(raw.elapsedMs)<0)throw Error("Tamamlanmamış veya geçersiz iş kaydı geri yüklenemez.");
+    tx.set(refs[i],restoreTimestamp(raw));added++;
+   }
+  });
+  out.textContent="Geri yükleme tamamlandı: "+added+" arşiv kaydı eklendi, "+existing+" kayıt zaten vardı. Canlı işler değiştirilmedi.";
+  validatedArchiveBackup=null;
+ }catch(err){out.textContent="Geri yükleme yapılamadı: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
 });
 const customers=[];const operators=[];const operatorLookup=new Map();
 function refreshManage(){const type=$("manageType").value,arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const selected=$("manageItem").value;$("manageItem").replaceChildren(...arr.map(x=>new Option(type==="operator"?x.displayName+" (@"+x.username+")":type==="customer"?x.name:type==="machine"?(x.machineName||x.id):((x.machineName||"İş")+" · "+(x.operatorName||"")),x.id)));if(arr.some(x=>x.id===selected))$("manageItem").value=selected;fillManageName();}
