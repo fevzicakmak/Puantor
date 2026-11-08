@@ -34,7 +34,7 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
-function showError(e){$("error").textContent=e}
+function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
 let runningAnchor=0;
 function renderTime(){if(!machineData)return;const elapsed=Number(machineData.elapsedMs)||0;const start=machineData.startedAt?.toMillis?.()||runningAnchor;const delta=machineData.status==="running"&&start?Math.max(0,Date.now()-start):0;$("machineTime").textContent=fmt(elapsed+delta)}
 setInterval(renderTime,1000);
@@ -43,7 +43,7 @@ async function changeState(action){
  if(!machineId||busy)return;let reason="";
  if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
  if(action==="finish"&&!confirm("Bu makinenin çalışmasını bitirmek istiyor musunuz?"))return;
- busy=true;updateControls();showError("");
+ busy=true;updateControls();showError("");$("controlInfo").textContent="İşlem gönderiliyor: "+action+"…";
  try{
   await runTransaction(db,async tx=>{
    const ref=doc(db,"machines",machineId),snap=await tx.get(ref);
@@ -58,13 +58,13 @@ async function changeState(action){
   const verified=await getDoc(doc(db,"machines",machineId));
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
   if(!verified.exists()||verified.data().status!==expected)throw Error("İşlem kaydı doğrulanamadı. Sayfayı yenileyip tekrar kontrol edin.");
-  machineData=verified.data();
+  machineData=verified.data();$("controlInfo").textContent="İşlem başarılı: "+expected+". Çalışma kaydı güncellendi.";
   if(action==="finish"){runningAnchor=0;showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");}
   updateControls();renderTime();
- }catch(e){showError(e.code==="permission-denied"?"Firebase yazma yetkisi henüz yayımlanmadı.":("İşlem başarısız: "+(e.message||e.code)))}
+ }catch(e){showError("İşlem başarısız ["+(e.code||"hata")+"]: "+(e.message||"Bilinmeyen hata"))}
  finally{busy=false;updateControls()}
 }
-for(const id of controls)$(id).addEventListener("click",()=>changeState(id));
+for(const id of controls)$(id).addEventListener("click",()=>{ $("controlInfo").textContent="Butona basıldı: "+id;changeState(id) });
 onAuthStateChanged(auth,async user=>{
  if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();
  $("operatorLogin").hidden=!!user;$("session").hidden=!user;
@@ -80,7 +80,7 @@ onAuthStateChanged(auth,async user=>{
  const m=snap.data();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
- showError(m.status==="done"||m.jobReady===false?"Yeni çalışma için yönetici bekleniyor.":"");
+ if(m.status==="done"||m.jobReady===false)showError("Yeni çalışma için yönetici bekleniyor.");
  },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
