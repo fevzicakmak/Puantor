@@ -405,8 +405,8 @@ $("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
  if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="operator")throw Error("Makine veya operatör yetkisi bulunamadı.");
  const m=ms.data();if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
  tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username,operatorName:operator.displayName,customerName:customer.name,hourlyRate:Number($("taskRate").value),jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
- tx.update(userRef,{machineIds:[machine.id],updatedAt:serverTimestamp()});
- tx.update(opRef,{machineIds:[machine.id],updatedAt:serverTimestamp()});
+ tx.update(userRef,{machineIds:[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
+ tx.update(opRef,{machineIds:[...new Set([...(Array.isArray(os.data().machineIds)?os.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
  });out.textContent="Görev oluşturuldu. Operatör artık bu görevi başlatabilir.";$("taskForm").reset();
  }catch(err){out.textContent="Görev oluşturulamadı: "+(err.message||err.code)}finally{b.disabled=false}});
 function refreshSuggestions(){
