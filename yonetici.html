@@ -54,7 +54,7 @@ setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("sta
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
 const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
 function message(t){$("status").textContent=t}
@@ -100,9 +100,22 @@ function renderStatement(){
  $("statementDuration").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
  $("statementTotal").textContent=money(jobs.reduce((n,j)=>n+(statementAmount(j)??0),0));
  $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = kayıtlı çalışma bedeli − tahsilatlar.";
- $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
+ $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p><div class="grid"><button type="button" class="secondary" data-pay-edit="'+safe(p.id)+'">Düzenle</button><button type="button" class="secondary" data-pay-delete="'+safe(p.id)+'">Sil</button></div></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
  $("statementRows").innerHTML=$("statementCustomer").value?(jobs.length?jobs.map(j=>'<div class="card"><strong>'+safe(j.machineName||j.machineId||"Makine")+'</strong><p>'+safe((j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"Tarih bilinmiyor")+' · '+formatMs(j.elapsedMs)+'</p><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Saatlik: '+(statementAmount(j)===null?"Belirtilmemiş":money(Number(j.hourlyRate)))+' · Tutar: <strong>'+(statementAmount(j)===null?"Belirtilmemiş":money(statementAmount(j)))+'</strong></p></div>').join(""):'<p>Bu müşterinin arşivlenmiş işi yok.</p>'):'<p>Müşteri seçin.</p>';
 }
+$("paymentRows").addEventListener("click",async e=>{
+ const edit=e.target.closest("[data-pay-edit]"),del=e.target.closest("[data-pay-delete]");if(!edit&&!del)return;
+ const id=(edit||del).dataset[edit?"payEdit":"payDelete"],p=payments.find(x=>x.id===id);if(!p)return;
+ if(del){if(!confirm(p.customerName+" müşterisinin "+money(p.amount)+" tahsilatını kalıcı olarak silmek istiyor musunuz?"))return;
+  try{await deleteDoc(doc(db,"payments",id));$("paymentResult").textContent="Tahsilat silindi."}catch(err){$("paymentResult").textContent="Silinemedi: "+(err.message||err.code)}}else{
+ const date=prompt("Tahsilat tarihi (YYYY-AA-GG)",p.date);if(date===null)return;
+ const amountRaw=prompt("Tahsilat tutarı (TL)",String(p.amount));if(amountRaw===null)return;
+ const amount=Number(amountRaw.replace(",","."));const note=prompt("Açıklama",p.note||"");if(note===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(amount)||amount<=0||amount>100000000||note.length>150){$("paymentResult").textContent="Tarih, tutar veya açıklama geçersiz.";return}
+ if(!confirm("Tahsilat "+money(amount)+" olarak güncellensin mi?"))return;
+ try{await updateDoc(doc(db,"payments",id),{date,amount:Math.round(amount*100)/100,note});$("paymentResult").textContent="Tahsilat güncellendi."}catch(err){$("paymentResult").textContent="Düzenlenemedi: "+(err.message||err.code)}
+ }
+});
 $("statementCustomer").addEventListener("change",renderStatement);
 $("paymentDate").value=new Date().toLocaleDateString("en-CA");
 $("paymentForm").addEventListener("submit",async e=>{
@@ -117,9 +130,14 @@ $("paymentForm").addEventListener("submit",async e=>{
 });
 
 $("statementCsv").addEventListener("click",()=>{
- const jobs=statementJobs();if(!$("statementCustomer").value||!jobs.length){message("Ekstre için iş kaydı bulunan bir müşteri seçin.");return}
- const rows=[["Tarih","Makine","Operatör","Çalışma süresi","Saatlik ücret TL","Tutar TL"]];
- for(const j of jobs){const date=(j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"";rows.push([date,j.machineName||j.machineId||"",j.operatorName||"",formatMs(j.elapsedMs),statementAmount(j)===null?"":Number(j.hourlyRate).toFixed(2),statementAmount(j)===null?"":statementAmount(j).toFixed(2)])}
+ const customer=$("statementCustomer").value;if(!customer){message("Ekstre için müşteri seçin.");return}
+ const jobs=statementJobs(),received=payments.filter(p=>p.customerName===customer);
+ const rows=[["Tarih","İşlem","Makine / Açıklama","Operatör","Süre","Saatlik ücret TL","Borç TL","Tahsilat TL"]];
+ for(const j of jobs){const date=(j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"";rows.push([date,"Çalışma",j.machineName||j.machineId||"",j.operatorName||"",formatMs(j.elapsedMs),statementAmount(j)===null?"":Number(j.hourlyRate).toFixed(2),statementAmount(j)===null?"":statementAmount(j).toFixed(2),""])}
+ for(const p of received)rows.push([p.date,"Tahsilat",p.note||"","", "","","",Number(p.amount).toFixed(2)]);
+ const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ rows.push(["","TOPLAM","","","","",total.toFixed(2),paid.toFixed(2)]);
+ rows.push(["","KALAN ALACAK","","","","",(total-paid).toFixed(2),""]);
  const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="puantor-musteri-ekstresi.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
