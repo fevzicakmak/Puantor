@@ -132,7 +132,36 @@ function refreshManage(){const type=$("manageType").value,arr=type==="operator"?
 function fillManageName(){const type=$("manageType").value,id=$("manageItem").value;const arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const item=arr.find(x=>x.id===id);$("manageName").value=item?(type==="operator"?item.displayName||"":type==="customer"?item.name||"":type==="machine"?item.machineName||item.plaka||item.id:""):"";}
 $("manageType").onchange=()=>{refreshManage();fillManageName()};
 $("manageItem").onchange=fillManageName;
-$("manageRename").onclick=async()=>{const type=$("manageType").value,id=$("manageItem").value,name=$("manageName").value.trim();if(!id||!name)return;$("manageResult").textContent="";try{if(type==="job")throw Error("İş kayıtlarının düzenlenmesi için ayrı alanlar gerekiyor.");if(type==="operator"){await updateDoc(doc(db,"operators",id),{displayName:name,updatedAt:serverTimestamp()});$("manageResult").textContent="Operatör güncellendi.";return;}await updateDoc(doc(db,type==="customer"?"customers":"machines",id),{[type==="customer"?"name":"machineName"]:name,updatedAt:serverTimestamp()});$("manageResult").textContent="Güncellendi."}catch(err){$("manageResult").textContent=err.message||err.code}};
+$("manageRename").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,name=$("manageName").value.trim(),out=$("manageResult");
+ if(!id||!name)return;out.textContent="";
+ const btn=$("manageRename");btn.disabled=true;
+ try{
+  if(type==="job")throw Error("Geçmiş iş kayıtlarının isimleri tarihsel doğruluk için değiştirilmez.");
+  const source=type==="operator"?operators:type==="customer"?customers:cached;
+  const item=source.find(x=>x.id===id);if(!item)throw Error("Kayıt bulunamadı.");
+  const oldName=type==="operator"?item.displayName:type==="customer"?item.name:item.machineName;
+  if(oldName===name){out.textContent="Ad zaten aynı.";return}
+  const ref=doc(db,type==="operator"?"operators":type==="customer"?"customers":"machines",id);
+  const linked=type==="operator"?cached.filter(m=>m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):type==="customer"?cached.filter(m=>m.customerName===oldName):[];
+  if(linked.length>100)throw Error("Bağlı makine sayısı çok yüksek. İşlem güvenli sınırı aşıyor.");
+  const refs=linked.map(m=>doc(db,"machines",m.id));
+  await runTransaction(db,async tx=>{
+   const main=await tx.get(ref);if(!main.exists())throw Error("Kayıt artık mevcut değil.");
+   const snaps=[];for(const linkedRef of refs)snaps.push(await tx.get(linkedRef));
+   const field=type==="operator"?"displayName":type==="customer"?"name":"machineName";
+   tx.update(ref,{[field]:name,updatedAt:serverTimestamp()});
+   for(let i=0;i<refs.length;i++){
+    if(!snaps[i].exists())continue;
+    const m=snaps[i].data();
+    const valid=type==="operator"?(m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):m.customerName===oldName;
+    if(valid)tx.update(refs[i],{[type==="operator"?"operatorName":"customerName"]:name,updatedAt:serverTimestamp()});
+   }
+  });
+  out.textContent="Ad güncellendi. "+linked.length+" bağlı makine kontrol edildi. Eski arşiv kayıtları korunuyor.";
+ }catch(err){out.textContent="Güncellenemedi: "+(err.message||err.code)}
+ finally{btn.disabled=false}
+};
 $("manageApprove").onclick=async()=>{const op=operators.find(x=>x.id===$("manageItem").value);if($("manageType").value!=="operator"||!op)return;const uid=op.pendingUid;if(!uid){$("manageResult").textContent="Henüz bu operatör için kayıt başvurusu yok.";return}if(!confirm(op.displayName+" için kayıt başvurusunu doğruladınız mı? Başvuru sahibinin gerçekten bu kişi olduğunu teyit edin."))return;try{await runTransaction(db,async tx=>{const oref=doc(db,"operators",op.id),uref=doc(db,"users",uid);const [os,us]=await Promise.all([tx.get(oref),tx.get(uref)]);if(!os.exists()||!us.exists()||os.data().pendingUid!==uid||us.data().role!=="pending"||us.data().username!==op.username)throw Error("Başvuru geçersiz.");tx.update(oref,{authUid:uid,authStatus:"active",updatedAt:serverTimestamp()});tx.update(uref,{role:"operator",displayName:os.data().displayName,updatedAt:serverTimestamp()})});$("manageResult").textContent="Operatör onaylandı."}catch(err){$("manageResult").textContent=err.message||err.code}};
 $("manageDelete").onclick=async()=>{
  const type=$("manageType").value,id=$("manageItem").value,out=$("manageResult");
