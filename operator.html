@@ -21,7 +21,7 @@ a{color:#1d4ed8}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 28 · Sayaç tanısı</p><p id="timerDiag" style="font-size:12px;overflow-wrap:anywhere;color:#7c2d12"></p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 29 · Saat farkı düzeltmesi</p><p id="timerDiag" style="font-size:12px;overflow-wrap:anywhere;color:#7c2d12"></p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
 <div class="notice">Makine çalışma kontrolleri yalnızca yetkili operatör tarafından kullanılabilir.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
@@ -35,15 +35,15 @@ const $=id=>document.getElementById(id);
 let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
-let runningAnchor=0, lastServerStart=0, lastSnapshotAt=0;
+let runningAnchor=0, lastServerStart=0, lastSnapshotAt=0, serverClockOffset=0, clockSynced=false;
 function renderTime(){
  if(!machineData)return;
  const elapsed=Math.max(0,Number(machineData.elapsedMs)||0);
  const start=machineData.startedAt?.toMillis?.()||runningAnchor;
- const delta=machineData.status==="running"&&start?Math.max(0,Date.now()-start):0;
+ const delta=machineData.status==="running"&&start?Math.max(0,Date.now()+serverClockOffset-start):0;
  $("machineTime").textContent=fmt(elapsed+delta);
  const diag=$("timerDiag");
- if(diag)diag.textContent="Sayaç tanısı · durum="+machineData.status+" · kayıt="+elapsed+" ms · başlangıç="+(start?new Date(start).toISOString():"YOK")+" · telefon="+new Date().toISOString()+" · fark="+Math.round((Date.now()-start)/1000)+" sn · veri="+(lastSnapshotAt?new Date(lastSnapshotAt).toLocaleTimeString("tr-TR"):"bekleniyor");
+ if(diag)diag.textContent="Sayaç tanısı · durum="+machineData.status+" · kayıt="+elapsed+" ms · başlangıç="+(start?new Date(start).toISOString():"YOK")+" · telefon="+new Date().toISOString()+" · fark="+Math.round((Date.now()-start)/1000)+" sn · düzeltme="+Math.round(serverClockOffset/1000)+" sn · veri="+(lastSnapshotAt?new Date(lastSnapshotAt).toLocaleTimeString("tr-TR"):"bekleniyor");
 }
 setInterval(renderTime,1000);
 function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&machineData.jobReady===false)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
@@ -82,7 +82,9 @@ onAuthStateChanged(auth,async user=>{
  if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
  machineId=ids[0];unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
- const m=snap.data();lastSnapshotAt=Date.now();if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
+ const m=snap.data();lastSnapshotAt=Date.now();
+ const serverUpdated=m.updatedAt?.toMillis?.();
+ if(serverUpdated && serverUpdated>Date.now()+15000){serverClockOffset=Math.max(serverClockOffset,serverUpdated-Date.now());clockSynced=true;}if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
