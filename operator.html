@@ -21,7 +21,7 @@ a{color:#1d4ed8}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 30 · Süre kaydı düzeltmesi</p><p id="timerDiag" style="font-size:12px;overflow-wrap:anywhere;color:#7c2d12"></p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><label for="machineSelect">Atanan makineyi seç</label><select id="machineSelect" style="width:100%;padding:13px;font-size:17px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"></select><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p id="buildInfo" style="font-weight:800;color:#1d4ed8">Operatör sürümü: 30 · Süre kaydı düzeltmesi</p><p id="timerDiag" style="font-size:12px;overflow-wrap:anywhere;color:#7c2d12"></p><p class="notice" id="controlInfo">Başlatınca sayaç saniye saniye ilerler. Bitirilen işler yönetici tarafından arşivlenerek yeni çalışma açılır.</p><button type="button" id="signout">Çıkış yap</button></section>
 <div class="notice">Makine çalışma kontrolleri yalnızca yetkili operatör tarafından kullanılabilir.</div>
 <p><a href="./index.html">Mevcut Puantör V19 uygulamasına git</a></p>
 </main>
@@ -32,7 +32,7 @@ import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "htt
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
-let unsubscribe=null,machineId=null,machineData=null,busy=false;const controls=["start","pause","fault","finish"];
+let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[];const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
 let runningAnchor=0, lastServerStart=0, lastSnapshotAt=0, serverClockOffset=0, clockSynced=false;
@@ -83,17 +83,20 @@ onAuthStateChanged(auth,async user=>{
  const profile=await getDoc(doc(db,"users",user.uid));
  if(!profile.exists()||profile.data().role!=="operator"){location.replace("./giris.html");return}
  const ids=profile.data().machineIds;
- if(!Array.isArray(ids)||ids.length!==1){showError("Makine ataması henüz tamamlanmadı.");return}
- machineId=ids[0];unsubscribe=onSnapshot(doc(db,"machines",ids[0]),snap=>{
+ if(!Array.isArray(ids)||!ids.length){showError("Makine ataması henüz tamamlanmadı.");return}
+ assignedIds=ids;const selector=$("machineSelect");selector.innerHTML="";for(const id of ids){const opt=document.createElement("option");opt.value=id;opt.textContent=id;selector.appendChild(opt)}
+ const selected=ids.includes(sessionStorage.getItem("puantor-selected-machine"))?sessionStorage.getItem("puantor-selected-machine"):ids[0];selector.value=selected;
+ function subscribeMachine(id){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=id;machineData=null;updateControls();showError("");$("machine").textContent=id;sessionStorage.setItem("puantor-selected-machine",id);unsubscribe=onSnapshot(doc(db,"machines",id),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
  const m=snap.data();lastSnapshotAt=Date.now();
  const serverUpdated=m.updatedAt?.toMillis?.();
- if(serverUpdated && serverUpdated>Date.now()+15000){serverClockOffset=Math.max(serverClockOffset,serverUpdated-Date.now());clockSynced=true;}if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||ids[0];
+ if(serverUpdated && serverUpdated>Date.now()+15000){serverClockOffset=Math.max(serverClockOffset,serverUpdated-Date.now());clockSynced=true;}if(m.status==="running"){runningAnchor=m.startedAt?.toMillis?.()||runningAnchor||Date.now()}else{runningAnchor=0}machineData=m;updateControls();$("machine").textContent=m.machineName||m.plaka||id;
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
  if(m.status==="done"||m.jobReady===false)showError("Yeni çalışma için yönetici bekleniyor.");
- },()=>showError("Makine verilerine erişim izni henüz verilmedi."));
+ },()=>showError("Seçilen makineye erişim izni yok. Yönetici makine atamasını kontrol etmeli."));}
+ selector.onchange=()=>subscribeMachine(selector.value);subscribeMachine(selected);
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
 });
 $("operatorLogin").addEventListener("submit",async e=>{
