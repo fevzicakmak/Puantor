@@ -666,6 +666,10 @@ $("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
  if(!machine||!operator||!customer)throw Error("Lütfen listeden kayıtlı makine, operatör ve müşteri seçin.");if(!operator.authUid||operator.authStatus!=="active")throw Error("Operatör henüz yönetici tarafından onaylanmadı.");
  await runTransaction(db,async tx=>{const machineRef=doc(db,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"operators",operator.id);
  const [ms,us,os]=await Promise.all([tx.get(machineRef),tx.get(userRef),tx.get(opRef)]);
+ const linkedIds=[...new Set([...(Array.isArray(us.data()?.machineIds)?us.data().machineIds:[]),...cached.filter(x=>x.operatorUid===operator.authUid).map(x=>x.id)])].filter(id=>id!==machine.id);
+ const linkedSnapshots=await Promise.all(linkedIds.map(id=>tx.get(doc(db,"machines",id))));
+ for(const other of linkedSnapshots){if(!other.exists())continue;const om=other.data();if(om.operatorUid===operator.authUid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Operatörün arşivlenmemiş başka bir işi var ("+(om.machineName||other.id)+"). Önce işi bitirip yönetici onayıyla arşivleyin.");}
+
  if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="operator")throw Error("Makine veya operatör yetkisi bulunamadı.");
  const m=ms.data();if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
  tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username,operatorName:operator.displayName,customerName:customer.name,hourlyRate:Number($("taskRate").value),jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
