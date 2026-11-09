@@ -82,7 +82,59 @@ window.addEventListener("DOMContentLoaded",()=>{
  target.classList.add("search-blink");target.scrollIntoView({behavior:"smooth",block:"center"});hint.textContent="Adım "+(idx+1)+"/"+steps.length+": "+(target.closest("label")?.textContent.trim()||target.textContent.trim()||"Vurgulanan alan").slice(0,110);}
  const advance=()=>{idx++;showStep()};
  function select(item){input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
- function score(item,q){const name=norm(item[0]),terms=norm(item.slice(2).join(" ")),words=q.split(" ").filter(Boolean);let points=0;for(const w of words){if(name.startsWith(w))points+=10;else if(name.includes(w))points+=6;else if(terms.split(" ").some(x=>x.startsWith(w)))points+=4;else if(terms.includes(w))points+=2;else return 0;}return points;}
+ const synonyms=[
+ ["operatör","operator","personel","eleman","adam","usta","şoför","sofor","sürücü","surucu","çalışan","calisan","işçi","isci"],
+ ["makine","kepçe","kepce","araç","arac","ekskavatör","ekskavator","iş makinesi","kamyon","plaka","ekipman"],
+ ["müşteri","musteri","cari","firma","şirket","sirket","işveren","isveren"],
+ ["görev","gorev","atama","görevlendir","gorevlendir","iş ver","is ver","gönder","gonder","yolla","çalıştır","calistir","iş başlat","is baslat"],
+ ["ekle","kaydet","oluştur","olustur","tanımla","tanimla","yeni","aç","ac","kayıt aç","kayit ac"],
+ ["tahsilat","ödeme al","odeme al","para al","para geldi","ödemiş","odemis","ödedi","odedi","tahsil","para yatırdı","para yatirdi"],
+ ["borç","borc","alacak","bakiye","hesap","ne kadar borçlu","ne kadar borclu","ödemedi","odemedi"],
+ ["canlı","canli","şu an","su an","nerede","kim çalışıyor","kim calisiyor","çalışıyor","calisiyor","aktif","durum","takip","sahada"],
+ ["bitirilen","tamamlanan","biten","geçmiş","gecmis","eski","önceki","yapılan işler","yapilan isler"],
+ ["arşiv","arsiv","arşivle","arsivle","kapat","tamamla","işi kaldır","isi kaldir"],
+ ["finans","gelir","ciro","kazanç","kazanc","toplam","özet","ozet","ne kazandık","ne kazandik"],
+ ["yedek","yedekle","dışa aktar","disa aktar","indir","kaydet","backup"],
+ ["rapor","çıktı","cikti","pdf","belge","doküman","dokuman"],
+ ["excel","csv","tablo","liste"]
+ ].map(group=>group.map(norm));
+ const stop=new Set(["bir","bu","şu","su","ben","bana","biz","bizim","istiyorum","isterim","lütfen","lutfen","nasıl","nasil","nereden","nerde","nerede","göster","goster","bak","bakalım","bakalim","için","icin","ile","ve","de","da","ki","mı","mi","mu","mü","yap","yapmak","yapacağım","yapacagim","istediğim","istedigim","var","mıydı","miydi"]);
+ const intentTerms=[
+ "operatör ekle personel eleman adam usta çalışan yeni kayıt",
+ "makine ekle kepçe araç plaka ekskavatör yeni kayıt",
+ "müşteri ekle firma cari şirket yeni kayıt",
+ "görev ata operatör makine kepçe iş ver görevlendir gönder çalıştır",
+ "bitirilen işler tamamlanan geçmiş yapılan işler liste",
+ "yedek indir json dışa aktar kayıt",
+ "operatör hesapları şifre parola kullanıcı sil düzenle değiştir",
+ "canlı makine durumları kim nerede çalışıyor aktif arıza duraklat takip sahada",
+ "bitirilen işi arşivle makine hazırla arşiv kapat",
+ "müşteri ekstresi borç alacak bakiye cari hesap kim ne kadar borçlu",
+ "tahsilat kaydet ödeme al para geldi ödedi tahsil",
+ "müşteri ekstresi pdf rapor indir çıktı",
+ "müşteri ekstresi excel csv tablo indir",
+ "finans özeti gelir ciro kazanç toplam para"
+ ].map(norm);
+ function expand(word){const w=norm(word);const found=new Set([w]);for(const group of synonyms){if(group.some(t=>t.split(" ").some(p=>p===w||p.startsWith(w)&&w.length>=3||w.startsWith(p)&&p.length>=4))){for(const t of group)for(const part of t.split(" "))found.add(part)}}return [...found]}
+ function score(item,q){const index=items.indexOf(item),name=norm(item[0]),terms=norm(item.slice(2).join(" ")+" "+intentTerms[index]);const words=q.split(" ").filter(w=>w&&!stop.has(w));if(!words.length)return 0;
+ let total=0,matched=0;
+ for(const w of words){const candidates=expand(w);let best=0;for(const term of candidates){if(name.split(" ").some(p=>p===term))best=Math.max(best,12);else if(name.split(" ").some(p=>p.startsWith(term)&&term.length>=2))best=Math.max(best,9);else if(terms.split(" ").some(p=>p===term))best=Math.max(best,7);else if(terms.split(" ").some(p=>p.startsWith(term)&&term.length>=2))best=Math.max(best,5);else if(term.length>=4&&terms.includes(term))best=Math.max(best,3)}if(best){matched++;total+=best}else if(w.length>3){total-=2}}
+ if(!matched)return 0;
+ total+=Math.round(12*matched/words.length);
+ if(name.includes(q))total+=15;
+ // A clear action verb is stronger than a shared noun such as "kepçe".
+ const isAssign=/\b(ata|atama|ver|gonder|gorevlendir|yolla|calistir)\b/.test(q);
+ const isAdd=/\b(ekle|yeni|olustur|tanimla|kaydet)\b/.test(q);
+ const isPayment=/\b(tahsil|odedi|odemis|aldi|geldi|yatirdi)\b/.test(q);
+ const isLive=/\b(nerede|calisiyor|aktif|durum|sahada)\b/.test(q);
+ const isDebt=/\b(borc|borclu|alacak|bakiye)\b/.test(q);
+ if(isAssign)total+=index===3?28:-8;
+ if(isAdd&&index<=2)total+=18;
+ if(isPayment)total+=index===10?30:-5;
+ if(isLive)total+=index===7?25:-5;
+ if(isDebt)total+=index===9?25:index===13?6:-5;
+ return Math.max(0,total);
+ }
  function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const ranked=items.map((item,i)=>({item,i,score:score(item,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,8);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
  input.addEventListener("input",update);input.addEventListener("focus",update);
  document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
