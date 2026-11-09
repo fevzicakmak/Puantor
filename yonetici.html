@@ -14,7 +14,7 @@ html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
 <section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
-<main id="dashboard" class="hidden"><section class="search-assist" aria-label="İşlem arama"><strong>🔎 Ne yapmak istiyorsunuz?</strong><input id="actionSearch" type="search" autocomplete="off" placeholder="Örn. kepçe ekle, görev ver, tahsilat..." aria-label="İşlem ara" aria-autocomplete="list" aria-controls="actionResults"><div id="actionResults" class="search-results" role="listbox" hidden></div><p id="actionHint" class="search-step" role="status">İşlem aramak için yazmaya başlayın.</p><button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button></section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
+<main id="dashboard" class="hidden"><section class="search-assist" aria-label="İşlem arama"><strong>🔎 Ne yapmak istiyorsunuz?</strong><input id="actionSearch" type="search" autocomplete="off" placeholder="Örn. kepçe ekle, görev ver, tahsilat..." aria-label="İşlem ara" aria-autocomplete="list" aria-controls="actionResults"><button type="button" id="actionMic" class="secondary" style="width:auto;margin-top:7px">🎤 Sesle ara</button><div id="actionResults" class="search-results" role="listbox" hidden></div><p id="actionHint" class="search-step" role="status">İşlem aramak için yazmaya başlayın.</p><button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button></section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
 <nav id="managerToolbar" class="manager-toolbar" aria-label="Yönetici araçları"><button type="button" data-panel="0">➕<span>Ekle</span><small class="toolbar-hint">(Operatör, makine, müşteri)</small></button><button type="button" data-panel="1">📌<span>Operatöre Görev Ata</span><small class="toolbar-hint">(Operatör görevlendir)</small></button><button type="button" data-panel="2">📋<span>Bitirilen İşler</span><small class="toolbar-hint">(Tamamlanan işler, yedek)</small></button><button type="button" data-panel="3">👷‍♂️👷‍♂️<span>Operatör Hesapları</span><small class="toolbar-hint">(Operatör kayıt, düzenle, sil)</small></button><button type="button" data-panel="4">🚜<span>Bitirilen İşi Arşivle</span><small class="toolbar-hint">(Canlı çalışma takibi)</small></button><button type="button" data-panel="5">🧾<span>Müşteri Ekstresi</span><small class="toolbar-hint">(İşler, tahsilat, bakiye)</small></button><button type="button" data-panel="6">📊<span>Finans Özeti</span><small class="toolbar-hint">(Gelir, alacak, toplam)</small></button></nav><div class="toolbox-grid" id="managerPanels">
 <details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
 <label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
@@ -57,7 +57,7 @@ setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("sta
 
 <script>
 window.addEventListener("DOMContentLoaded",()=>{
- const el=id=>document.getElementById(id),input=el("actionSearch"),results=el("actionResults"),hint=el("actionHint"),cancel=el("actionCancel");
+ const el=id=>document.getElementById(id),input=el("actionSearch"),results=el("actionResults"),hint=el("actionHint"),cancel=el("actionCancel"),mic=el("actionMic");
  const items=[
  ["Yeni operatör ekle",0,"addType","operator","opUsername","opName","opSave","personel çalışan kayıt oluştur"],
  ["Yeni makine / kepçe ekle",0,"addType","machine","newMachine","addMachine","araç iş makinesi plaka ekskavatör"],
@@ -75,6 +75,13 @@ window.addEventListener("DOMContentLoaded",()=>{
  ["Finans özetini görüntüle",6,"financeGross","gelir toplam ciro alacak bakiye kazanç"]
  ];
  const norm=t=>String(t||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+
+ const preferenceKey="puantor-search-learning-v1";
+ let preferences={};
+ try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||"{}")||{}}catch{}
+ function category(item){return item[1]+":"+norm(item[0]).replace(/^(musteri|operator|makine) [^ ]+ /,"").slice(-28)}
+ function bonus(item,q){const key=category(item);let n=Number(preferences[q+"|"+key])||0;for(const word of q.split(" ").filter(w=>w.length>2))n+=Math.min(3,Number(preferences[word+"|"+key])||0);return Math.min(25,Math.round(Math.log2(n+1)*8))}
+ function learn(item,q){const key=category(item);for(const term of [q,...q.split(" ").filter(w=>w.length>2)]){const k=term+"|"+key;preferences[k]=Math.min(30,(Number(preferences[k])||0)+1)}preferences=Object.fromEntries(Object.entries(preferences).sort((a,b)=>b[1]-a[1]).slice(0,250));try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}}
  let selectedRecord=null;
  function dynamicItems(){const data=window.__puantorSearchData||{customers:[],operators:[],machines:[]};const out=[];
  for(const c of data.customers||[]){const name=String(c.name||"").trim();if(!name)continue;const x=["Müşteri: "+name+" — Ekstre",5,"statementCustomer","müşteri firma cari borç alacak bakiye "+name];x.record={id:"statementCustomer",value:name};out.push(x);const y=["Müşteri: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","müşteriye iş ver görev ata "+name];y.record={id:"taskCustomer",value:name};out.push(y)}
@@ -89,7 +96,7 @@ window.addEventListener("DOMContentLoaded",()=>{
  const target=document.getElementById(steps[idx]);if(!target){idx++;showStep();return}
  target.classList.add("search-blink");target.scrollIntoView({behavior:"smooth",block:"center"});hint.textContent="Adım "+(idx+1)+"/"+steps.length+": "+(target.closest("label")?.textContent.trim()||target.textContent.trim()||"Vurgulanan alan").slice(0,110);}
  const advance=()=>{idx++;if(idx===1)queueMicrotask(applyRecord);showStep()};
- function select(item){selectedRecord=item.record||null;input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
+ function select(item){learn(item,norm(input.value));selectedRecord=item.record||null;input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
  const synonyms=[
  ["operatör","operator","personel","eleman","adam","usta","şoför","sofor","sürücü","surucu","çalışan","calisan","işçi","isci"],
  ["makine","kepçe","kepce","araç","arac","ekskavatör","ekskavator","iş makinesi","kamyon","plaka","ekipman"],
@@ -143,7 +150,17 @@ window.addEventListener("DOMContentLoaded",()=>{
  if(isDebt)total+=index===9?25:index===13?6:-5;
  return Math.max(0,total);
  }
- function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+ function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)>0?score(item,q)+bonus(item,q):0})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+
+ const SpeechRecognitionClass=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(SpeechRecognitionClass){
+ const recognition=new SpeechRecognitionClass();recognition.lang="tr-TR";recognition.interimResults=false;let listening=false;
+ mic.addEventListener("click",()=>{if(listening){recognition.stop();return}try{recognition.start()}catch(e){hint.textContent="Mikrofon başlatılamadı."}});
+ recognition.onstart=()=>{listening=true;mic.textContent="⏹️ Dinlemeyi durdur";hint.textContent="Dinliyorum…"};
+ recognition.onresult=e=>{const spoken=e.results[0][0].transcript;if(spoken){input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir işlem seçin."}};
+ recognition.onerror=e=>{hint.textContent=e.error==="not-allowed"?"Mikrofon izni verilmedi.":"Ses tanınamadı: "+e.error};
+ recognition.onend=()=>{listening=false;mic.textContent="🎤 Sesle ara"};
+ }else{mic.disabled=true;mic.textContent="🎤 Ses tanıma desteklenmiyor"}
  window.addEventListener("puantor-search-data",()=>{if(document.activeElement===input)update()});
  input.addEventListener("input",update);input.addEventListener("focus",update);
  document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
