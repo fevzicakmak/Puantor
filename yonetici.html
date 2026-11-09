@@ -61,7 +61,7 @@ input,select,textarea{font-size:16px!important}
  </div>
  <div id="actionResults" class="search-results" role="listbox" hidden></div>
  <div id="voiceTaskReview" class="voice-task-review" hidden><strong>Görev taslağı</strong><p id="voiceTaskSummary"></p><button type="button" id="voiceTaskPrepare">Görev formunu doldur</button><button type="button" id="voiceTaskDismiss" class="secondary">Vazgeç</button></div>
- <details id="microaiPanel" class="timeline-details" style="margin-top:10px"><summary>🧠 MikroAI Core · Canlı sorgu ve rapor</summary><div style="padding-top:10px"><label for="microaiQuestion">Makine, çalışma süresi veya rapor sorusu</label><input id="microaiQuestion" type="text" placeholder="Örn: Çalışma süresi raporu" autocomplete="off"><button type="button" id="microaiAsk">Sor / Sorgula</button><label style="font-size:13px"><input id="microaiSpeak" type="checkbox" style="width:auto;min-width:0;margin-right:7px" checked>Yanıtı sesli oku</label><pre id="microaiAnswer" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px"></pre><small>Yalnızca yetkili Firebase kayıtları okunur. Bu bölüm görevleri değiştirmez.</small></div></details>
+ 
  <p id="actionHint" class="search-step" role="status">İşlem, müşteri, operatör veya makine arayın.</p>
  <button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button>
  </section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
@@ -224,7 +224,7 @@ window.addEventListener("DOMContentLoaded",()=>{
  function resetMic(){listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"}
  mic.addEventListener("click",()=>{if(listening){recognition.stop();return}received=false;hadError=false;try{recognition.start()}catch(e){resetMic();hint.textContent="Ses tanıma başlatılamadı. "+dictationHelp;input.focus()}});
  recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum… Konuşun."};
- recognition.onresult=e=>{let spoken="",final=false;for(let i=0;i<e.results.length;i++){spoken+=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)final=true}spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+(final?". İşleniyor…":"");if(final)window.dispatchEvent(new CustomEvent("puantor-unified-question",{detail:{text:spoken,source:"voice"}}))}};
+ recognition.onresult=e=>{let spoken="";for(let i=0;i<e.results.length;i++)spoken+=e.results[i][0]?.transcript||"";spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir öneri seçin."}};
  recognition.onerror=e=>{hadError=true;const errors={"not-allowed":"Mikrofon izni reddedildi. Safari site ayarlarından mikrofon izni verin.","service-not-allowed":"Bu tarayıcı konuşma tanıma servisine izin vermiyor.","audio-capture":"Mikrofona erişilemiyor. Mikrofon izinlerini kontrol edin.","network":"Konuşma tanıma servisine bağlanılamadı.","no-speech":"Konuşma algılanamadı. Tekrar deneyin.","language-not-supported":"Türkçe konuşma tanıma bu tarayıcıda desteklenmiyor."};hint.textContent=(errors[e.error]||"Ses tanıma hatası: "+e.error)+ " "+dictationHelp};
  recognition.onend=()=>{resetMic();if(!received&&!hadError)hint.textContent="Konuşma algılanmadı. "+dictationHelp};
  }else{mic.addEventListener("click",()=>{input.focus();hint.textContent="Bu tarayıcı doğrudan ses tanımayı desteklemiyor. "+dictationHelp});mic.title="Klavye diktesiyle ara"}
@@ -248,7 +248,7 @@ function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=
  learningUnsub=onSnapshot(ref,snap=>{if(snap.exists())window.dispatchEvent(new CustomEvent("puantor-learning-remote",{detail:snap.data().preferences||{}}));window.dispatchEvent(new Event("puantor-learning-ready"))},()=>window.dispatchEvent(new Event("puantor-learning-disabled")));
 }
 const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
-function publishSearchData(){window.__puantorCoreSnapshot={machines:cached.map(m=>({...m})),jobs:archivedJobs.map(j=>({...j})),userUid:window.__puantorCoreUid||null};window.dispatchEvent(new Event("puantor-core-data"));window.__puantorSearchData={customers:customers.map(c=>({name:c.name})),operators:operators.map(o=>({displayName:o.displayName,username:o.username})),machines:cached.map(m=>({id:m.id,machineName:m.machineName,plaka:m.plaka,plate:m.plate}))};window.dispatchEvent(new Event("puantor-search-data"))}
+function publishSearchData(){window.__puantorSearchData={customers:customers.map(c=>({name:c.name})),operators:operators.map(o=>({displayName:o.displayName,username:o.username})),machines:cached.map(m=>({id:m.id,machineName:m.machineName,plaka:m.plaka,plate:m.plate}))};window.dispatchEvent(new Event("puantor-search-data"))}
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
@@ -644,7 +644,7 @@ $("machines").addEventListener("click",async e=>{const b=e.target.closest("butto
 $("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editForm").reset()};
 $("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");await updateDoc(doc(db,"machines",id),{machineName:$("editMachine").value.trim(),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
 $("logout").onclick=()=>signOut(auth);
-onAuthStateChanged(auth,async user=>{window.__puantorCoreUid=user?.uid||null;window.__puantorCoreRole=null;
+onAuthStateChanged(auth,async user=>{
  if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=null;window.__puantorSaveLearning=null;window.dispatchEvent(new Event("puantor-learning-disabled"));
  if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(unsubscribeCustomers){unsubscribeCustomers();unsubscribeCustomers=null}if(unsubscribeOperators){unsubscribeOperators();unsubscribeOperators=null}if(ticker){clearInterval(ticker);ticker=null}
  $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
@@ -653,10 +653,9 @@ onAuthStateChanged(auth,async user=>{window.__puantorCoreUid=user?.uid||null;win
  try{
   const profile=await getDoc(doc(db,"users",user.uid));
   if(!profile.exists()||profile.data().role!=="admin"){location.replace("./giris.html");return}
-  window.__puantorCoreRole="admin";
   $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");startLearningSync(user.uid);
   unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));publishSearchData();refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
-  unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));publishSearchData();updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
+  unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
   unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
   unsubscribePayments=onSnapshot(collection(db,"payments"),snap=>{payments=snap.docs.map(d=>({id:d.id,...d.data()}));updateStatementOptions()},err=>{$("paymentResult").textContent="Tahsilat kayıtları okunamadı: "+(err.code||err.message)+". Firebase erişim kuralları kontrol edilmeli."});
   unsubscribeOperators=onSnapshot(collection(db,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();refreshTaskLists();refreshManage()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
@@ -664,46 +663,5 @@ onAuthStateChanged(auth,async user=>{window.__puantorCoreUid=user?.uid||null;win
  }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
 });
 </script>
-<script type="module">
-const question=document.getElementById("microaiQuestion");
-const output=document.getElementById("microaiAnswer");
-const panel=document.getElementById("microaiPanel");
-let core=null,loading=null;
-function show(text){output.textContent=text}
-function speak(text){
- if(!document.getElementById("microaiSpeak").checked||!("speechSynthesis" in window))return;
- window.speechSynthesis.cancel();
- const u=new SpeechSynthesisUtterance(text);u.lang="tr-TR";u.rate=1;
- window.speechSynthesis.speak(u);
-}
-async function getCore(){
- if(core)return core;
- if(!loading)loading=import("./microai/core.js").then(m=>m.createCore({
-  getSnapshot:()=>window.__puantorCoreSnapshot||{},
-  getRole:()=>window.__puantorCoreRole||null
- })).catch(e=>{loading=null;throw e});
- return loading;
-}
-async function ask(q=question.value){
- q=String(q||"").trim();if(!q){show("Sorunuzu yazın veya üstteki mikrofonu kullanın.");return}
- question.value=q;panel.open=true;show("Sorgu işleniyor…");
- try{
-  const engine=await getCore(),result=engine.ask(q);
-  show(result.text);if(result.ok)speak(result.text);
- }catch(e){show("MikroAI yüklenemedi: "+(e?.message||String(e))+". Sayfayı yenileyip tekrar deneyin.")}
-}
-const taskIntent=q=>/\b(gorev|ata|gonder|gitsin|is ver|yonlendir)\b/.test(q);
-const normalize=q=>String(q||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
-function route(text,source){
- const q=normalize(text);
- if(taskIntent(q))return;
- const isQuestion=/(kac|ne kadar|hangi|kim|nerede|nedir|goster|listele|rapor|ozet|sure|saat|calis|ariza|bekle|durakla|tamamlan|makine|operator|musteri)/.test(q);
- if(isQuestion||source==="voice")ask(text);
-}
-document.getElementById("microaiAsk").addEventListener("click",()=>ask());
-question.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();ask()}});
-window.addEventListener("puantor-unified-question",e=>route(e.detail?.text,e.detail?.source));
-const main=document.getElementById("actionSearch");
-main.addEventListener("keydown",e=>{if(e.key==="Enter"){const q=main.value.trim();if(q){route(q,"text")}}});
-</script>
+
 </body></html>
