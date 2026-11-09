@@ -53,3 +53,28 @@ exports.operatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async
  }
  throw new HttpsError("invalid-argument","Geçersiz işlem.");
 });
+
+
+// Secure AI navigation; no Firestore mutations and no client-side API key.
+const {defineSecret}=require("firebase-functions/params");
+const OpenAI=require("openai");
+const aiSecret=defineSecret("OPENAI_API_KEY");
+const aiRoutes={
+ add:{panel:0,steps:["addType"]},task:{panel:1,steps:["taskMachine","taskOperator","taskCustomer","taskRate","taskSave"]},
+ jobs:{panel:2,steps:[]},operators:{panel:3,steps:[]},archive:{panel:4,steps:[]},
+ statement:{panel:5,steps:["statementCustomer"]},finance:{panel:6,steps:[]}
+};
+exports.guideIntent=onCall({region:"europe-west1",secrets:[aiSecret],maxInstances:2,timeoutSeconds:20},async request=>{
+ adminOnly(request);
+ const query=String(request.data?.query||"").trim().slice(0,500);
+ if(!query)throw new HttpsError("invalid-argument","Lütfen isteğinizi belirtin.");
+ const client=new OpenAI({apiKey:aiSecret.value()});
+ let response;
+ try{response=await client.responses.create({model:"gpt-4.1-mini",max_output_tokens:160,
+ input:[{role:"system",content:"Puantör yönetici panelinde kullanıcının Türkçe serbest ifadesini gezinme amacına çevir. Yalnızca JSON üret: {\"route\":\"add|task|jobs|operators|archive|statement|finance|unknown\",\"explanation\":\"kısa Türkçe açıklama\"}. Bilmediğin finansal verileri veya iş sonuçlarını uydurma. Hiçbir işlemi gerçekleştirme."},{role:"user",content:query}]});}
+ catch(e){throw new HttpsError("unavailable","Yapay zekâ hizmetine erişilemedi.");}
+ let answer;try{answer=JSON.parse(response.output_text)}catch{throw new HttpsError("internal","Yanıt anlaşılamadı.");}
+ const route=aiRoutes[answer.route];
+ if(!route)return {route:"unknown",explanation:"İsteğinizi biraz daha açıklayabilir misiniz?",steps:[]};
+ return {route:answer.route,panel:route.panel,steps:route.steps,explanation:String(answer.explanation||"İlgili bölüme yönlendiriyorum.").slice(0,200)};
+});
