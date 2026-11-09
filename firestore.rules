@@ -21,7 +21,27 @@ service cloud.firestore {
      request.auth.uid == uid &&
      getAfter(/databases/$(database)/documents/operators/$(request.resource.data.username)).data.pendingUid == uid
    );
-   allow update, delete: if isAdmin();
+   allow update: if isAdmin() || (
+     signedIn() && request.auth.uid == uid &&
+     resource.data.role == 'operator' &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
+     request.resource.data.activeMachineId is string &&
+     (
+       (
+         request.resource.data.activeMachineId != '' &&
+         resource.data.get('activeMachineId', '') == '' &&
+         request.resource.data.activeMachineId in resource.data.machineIds &&
+         getAfter(/databases/$(database)/documents/machines/$(request.resource.data.activeMachineId)).data.operatorUid == uid &&
+         getAfter(/databases/$(database)/documents/machines/$(request.resource.data.activeMachineId)).data.status == 'running'
+       ) ||
+       (
+         request.resource.data.activeMachineId == '' &&
+         resource.data.get('activeMachineId', '') != '' &&
+         getAfter(/databases/$(database)/documents/machines/$(resource.data.activeMachineId)).data.status != 'running'
+       )
+     )
+   );
+   allow delete: if isAdmin();
   }
   match /searchPreferences/{uid} {
    allow read: if isAdmin() && request.auth.uid == uid;
