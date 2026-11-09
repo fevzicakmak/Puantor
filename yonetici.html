@@ -10,11 +10,38 @@ html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;
 
 
 .search-assist{position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:13px;margin:12px 0}.search-assist input{margin:8px 0 0}.search-results{position:relative;z-index:5;max-height:280px;overflow-y:auto;border:1px solid #cbd5e1;border-radius:10px;margin-top:5px}.search-results[hidden]{display:none}.search-results button{display:block;text-align:left;background:#fff;color:#142033;border:0;border-bottom:1px solid #e2e8f0;border-radius:0;margin:0;padding:12px}.search-results button:focus,.search-results button:hover{background:#dbeafe}.search-results small{display:block;font-weight:400}.search-step{font-size:13px;color:#475569;line-height:1.5;margin:9px 0}.search-blink{outline:4px solid #f59e0b!important;outline-offset:2px;animation:searchPulse 1s infinite;scroll-margin-top:100px}@keyframes searchPulse{50%{box-shadow:0 0 0 8px #f59e0b66}}@media(prefers-reduced-motion:reduce){.search-blink{animation:none}}
+
+/* Chat-style compact search composer */
+.search-assist{background:transparent!important;border:0!important;padding:0!important;margin:16px 0 12px!important;max-width:100%}
+.search-shell{display:flex;align-items:center;gap:9px;padding:6px 7px 6px 15px;background:#f4f4f4;border:1px solid #e5e7eb;border-radius:999px;min-height:54px;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:border-color .2s,box-shadow .2s}
+.search-shell:focus-within{background:#fff;border-color:#b5beca;box-shadow:0 0 0 3px rgba(148,163,184,.14)}
+.search-leading{display:flex;align-items:center;color:#68717d;flex:none}.search-leading svg{width:21px;height:21px}
+.search-assist .search-shell input#actionSearch{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;margin:0!important;padding:10px 0!important;flex:1;min-width:0;width:100%;font-size:16px!important;color:#18212f;border-radius:0!important}
+.search-shell input::-webkit-search-cancel-button{display:none}
+.search-assist .search-shell button.search-mic{display:grid!important;place-items:center!important;flex:none;width:41px!important;height:41px!important;min-width:41px!important;margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:#202123!important;color:#fff!important;box-shadow:none!important;cursor:pointer}
+.search-shell button.search-mic svg{width:21px;height:21px;display:block}
+.search-shell button.search-mic.listening{background:#c0392b!important;animation:searchMicPulse 1.2s infinite}
+.search-shell button.search-mic:disabled{background:#9ca3af!important;opacity:.7}
+.search-assist .search-step{margin:7px 12px 0;font-size:12px;color:#68717d}
+.search-assist .search-results{margin-top:8px;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.08);background:#fff}
+.search-assist .search-results button{width:100%;border-radius:0!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@keyframes searchMicPulse{50%{box-shadow:0 0 0 7px rgba(192,57,43,.14)}}
+@media(prefers-reduced-motion:reduce){.search-shell button.search-mic.listening{animation:none}}
 </style></head><body>
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
 <section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
-<main id="dashboard" class="hidden"><section class="search-assist" aria-label="İşlem arama"><strong>🔎 Ne yapmak istiyorsunuz?</strong><input id="actionSearch" type="search" autocomplete="off" placeholder="Örn. kepçe ekle, görev ver, tahsilat..." aria-label="İşlem ara" aria-autocomplete="list" aria-controls="actionResults"><button type="button" id="actionMic" class="secondary" style="width:auto;margin-top:7px">🎤 Sesle ara</button><div id="actionResults" class="search-results" role="listbox" hidden></div><p id="actionHint" class="search-step" role="status">İşlem aramak için yazmaya başlayın.</p><button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button></section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
+<main id="dashboard" class="hidden"><section class="search-assist" aria-label="Akıllı işlem arama">
+ <div class="search-shell">
+  <span class="search-leading" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.6"/><path d="m16 16 5 5"/></svg></span>
+  <input id="actionSearch" type="search" autocomplete="off" placeholder="Puantör'e bir şey sor..." aria-label="İşlem veya kayıt ara" aria-autocomplete="list" aria-controls="actionResults">
+  <button type="button" id="actionMic" class="search-mic" aria-label="Sesle ara" title="Sesle ara"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4m-4 0h8"/></svg><span class="sr-only">Sesle ara</span></button>
+ </div>
+ <div id="actionResults" class="search-results" role="listbox" hidden></div>
+ <p id="actionHint" class="search-step" role="status">İşlem, müşteri, operatör veya makine arayın.</p>
+ <button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button>
+ </section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
 <nav id="managerToolbar" class="manager-toolbar" aria-label="Yönetici araçları"><button type="button" data-panel="0">➕<span>Ekle</span><small class="toolbar-hint">(Operatör, makine, müşteri)</small></button><button type="button" data-panel="1">📌<span>Operatöre Görev Ata</span><small class="toolbar-hint">(Operatör görevlendir)</small></button><button type="button" data-panel="2">📋<span>Bitirilen İşler</span><small class="toolbar-hint">(Tamamlanan işler, yedek)</small></button><button type="button" data-panel="3">👷‍♂️👷‍♂️<span>Operatör Hesapları</span><small class="toolbar-hint">(Operatör kayıt, düzenle, sil)</small></button><button type="button" data-panel="4">🚜<span>Bitirilen İşi Arşivle</span><small class="toolbar-hint">(Canlı çalışma takibi)</small></button><button type="button" data-panel="5">🧾<span>Müşteri Ekstresi</span><small class="toolbar-hint">(İşler, tahsilat, bakiye)</small></button><button type="button" data-panel="6">📊<span>Finans Özeti</span><small class="toolbar-hint">(Gelir, alacak, toplam)</small></button></nav><div class="toolbox-grid" id="managerPanels">
 <details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
 <label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
@@ -162,11 +189,11 @@ window.addEventListener("DOMContentLoaded",()=>{
  if(SpeechRecognitionClass){
  const recognition=new SpeechRecognitionClass();recognition.lang="tr-TR";recognition.interimResults=false;let listening=false;
  mic.addEventListener("click",()=>{if(listening){recognition.stop();return}try{recognition.start()}catch(e){hint.textContent="Mikrofon başlatılamadı."}});
- recognition.onstart=()=>{listening=true;mic.textContent="⏹️ Dinlemeyi durdur";hint.textContent="Dinliyorum…"};
+ recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum…"};
  recognition.onresult=e=>{const spoken=e.results[0][0].transcript;if(spoken){input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir işlem seçin."}};
  recognition.onerror=e=>{hint.textContent=e.error==="not-allowed"?"Mikrofon izni verilmedi.":"Ses tanınamadı: "+e.error};
- recognition.onend=()=>{listening=false;mic.textContent="🎤 Sesle ara"};
- }else{mic.disabled=true;mic.textContent="🎤 Ses tanıma desteklenmiyor"}
+ recognition.onend=()=>{listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"};
+ }else{mic.disabled=true;mic.title="Bu tarayıcı ses tanımayı desteklemiyor";mic.setAttribute("aria-label","Ses tanıma desteklenmiyor")}
  window.addEventListener("puantor-search-data",()=>{if(document.activeElement===input)update()});
  input.addEventListener("input",update);input.addEventListener("focus",update);
  document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
