@@ -61,7 +61,7 @@ input,select,textarea{font-size:16px!important}
  </div>
  <div id="actionResults" class="search-results" role="listbox" hidden></div>
  <div id="voiceTaskReview" class="voice-task-review" hidden><strong>Görev taslağı</strong><p id="voiceTaskSummary"></p><button type="button" id="voiceTaskPrepare">Görev formunu doldur</button><button type="button" id="voiceTaskDismiss" class="secondary">Vazgeç</button></div>
- <details id="microaiPanel" class="timeline-details" style="margin-top:10px"><summary>🧠 MikroAI Core · Canlı sorgu ve rapor</summary><div style="padding-top:10px"><label for="microaiQuestion">Makine, çalışma süresi veya rapor sorusu</label><input id="microaiQuestion" type="text" placeholder="Örn: Çalışma süresi raporu" autocomplete="off"><div class="grid"><button type="button" id="microaiAsk">Sor / Sorgula</button><button type="button" id="microaiMic" class="secondary" aria-label="Sesli soru sor">🎙️ Sesli sor</button></div><label style="font-size:13px"><input id="microaiSpeak" type="checkbox" style="width:auto;min-width:0;margin-right:7px" checked>Yanıtı sesli oku</label><pre id="microaiAnswer" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px"></pre><small>Yalnızca yetkili Firebase kayıtları okunur. Bu bölüm görevleri değiştirmez.</small></div></details>
+ <details id="microaiPanel" class="timeline-details" style="margin-top:10px"><summary>🧠 MikroAI Core · Canlı sorgu ve rapor</summary><div style="padding-top:10px"><label for="microaiQuestion">Makine, çalışma süresi veya rapor sorusu</label><input id="microaiQuestion" type="text" placeholder="Örn: Çalışma süresi raporu" autocomplete="off"><button type="button" id="microaiAsk">Sor / Sorgula</button><label style="font-size:13px"><input id="microaiSpeak" type="checkbox" style="width:auto;min-width:0;margin-right:7px" checked>Yanıtı sesli oku</label><pre id="microaiAnswer" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px"></pre><small>Yalnızca yetkili Firebase kayıtları okunur. Bu bölüm görevleri değiştirmez.</small></div></details>
  <p id="actionHint" class="search-step" role="status">İşlem, müşteri, operatör veya makine arayın.</p>
  <button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button>
  </section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
@@ -224,7 +224,7 @@ window.addEventListener("DOMContentLoaded",()=>{
  function resetMic(){listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"}
  mic.addEventListener("click",()=>{if(listening){recognition.stop();return}received=false;hadError=false;try{recognition.start()}catch(e){resetMic();hint.textContent="Ses tanıma başlatılamadı. "+dictationHelp;input.focus()}});
  recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum… Konuşun."};
- recognition.onresult=e=>{let spoken="";for(let i=0;i<e.results.length;i++)spoken+=e.results[i][0]?.transcript||"";spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir öneri seçin."}};
+ recognition.onresult=e=>{let spoken="",final=false;for(let i=0;i<e.results.length;i++){spoken+=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)final=true}spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+(final?". İşleniyor…":"");if(final)window.dispatchEvent(new CustomEvent("puantor-unified-question",{detail:{text:spoken,source:"voice"}}))}};
  recognition.onerror=e=>{hadError=true;const errors={"not-allowed":"Mikrofon izni reddedildi. Safari site ayarlarından mikrofon izni verin.","service-not-allowed":"Bu tarayıcı konuşma tanıma servisine izin vermiyor.","audio-capture":"Mikrofona erişilemiyor. Mikrofon izinlerini kontrol edin.","network":"Konuşma tanıma servisine bağlanılamadı.","no-speech":"Konuşma algılanamadı. Tekrar deneyin.","language-not-supported":"Türkçe konuşma tanıma bu tarayıcıda desteklenmiyor."};hint.textContent=(errors[e.error]||"Ses tanıma hatası: "+e.error)+ " "+dictationHelp};
  recognition.onend=()=>{resetMic();if(!received&&!hadError)hint.textContent="Konuşma algılanmadı. "+dictationHelp};
  }else{mic.addEventListener("click",()=>{input.focus();hint.textContent="Bu tarayıcı doğrudan ses tanımayı desteklemiyor. "+dictationHelp});mic.title="Klavye diktesiyle ara"}
@@ -667,8 +667,8 @@ onAuthStateChanged(auth,async user=>{window.__puantorCoreUid=user?.uid||null;win
 <script type="module">
 const question=document.getElementById("microaiQuestion");
 const output=document.getElementById("microaiAnswer");
-const mic=document.getElementById("microaiMic");
-let core=null,recognition=null,loading=null;
+const panel=document.getElementById("microaiPanel");
+let core=null,loading=null;
 function show(text){output.textContent=text}
 function speak(text){
  if(!document.getElementById("microaiSpeak").checked||!("speechSynthesis" in window))return;
@@ -684,34 +684,26 @@ async function getCore(){
  })).catch(e=>{loading=null;throw e});
  return loading;
 }
-async function ask(){
- const q=question.value.trim();if(!q){show("Lütfen sorunuzu yazın veya mikrofonla söyleyin.");return}
- show("Sorgu işleniyor…");
+async function ask(q=question.value){
+ q=String(q||"").trim();if(!q){show("Sorunuzu yazın veya üstteki mikrofonu kullanın.");return}
+ question.value=q;panel.open=true;show("Sorgu işleniyor…");
  try{
-  const engine=await getCore();
-  const result=engine.ask(q);
+  const engine=await getCore(),result=engine.ask(q);
   show(result.text);if(result.ok)speak(result.text);
  }catch(e){show("MikroAI yüklenemedi: "+(e?.message||String(e))+". Sayfayı yenileyip tekrar deneyin.")}
 }
-document.getElementById("microaiAsk").addEventListener("click",ask);
+const taskIntent=q=>/\b(gorev|ata|gonder|gitsin|is ver|yonlendir)\b/.test(q);
+const normalize=q=>String(q||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
+function route(text,source){
+ const q=normalize(text);
+ if(taskIntent(q))return;
+ const isQuestion=/(kac|ne kadar|hangi|kim|nerede|nedir|goster|listele|rapor|ozet|sure|saat|calis|ariza|bekle|durakla|tamamlan|makine|operator|musteri)/.test(q);
+ if(isQuestion||source==="voice")ask(text);
+}
+document.getElementById("microaiAsk").addEventListener("click",()=>ask());
 question.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();ask()}});
-mic.addEventListener("click",()=>{
- const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SpeechRecognition){show("Bu tarayıcı ses tanımayı desteklemiyor. iPhone klavyesindeki mikrofonla soruyu söyleyebilirsiniz.");return}
- if(recognition){recognition.stop();return}
- try{
-  recognition=new SpeechRecognition();recognition.lang="tr-TR";recognition.interimResults=true;recognition.continuous=false;
-  mic.textContent="⏹️ Dinlemeyi durdur";show("Dinliyorum…");
-  recognition.onresult=e=>{
-   let transcript="",final=false;
-   for(let i=0;i<e.results.length;i++){transcript+=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)final=true}
-   question.value=transcript.trim();
-   if(final){recognition.stop();ask()}
-  };
-  recognition.onerror=e=>{show("Ses algılanamadı: "+e.error+". Mikrofon iznini kontrol edin.");};
-  recognition.onend=()=>{recognition=null;mic.textContent="🎙️ Sesli sor"};
-  recognition.start();
- }catch(e){recognition=null;mic.textContent="🎙️ Sesli sor";show("Mikrofon açılamadı: "+e.message)}
-});
+window.addEventListener("puantor-unified-question",e=>route(e.detail?.text,e.detail?.source));
+const main=document.getElementById("actionSearch");
+main.addEventListener("keydown",e=>{if(e.key==="Enter"){const q=main.value.trim();if(q){route(q,"text")}}});
 </script>
 </body></html>
