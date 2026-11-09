@@ -55,9 +55,9 @@ async function changeState(action){
  busy=true;updateControls();showError("");$("controlInfo").textContent="İşlem gönderiliyor: "+action+"…";
  try{
   await runTransaction(db,async tx=>{
-   const ref=doc(db,"machines",machineId),snap=await tx.get(ref);
+   const ref=doc(db,"machines",machineId),userRef=doc(db,"users",auth.currentUser.uid);const [snap,userSnap]=await Promise.all([tx.get(ref),tx.get(userRef)]);if(!userSnap.exists()||userSnap.data().role!=="operator")throw Error("Operatör hesabı doğrulanamadı.");
    if(!snap.exists())throw Error("Makine bulunamadı");
-   const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");
+   const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");const activeMachine=userSnap.data().activeMachineId||"";if(action==="start"&&activeMachine&&activeMachine!==machineId)throw Error("Başka bir makinede çalışmanız devam ediyor. Önce o makineyi duraklatın veya bitirin.");
    // Use the same server-adjusted clock for display and persistence.
    // A device clock behind Firestore must not erase active working time.
    const serverNow=Math.max(Date.now(),m.updatedAt?.toMillis?.()||0);
@@ -68,6 +68,7 @@ async function changeState(action){
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
    const event={action,at:Timestamp.fromMillis(serverNow),elapsedMs:Math.floor(elapsed),operatorName:m.operatorName||"",reason:action==="fault"?reason.trim():""};const timeline=Array.isArray(m.timeline)?m.timeline:[];if(timeline.length>=250)throw Error("Zaman çizelgesi doldu; yöneticiden işi arşivlemesini isteyin.");
    tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp(),timeline:[...timeline,event]});
+   if(action==="start")tx.update(userRef,{activeMachineId:machineId});else if(activeMachine===machineId)tx.update(userRef,{activeMachineId:""});
   });
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
   $("controlInfo").textContent="Firebase işlemi kaydetti: "+expected+". Canlı veri bekleniyor.";
