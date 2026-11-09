@@ -66,7 +66,8 @@ async function changeState(action){
    if(m.status==="running"&&!start)throw Error("Firebase başlangıç zamanı henüz alınamadı. Birkaç saniye sonra tekrar deneyin.");const previous=Math.max(0,Number(m.elapsedMs)||0);
    const elapsed=previous+(m.status==="running"&&start?Math.max(0,serverNow-start):0);
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp()});
+   const event={action,at:Timestamp.fromMillis(serverNow),elapsedMs:Math.floor(elapsed),operatorName:m.operatorName||"",reason:action==="fault"?reason.trim():""};const timeline=Array.isArray(m.timeline)?m.timeline:[];if(timeline.length>=250)throw Error("Zaman çizelgesi doldu; yöneticiden işi arşivlemesini isteyin.");
+   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp(),timeline:[...timeline,event]});
   });
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
   $("controlInfo").textContent="Firebase işlemi kaydetti: "+expected+". Canlı veri bekleniyor.";
