@@ -56,7 +56,12 @@ async function changeState(action){
  try{
   await runTransaction(db,async tx=>{
    const ref=doc(db,"machines",machineId),userRef=doc(db,"users",auth.currentUser.uid);const [snap,userSnap]=await Promise.all([tx.get(ref),tx.get(userRef)]);if(!userSnap.exists()||userSnap.data().role!=="operator")throw Error("Operatör hesabı doğrulanamadı.");
-   if(!snap.exists())throw Error("Makine bulunamadı");
+   if(!snap.exists())throw Error("Makine bulunamadı");if(action==="start"){
+    const otherIds=[...new Set(Array.isArray(userSnap.data().machineIds)?userSnap.data().machineIds:[])].filter(id=>id!==machineId);
+    const otherSnaps=await Promise.all(otherIds.map(id=>tx.get(doc(db,"machines",id))));
+    for(const other of otherSnaps){if(!other.exists())continue;const om=other.data();if(om.operatorUid===auth.currentUser.uid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Başka makinede arşivlenmemiş işiniz var ("+(om.machineName||other.id)+"). Yönetici onayıyla arşivlenmeden yeni işe başlayamazsınız.");}
+   }
+   
    const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");const activeMachine=userSnap.data().activeMachineId||"";if(action==="start"&&activeMachine&&activeMachine!==machineId)throw Error("Başka bir makinede çalışmanız devam ediyor. Önce o makineyi duraklatın veya bitirin.");
    // Use the same server-adjusted clock for display and persistence.
    // A device clock behind Firestore must not erase active working time.
