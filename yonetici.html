@@ -189,14 +189,17 @@ window.addEventListener("DOMContentLoaded",()=>{
  function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)>0?score(item,q)+bonus(item,q):0})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
 
  const SpeechRecognitionClass=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const dictationHelp="iPhone'da arama kutusuna dokunup klavyedeki mikrofon simgesini kullanabilirsiniz.";
  if(SpeechRecognitionClass){
- const recognition=new SpeechRecognitionClass();recognition.lang="tr-TR";recognition.interimResults=false;let listening=false;
- mic.addEventListener("click",()=>{if(listening){recognition.stop();return}try{recognition.start()}catch(e){hint.textContent="Mikrofon başlatılamadı."}});
- recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum…"};
- recognition.onresult=e=>{const spoken=e.results[0][0].transcript;if(spoken){input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir işlem seçin."}};
- recognition.onerror=e=>{hint.textContent=e.error==="not-allowed"?"Mikrofon izni verilmedi.":"Ses tanınamadı: "+e.error};
- recognition.onend=()=>{listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"};
- }else{mic.disabled=true;mic.title="Bu tarayıcı ses tanımayı desteklemiyor";mic.setAttribute("aria-label","Ses tanıma desteklenmiyor")}
+ const recognition=new SpeechRecognitionClass();recognition.lang="tr-TR";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;
+ let listening=false,received=false,hadError=false;
+ function resetMic(){listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"}
+ mic.addEventListener("click",()=>{if(listening){recognition.stop();return}received=false;hadError=false;try{recognition.start()}catch(e){resetMic();hint.textContent="Ses tanıma başlatılamadı. "+dictationHelp;input.focus()}});
+ recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum… Konuşun."};
+ recognition.onresult=e=>{let spoken="";for(let i=0;i<e.results.length;i++)spoken+=e.results[i][0]?.transcript||"";spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir öneri seçin."}};
+ recognition.onerror=e=>{hadError=true;const errors={"not-allowed":"Mikrofon izni reddedildi. Safari site ayarlarından mikrofon izni verin.","service-not-allowed":"Bu tarayıcı konuşma tanıma servisine izin vermiyor.","audio-capture":"Mikrofona erişilemiyor. Mikrofon izinlerini kontrol edin.","network":"Konuşma tanıma servisine bağlanılamadı.","no-speech":"Konuşma algılanamadı. Tekrar deneyin.","language-not-supported":"Türkçe konuşma tanıma bu tarayıcıda desteklenmiyor."};hint.textContent=(errors[e.error]||"Ses tanıma hatası: "+e.error)+ " "+dictationHelp};
+ recognition.onend=()=>{resetMic();if(!received&&!hadError)hint.textContent="Konuşma algılanmadı. "+dictationHelp};
+ }else{mic.addEventListener("click",()=>{input.focus();hint.textContent="Bu tarayıcı doğrudan ses tanımayı desteklemiyor. "+dictationHelp});mic.title="Klavye diktesiyle ara"}
  window.addEventListener("puantor-search-data",()=>{if(document.activeElement===input)update()});
  input.addEventListener("input",update);input.addEventListener("focus",update);
  document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
