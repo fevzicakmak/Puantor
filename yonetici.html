@@ -75,13 +75,21 @@ window.addEventListener("DOMContentLoaded",()=>{
  ["Finans özetini görüntüle",6,"financeGross","gelir toplam ciro alacak bakiye kazanç"]
  ];
  const norm=t=>String(t||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+ let selectedRecord=null;
+ function dynamicItems(){const data=window.__puantorSearchData||{customers:[],operators:[],machines:[]};const out=[];
+ for(const c of data.customers||[]){const name=String(c.name||"").trim();if(!name)continue;const x=["Müşteri: "+name+" — Ekstre",5,"statementCustomer","müşteri firma cari borç alacak bakiye "+name];x.record={id:"statementCustomer",value:name};out.push(x);const y=["Müşteri: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","müşteriye iş ver görev ata "+name];y.record={id:"taskCustomer",value:name};out.push(y)}
+ for(const o of data.operators||[]){const name=String(o.displayName||o.name||o.username||"").trim();if(!name)continue;const uname=String(o.username||"");const x=["Operatör: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","operatör personel usta iş ver "+name+" "+uname];x.record={id:"taskOperator",match:"(@"+uname+")",name};out.push(x);out.push(["Operatör: "+name+" — Hesapları yönet",3,"operatör hesap düzenle şifre "+name+" "+uname])}
+ for(const m of data.machines||[]){const name=String(m.machineName||m.plaka||m.plate||m.id||"").trim();if(!name)continue;const x=["Makine: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","makine kepçe plaka iş ver "+name];x.record={id:"taskMachine",value:name};out.push(x);out.push(["Makine: "+name+" — Canlı takip",4,"makine durum nerede çalışıyor "+name])}
+ return out.slice(0,400);
+ }
+ function applyRecord(){if(!selectedRecord)return;const field=document.getElementById(selectedRecord.id);if(!field||!field.options)return;const option=[...field.options].find(o=>selectedRecord.value?norm(o.value)===norm(selectedRecord.value):o.value.includes(selectedRecord.match));if(option){field.value=option.value;field.dispatchEvent(new Event("change",{bubbles:true}));selectedRecord=null}}
  let steps=[],idx=0;
  const clear=()=>document.querySelectorAll(".search-blink").forEach(x=>x.classList.remove("search-blink"));
  function showStep(){clear();if(idx>=steps.length){hint.textContent="Yönlendirme tamamlandı. İşlemi kontrol edip onaylayabilirsiniz.";cancel.style.display="none";steps=[];return}
  const target=document.getElementById(steps[idx]);if(!target){idx++;showStep();return}
  target.classList.add("search-blink");target.scrollIntoView({behavior:"smooth",block:"center"});hint.textContent="Adım "+(idx+1)+"/"+steps.length+": "+(target.closest("label")?.textContent.trim()||target.textContent.trim()||"Vurgulanan alan").slice(0,110);}
- const advance=()=>{idx++;showStep()};
- function select(item){input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
+ const advance=()=>{idx++;if(idx===1)queueMicrotask(applyRecord);showStep()};
+ function select(item){selectedRecord=item.record||null;input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
  const synonyms=[
  ["operatör","operator","personel","eleman","adam","usta","şoför","sofor","sürücü","surucu","çalışan","calisan","işçi","isci"],
  ["makine","kepçe","kepce","araç","arac","ekskavatör","ekskavator","iş makinesi","kamyon","plaka","ekipman"],
@@ -135,7 +143,8 @@ window.addEventListener("DOMContentLoaded",()=>{
  if(isDebt)total+=index===9?25:index===13?6:-5;
  return Math.max(0,total);
  }
- function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const ranked=items.map((item,i)=>({item,i,score:score(item,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,8);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+ function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+ window.addEventListener("puantor-search-data",()=>{if(document.activeElement===input)update()});
  input.addEventListener("input",update);input.addEventListener("focus",update);
  document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
  document.addEventListener("change",e=>{if(!steps.length)return;const target=document.getElementById(steps[idx]);if(target===e.target&&target.value){advance();}});
@@ -150,6 +159,7 @@ import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "htt
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
 const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
+function publishSearchData(){window.__puantorSearchData={customers:customers.map(c=>({name:c.name})),operators:operators.map(o=>({displayName:o.displayName,username:o.username})),machines:cached.map(m=>({id:m.id,machineName:m.machineName,plaka:m.plaka,plate:m.plate}))};window.dispatchEvent(new Event("puantor-search-data"))}
 function message(t){$("status").textContent=t}
 function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
@@ -540,11 +550,11 @@ onAuthStateChanged(auth,async user=>{
   const profile=await getDoc(doc(db,"users",user.uid));
   if(!profile.exists()||profile.data().role!=="admin"){location.replace("./giris.html");return}
   $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
-  unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
+  unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));publishSearchData();refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
   unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
-  unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
+  unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
   unsubscribePayments=onSnapshot(collection(db,"payments"),snap=>{payments=snap.docs.map(d=>({id:d.id,...d.data()}));updateStatementOptions()},err=>{$("paymentResult").textContent="Tahsilat kayıtları okunamadı: "+(err.code||err.message)+". Firebase erişim kuralları kontrol edilmeli."});
-  unsubscribeOperators=onSnapshot(collection(db,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));refreshTaskLists();refreshManage()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
+  unsubscribeOperators=onSnapshot(collection(db,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();refreshTaskLists();refreshManage()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
   ticker=setInterval(render,1000);
  }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
 });
