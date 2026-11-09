@@ -81,7 +81,13 @@ window.addEventListener("DOMContentLoaded",()=>{
  try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||"{}")||{}}catch{}
  function category(item){return item[1]+":"+norm(item[0]).replace(/^(musteri|operator|makine) [^ ]+ /,"").slice(-28)}
  function bonus(item,q){const key=category(item);let n=Number(preferences[q+"|"+key])||0;for(const word of q.split(" ").filter(w=>w.length>2))n+=Math.min(3,Number(preferences[word+"|"+key])||0);return Math.min(25,Math.round(Math.log2(n+1)*8))}
- function learn(item,q){const key=category(item);for(const term of [q,...q.split(" ").filter(w=>w.length>2)]){const k=term+"|"+key;preferences[k]=Math.min(30,(Number(preferences[k])||0)+1)}preferences=Object.fromEntries(Object.entries(preferences).sort((a,b)=>b[1]-a[1]).slice(0,250));try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}}
+ function learn(item,q){const key=category(item);for(const term of [q,...q.split(" ").filter(w=>w.length>2)]){const k=term+"|"+key;preferences[k]=Math.min(30,(Number(preferences[k])||0)+1)}preferences=Object.fromEntries(Object.entries(preferences).sort((a,b)=>b[1]-a[1]).slice(0,250));try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}scheduleSync()}
+
+ let syncTimer=null,remoteReady=false,dirty=false;
+ function scheduleSync(){dirty=true;clearTimeout(syncTimer);syncTimer=setTimeout(()=>{syncTimer=null;if(dirty&&remoteReady&&window.__puantorSaveLearning){dirty=false;window.__puantorSaveLearning(preferences).catch(()=>{dirty=true})}},4000)}
+ window.addEventListener("puantor-learning-remote",e=>{const remote=e.detail;if(!remote||typeof remote!=="object"||Array.isArray(remote))return;const merged={...remote};for(const [k,v] of Object.entries(preferences))merged[k]=Math.max(Number(v)||0,Number(merged[k])||0);preferences=Object.fromEntries(Object.entries(merged).sort((a,b)=>b[1]-a[1]).slice(0,250));remoteReady=true;try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}});
+ window.addEventListener("puantor-learning-ready",()=>{remoteReady=true;if(dirty)scheduleSync()});
+ window.addEventListener("puantor-learning-disabled",()=>{remoteReady=false});
  let selectedRecord=null;
  function dynamicItems(){const data=window.__puantorSearchData||{customers:[],operators:[],machines:[]};const out=[];
  for(const c of data.customers||[]){const name=String(c.name||"").trim();if(!name)continue;const x=["Müşteri: "+name+" — Ekstre",5,"statementCustomer","müşteri firma cari borç alacak bakiye "+name];x.record={id:"statementCustomer",value:name};out.push(x);const y=["Müşteri: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","müşteriye iş ver görev ata "+name];y.record={id:"taskCustomer",value:name};out.push(y)}
@@ -175,6 +181,11 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;
+let learningUnsub=null,learningUid=null;
+function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=uid;const ref=doc(db,"searchPreferences",uid);
+ window.__puantorSaveLearning=async prefs=>{if(learningUid!==uid)throw Error("Oturum değişti");await setDoc(ref,{preferences:prefs,updatedAt:serverTimestamp()},{merge:true})};
+ learningUnsub=onSnapshot(ref,snap=>{if(snap.exists())window.dispatchEvent(new CustomEvent("puantor-learning-remote",{detail:snap.data().preferences||{}}));window.dispatchEvent(new Event("puantor-learning-ready"))},()=>window.dispatchEvent(new Event("puantor-learning-disabled")));
+}
 const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
 function publishSearchData(){window.__puantorSearchData={customers:customers.map(c=>({name:c.name})),operators:operators.map(o=>({displayName:o.displayName,username:o.username})),machines:cached.map(m=>({id:m.id,machineName:m.machineName,plaka:m.plaka,plate:m.plate}))};window.dispatchEvent(new Event("puantor-search-data"))}
 function message(t){$("status").textContent=t}
@@ -559,6 +570,7 @@ $("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editFor
 $("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");await updateDoc(doc(db,"machines",id),{machineName:$("editMachine").value.trim(),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
 $("logout").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{
+ if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=null;window.__puantorSaveLearning=null;window.dispatchEvent(new Event("puantor-learning-disabled"));
  if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(unsubscribeCustomers){unsubscribeCustomers();unsubscribeCustomers=null}if(unsubscribeOperators){unsubscribeOperators();unsubscribeOperators=null}if(ticker){clearInterval(ticker);ticker=null}
  $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
  if(!user){location.replace("./giris.html");return}
@@ -566,7 +578,7 @@ onAuthStateChanged(auth,async user=>{
  try{
   const profile=await getDoc(doc(db,"users",user.uid));
   if(!profile.exists()||profile.data().role!=="admin"){location.replace("./giris.html");return}
-  $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");
+  $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");startLearningSync(user.uid);
   unsubscribe=onSnapshot(collection(db,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));publishSearchData();refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
   unsubscribeJobs=onSnapshot(collection(db,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
   unsubscribeCustomers=onSnapshot(collection(db,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
