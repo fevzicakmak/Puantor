@@ -52,6 +52,33 @@ input,select,textarea{font-size:16px!important}
 .timeline-details{margin:9px 0;border:1px solid #cbd5e1;border-radius:10px;padding:9px;background:#ffffffa8}.timeline-details summary{font-weight:700;cursor:pointer;font-size:14px}.work-timeline{padding-left:22px;margin:10px 0}.work-timeline li{padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:13px}.work-timeline small{display:block;margin-top:4px}
 
 .history-group{margin:12px 0;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;overflow:hidden}.history-group>summary{cursor:pointer;padding:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}.history-group>summary span{font-size:12px;color:#475569}.history-group-items{padding:0 10px 10px}.history-group-items>.card{margin:8px 0}
+
+/* Puantör colorful dashboard refresh: presentation only */
+:root{background:#edf3fb}
+body{background:radial-gradient(ellipse at 10% 0%,#dbeafe 0,transparent 48%),radial-gradient(ellipse at 100% 20%,#f3e8ff 0,transparent 42%),#edf3fb;min-height:100vh}
+.manager-toolbar>button:not(#legacyTaskNav){position:relative;overflow:hidden;border:1px solid var(--tile-edge,#bfdbfe);background:linear-gradient(145deg,#fff 0%,var(--tile-bg,#eff6ff) 100%);color:var(--tile-ink,#1d4ed8);box-shadow:0 5px 16px #243b6817,0 1px 2px #243b680d;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.manager-toolbar>button:not(#legacyTaskNav)::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--tile-accent,#3b82f6)}
+.manager-toolbar>button:not(#legacyTaskNav):active{transform:scale(.97)}
+.manager-toolbar>button:not(#legacyTaskNav):focus-visible{outline:3px solid var(--tile-accent,#2563eb);outline-offset:2px}
+.manager-toolbar>button:not(#legacyTaskNav).active{background:linear-gradient(145deg,#fff,var(--tile-bg,#dbeafe));border:2px solid var(--tile-accent,#2563eb);color:var(--tile-ink,#1d4ed8);box-shadow:0 7px 21px #243b6826}
+.manager-toolbar>button:not(#legacyTaskNav) span{color:inherit}
+.manager-toolbar>button:not(#legacyTaskNav) .toolbar-hint,.manager-toolbar>button:not(#legacyTaskNav).active .toolbar-hint{color:#53647b}
+.manager-toolbar>button[data-panel="0"]{--tile-accent:#2563eb;--tile-bg:#dbeafe;--tile-ink:#1d4ed8;--tile-edge:#bfdbfe}
+.manager-toolbar>button[data-panel="2"]{--tile-accent:#7c3aed;--tile-bg:#ede9fe;--tile-ink:#6d28d9;--tile-edge:#ddd6fe}
+.manager-toolbar>button[data-panel="3"]{--tile-accent:#0891b2;--tile-bg:#cffafe;--tile-ink:#0e7490;--tile-edge:#a5f3fc}
+.manager-toolbar>button[data-panel="4"]{--tile-accent:#ea580c;--tile-bg:#ffedd5;--tile-ink:#c2410c;--tile-edge:#fed7aa}
+.manager-toolbar>button[data-panel="5"]{--tile-accent:#059669;--tile-bg:#d1fae5;--tile-ink:#047857;--tile-edge:#a7f3d0}
+.manager-toolbar>button[data-panel="6"]{--tile-accent:#be185d;--tile-bg:#fce7f3;--tile-ink:#9d174d;--tile-edge:#fbcfe8}
+.operator-toolbar-group{border:1px solid #c4b5fd;background:linear-gradient(145deg,#fff,#f5f3ff);box-shadow:0 5px 16px #4c1d9515}
+.operator-toolbar-title{color:#6d28d9}
+.manager-toolbar .operator-toolbar-buttons button{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+.manager-toolbar .operator-toolbar-buttons button.selected{background:linear-gradient(135deg,#6d28d9,#4f46e5);color:#fff}
+.dashboard-stats .stat{border:1px solid #dbeafe;box-shadow:0 3px 12px #1e3a8a10}
+#managerPanels>details.toolbox.active-panel{border:1px solid #d9e4f5;box-shadow:0 8px 25px #243b6812}
+button:not(:disabled){transition:filter .15s ease,transform .15s ease}
+button:not(:disabled):active{filter:brightness(.96)}
+@media(hover:hover){.manager-toolbar>button:not(#legacyTaskNav):hover{transform:translateY(-3px);box-shadow:0 10px 23px #243b6824}}
+@media(prefers-reduced-motion:reduce){.manager-toolbar>button:not(#legacyTaskNav),button:not(:disabled){transition:none}.manager-toolbar>button:not(#legacyTaskNav):hover{transform:none}}
 </style></head><body>
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
