@@ -284,7 +284,7 @@ const money=n=>new Intl.NumberFormat("tr-TR",{style:"currency",currency:"TRY"}).
 function timelineHtml(events){if(!Array.isArray(events)||!events.length)return '<p class="muted">Bu iş için ayrıntılı hareket kaydı bulunmuyor. Eski kayıtların saatleri geriye dönük oluşturulamaz.</p>';const names={start:"▶️ Başladı",pause:"⏸️ Duraklatıldı",fault:"⚠️ Arıza",finish:"🏁 Tamamlandı"};return '<ol class="work-timeline">'+events.map(e=>{const date=e.at?.toDate?.()||null;return '<li><strong>'+safe(names[e.action]||e.action)+'</strong> · '+safe(date?date.toLocaleString("tr-TR"):"Saat bilinmiyor")+(e.reason?' · '+safe(e.reason):'')+'<small> Toplam net çalışma: '+formatMs(e.elapsedMs||0)+'</small></li>'}).join("")+'</ol>'}
 function renderJobs(){
  const jobs=filteredJobs();$("jobCount").textContent=jobs.length;$("jobTotal").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
- const priced=jobs.filter(j=>Number.isFinite(Number(j.hourlyRate))&&j.hourlyRate!==null&&j.hourlyRate!==undefined);$("jobAmount").textContent=money(priced.reduce((sum,j)=>sum+(billedAmount(j.elapsedMs,j.hourlyRate)),0))+(priced.length<jobs.length?" · "+(jobs.length-priced.length)+" iş ücreti eksik":"");
+ const priced=jobs.filter(j=>Number.isFinite(Number(j.hourlyRate))&&j.hourlyRate!==null&&j.hourlyRate!==undefined);$("jobAmount").textContent=money(priced.reduce((sum,j)=>sum+(statementAmount(j)??0),0))+(priced.length<jobs.length?" · "+(jobs.length-priced.length)+" iş ücreti eksik":"");
  const target=$("jobsHistory");
  if(!$("historyCustomer").value){target.innerHTML='<p class="muted">Çalışma geçmişini görmek için yukarıdan bir müşteri seçin.</p>';return}
  const jobCard=j=>{
