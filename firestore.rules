@@ -57,9 +57,13 @@ service cloud.firestore {
    allow update: if isAdmin() || (
      isAssigned(machineId) &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-       'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt'
+       'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt','timeline'
      ]) &&
      request.resource.data.updatedAt == request.time &&
+     request.resource.data.timeline is list &&
+     request.resource.data.timeline.size() <= 250 &&
+     request.resource.data.timeline.size() == resource.data.get('timeline', []).size() + 1 &&
+     request.resource.data.timeline[request.resource.data.timeline.size() - 1].action in ['start','pause','fault','finish'] &&
      request.resource.data.elapsedMs is number &&
      request.resource.data.elapsedMs >= resource.data.elapsedMs &&
      request.resource.data.elapsedMs >= 0 &&
