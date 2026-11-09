@@ -74,9 +74,9 @@ input,select,textarea{font-size:16px!important}
 <div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><p class="muted">Makine seçimi Görev Ekle bölümünde yapılır. Operatör kendi şifresini oluşturur. Yönetici kaydı onaylayınca görev alabilir.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
 <div id="addCustomerPanel" class="hidden"><form id="customerForm"><label>Müşteri adı<input id="customerName" required maxlength="100" placeholder="Çakmak Yapı"></label><button type="submit" id="customerSave">Müşteriyi kaydet</button></form><p id="customerResult" role="status"></p></div>
 </div></details>
-<details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Operatöre Görev Ata<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div id="operatorTaskButtons" class="grid"></div><p id="operatorTaskHint" class="muted">Görev atamak için bir operatör seçin.</p><div id="operatorTaskCard" class="hidden"><form id="taskForm">
+<details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Operatöre Görev Ata<span class="tool-arrow">⌄</span></summary><div class="tool-content"><p id="operatorTaskHint" class="muted">Görevlendir grubundan operatör seçin.</p><div id="operatorTaskCard" class="hidden"><form id="taskForm">
 <label>Makine<select id="taskMachine" required><option value="">Makine seçiniz</option></select></label>
-<label>Operatör<select id="taskOperator" required><option value="">Operatör seçiniz</option></select></label>
+<div class="card" style="background:#eef2ff;padding:10px;margin:8px 0"><strong>Operatör: <span id="selectedTaskOperator">Seçilmedi</span></strong></div><select id="taskOperator" required class="hidden" aria-label="Seçili operatör"><option value="">Operatör seçiniz</option></select>
 <label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
 <label>Saatlik çalışma ücreti (TL)<input id="taskRate" type="number" min="0" step="0.01" placeholder="Örn. 2400" required></label><button type="submit" id="taskSave">Seçili Operatöre Görev Ata</button></form></div><p id="taskResult" role="status"></p><button type="button" id="repairAssignments">Mevcut makine atamalarını onar</button><small>Operatörlerin halen bağlı olduğu makineleri yeniden listelerine ekler; işlere ve sayaçlara dokunmaz.</small><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
 <section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
@@ -608,40 +608,35 @@ $("manageDelete").onclick=async()=>{
 };
 $("addType").addEventListener("change",()=>{for(const [type,id] of [["operator","addOperatorPanel"],["machine","addMachinePanel"],["customer","addCustomerPanel"]])$(id).classList.toggle("hidden",$("addType").value!==type)});
 function renderOperatorTaskButtons(){
- const host=$("operatorTaskButtons"),card=$("operatorTaskCard"),hint=$("operatorTaskHint"),select=$("taskOperator");
- if(!host||!card||!hint||!select)return;
+ const card=$("operatorTaskCard"),hint=$("operatorTaskHint"),select=$("taskOperator"),toolbar=$("operatorToolbarButtons"),label=$("selectedTaskOperator");
+ if(!card||!hint||!select||!toolbar)return;
  const active=operators.filter(o=>o.authStatus==="active"),selected=select.value;
- const toolbar=$("operatorToolbarButtons");if(toolbar)toolbar.replaceChildren();
- host.replaceChildren();
+ toolbar.replaceChildren();
  for(const op of active){
-  const value=op.displayName+" (@"+op.username+")",button=document.createElement("button");
-  button.type="button";button.className=value===selected&&!card.classList.contains("hidden")?"":"secondary";
+  const value=op.displayName+" (@"+op.username+")";
+  const button=document.createElement("button");button.type="button";
   button.textContent=op.displayName||op.username;
-  button.setAttribute("aria-expanded",String(value===selected&&!card.classList.contains("hidden")));
+  button.classList.toggle("selected",value===selected&&!card.classList.contains("hidden"));
+  button.setAttribute("aria-label",(op.displayName||op.username)+" operatörüne görev ata");
   button.addEventListener("click",()=>{
-   if(select.value===value&&!card.classList.contains("hidden")){card.classList.add("hidden");hint.textContent="Görev atamak için bir operatör seçin.";}
-   else{select.value=value;card.classList.remove("hidden");hint.textContent=(op.displayName||op.username)+" için makine ve müşteri seçin.";}
+   select.value=value;
+   card.classList.remove("hidden");
+   if(label)label.textContent=op.displayName||op.username;
+   hint.textContent=(op.displayName||op.username)+" için makine ve müşteri seçin.";
+   $("legacyTaskNav").click();
    renderOperatorTaskButtons();
-  });host.appendChild(button);
-  if(toolbar){
-   const shortcut=document.createElement("button");shortcut.type="button";
-   shortcut.textContent=op.displayName||op.username;
-   shortcut.classList.toggle("selected",value===selected&&!card.classList.contains("hidden"));
-   shortcut.setAttribute("aria-label",(op.displayName||op.username)+" operatörüne görev ata");
-   shortcut.addEventListener("click",()=>{
-    $("legacyTaskNav").click();
-    select.value=value;card.classList.remove("hidden");
-    hint.textContent=(op.displayName||op.username)+" için makine ve müşteri seçin.";
-    renderOperatorTaskButtons();
-    $("taskTool").scrollIntoView({behavior:"smooth",block:"start"});
-   });
-   toolbar.appendChild(shortcut);
-  }
+   $("taskTool").scrollIntoView({behavior:"smooth",block:"start"});
+  });
+  toolbar.appendChild(button);
  }
- if(toolbar&&!active.length){const empty=document.createElement("span");empty.className="muted";empty.textContent="Operatör ekleyin";toolbar.appendChild(empty)}
- if(!active.length)hint.textContent="Aktif operatör bulunamadı. Önce operatör ekleyin.";
- if(!active.some(o=>o.displayName+" (@"+o.username+")"===selected)){card.classList.add("hidden");if(active.length)hint.textContent="Görev atamak için bir operatör seçin.";}
+ const selectedOperator=active.find(o=>o.displayName+" (@"+o.username+")"===selected);
+ if(!selectedOperator){
+  card.classList.add("hidden");
+  if(label)label.textContent="Seçilmedi";
+  hint.textContent=active.length?"Görevlendir grubundan operatör seçin.":"Aktif operatör bulunamadı. Önce operatör ekleyin.";
+ }else if(label)label.textContent=selectedOperator.displayName||selectedOperator.username;
 }
+
 function refreshTaskLists(){
  const lists=[
  ["taskMachine","Makine seçiniz",cached.filter(m=>m.status==="idle"&&m.jobReady!==true).map(m=>m.machineName||m.id)],
