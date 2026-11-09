@@ -50,8 +50,9 @@ export function createCore({getSnapshot,getRole,limit=100}){
   machines=machines.filter(m=>customerMatch(m,customer));
   jobs=jobs.filter(j=>customerMatch(j,customer));
   const q=parsed.q;
-  const found=machines.filter(m=>matches(m,q));
-  const foundJobs=jobs.filter(j=>matches(j,q));
+  const tokens=q.split(" ").filter(x=>x.length>2&&!["makine","operator","calisma","suresi","raporu","rapor","goster","gore","listele","toplam","nedir","kadar","kac","saat","olan","hangi","isler","isleri"].includes(x));
+  const found=machines.filter(m=>tokens.some(t=>matches(m,t)));
+  const foundJobs=jobs.filter(j=>tokens.some(t=>matches(j,t)));
   const named=found.length||foundJobs.length;
   const scope=named?found:machines;
   const historical=named?foundJobs:jobs;
