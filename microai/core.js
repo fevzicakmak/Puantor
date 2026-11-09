@@ -30,7 +30,7 @@ function matches(item,query){
 function customerMatch(item,customer){return !customer||normalize(item.customerName)===normalize(customer)}
 function parseQuery(text){
  const q=normalize(text);
- const date=q.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/);
+ const date=String(text).match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/);
  const day=date?`${date[3]}-${date[2].padStart(2,"0")}-${date[1].padStart(2,"0")}`:null;
  return {q,day,kind:/rapor|ozet|dokum|ekstre/.test(q)?"report":/sure|saat|kac saat|ne kadar calis/.test(q)?"duration":/ariza|bozuk/.test(q)?"broken":/bekle|durakla/.test(q)?"paused":/tamamlan|biten/.test(q)?"done":/calis|aktif/.test(q)?"running":"status"};
 }
