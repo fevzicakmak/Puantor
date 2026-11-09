@@ -31,6 +31,8 @@ html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;
 
 /* iOS Safari: prevent automatic focus zoom while retaining user pinch zoom */
 input,select,textarea{font-size:16px!important}
+
+.voice-task-review{background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:12px;margin-top:9px}.voice-task-review[hidden]{display:none}.voice-task-review p{font-size:14px;line-height:1.5}.voice-task-review button{margin-top:6px}
 </style></head><body>
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
@@ -42,6 +44,7 @@ input,select,textarea{font-size:16px!important}
   <button type="button" id="actionMic" class="search-mic" aria-label="Sesle ara" title="Sesle ara"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4m-4 0h8"/></svg><span class="sr-only">Sesle ara</span></button>
  </div>
  <div id="actionResults" class="search-results" role="listbox" hidden></div>
+ <div id="voiceTaskReview" class="voice-task-review" hidden><strong>Görev taslağı</strong><p id="voiceTaskSummary"></p><button type="button" id="voiceTaskPrepare">Görev formunu doldur</button><button type="button" id="voiceTaskDismiss" class="secondary">Vazgeç</button></div>
  <p id="actionHint" class="search-step" role="status">İşlem, müşteri, operatör veya makine arayın.</p>
  <button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button>
  </section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
@@ -186,7 +189,15 @@ window.addEventListener("DOMContentLoaded",()=>{
  if(isDebt)total+=index===9?25:index===13?6:-5;
  return Math.max(0,total);
  }
- function update(){const q=norm(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)>0?score(item,q)+bonus(item,q):0})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+ const taskReview=el("voiceTaskReview"),taskSummary=el("voiceTaskSummary");
+ let taskDraft=null;
+ const searchName=(text,names)=>{const matches=names.filter(x=>x.name&&norm(text).includes(norm(x.name)));matches.sort((a,b)=>b.name.length-a.name.length);return matches[0]||null};
+ function detectTask(text){const q=norm(text);if(!/(gorev|ata|gonder|gitsin|calis|is ver|yonlendir)/.test(q))return null;const data=window.__puantorSearchData||{};const machines=(data.machines||[]).map(x=>({name:x.machineName||x.plaka||x.plate||x.id,extra:[x.plaka,x.plate,x.id].filter(Boolean)}));const matchMachine=machines.find(x=>[x.name,...x.extra].some(n=>n&&norm(q).includes(norm(n))))||null;return {operator:searchName(text,(data.operators||[]).map(x=>({name:x.displayName,username:x.username}))),customer:searchName(text,data.customers||[]),machine:matchMachine};}
+ function showTaskDraft(text){const draft=detectTask(text);if(!draft){taskReview.hidden=true;taskDraft=null;return false}taskDraft=draft;taskReview.hidden=false;taskSummary.textContent="Operatör: "+(draft.operator?.name||"Seçilmedi")+" · Makine: "+(draft.machine?.name||"Seçilmedi")+" · Müşteri: "+(draft.customer?.name||"Seçilmedi")+". Eksikleri formdan tamamlayıp ücreti girin. Görev kaydedilmeyecek.";return true}
+ function setTaskOption(id,name){if(!name)return false;const field=el(id);if(!field||!field.options)return false;const n=norm(name);const option=[...field.options].find(o=>norm(o.textContent)===n||norm(o.value)===n)||[...field.options].find(o=>norm(o.textContent).includes(n));if(!option)return false;field.value=option.value;field.dispatchEvent(new Event("change",{bubbles:true}));return true}
+ el("voiceTaskDismiss").addEventListener("click",()=>{taskDraft=null;taskReview.hidden=true});
+ el("voiceTaskPrepare").addEventListener("click",()=>{if(!taskDraft)return;const button=document.querySelector('#managerToolbar button[data-panel="1"]');if(button)button.click();const draft=taskDraft;setTimeout(()=>{const op=setTaskOption("taskOperator",draft.operator?.name);const machine=setTaskOption("taskMachine",draft.machine?.name);const customer=setTaskOption("taskCustomer",draft.customer?.name);taskReview.hidden=true;taskDraft=null;const missing=[!machine&&"makine",!op&&"operatör",!customer&&"müşteri"].filter(Boolean);hint.textContent=missing.length?"Görev formu hazır. Eksik alanlar: "+missing.join(", ")+". Saatlik ücreti girip kaydetmeden önce kontrol edin.":"Görev bilgileri hazır. Saatlik ücreti girin ve kaydetmeden önce kontrol edin.";el("taskRate")?.scrollIntoView({behavior:"smooth",block:"center"})},200)});
+ function update(){const q=norm(input.value);showTaskDraft(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)>0?score(item,q)+bonus(item,q):0})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
 
  const SpeechRecognitionClass=window.SpeechRecognition||window.webkitSpeechRecognition;
  const dictationHelp="iPhone'da arama kutusuna dokunup klavyedeki mikrofon simgesini kullanabilirsiniz.";
