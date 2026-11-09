@@ -338,7 +338,7 @@ function renderStatement(){
  $("statementCount").textContent=jobs.length;
  $("statementDuration").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
  $("statementTotal").textContent=money(jobs.reduce((n,j)=>n+(statementAmount(j)??0),0));
- $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = kayıtlı çalışma bedeli − tahsilatlar.";
+ $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = çalışma bedeli + yol ücreti − tahsilatlar.";
  $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p><div class="grid"><button type="button" class="secondary" data-pay-edit="'+safe(p.id)+'">Düzenle</button><button type="button" class="secondary" data-pay-delete="'+safe(p.id)+'">Sil</button></div></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
  $("statementRows").innerHTML=$("statementCustomer").value?(jobs.length?jobs.map(j=>'<div class="card"><strong>'+safe(j.machineName||j.machineId||"Makine")+'</strong><p>'+safe((j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"Tarih bilinmiyor")+' · '+formatMs(j.elapsedMs)+'</p><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Saatlik: '+(statementAmount(j)===null?"Belirtilmemiş":money(Number(j.hourlyRate)))+' · Çalışma: '+(statementAmount(j)===null?'Belirtilmemiş':money(billedAmount(j.elapsedMs,j.hourlyRate)))+' · Yol: '+money(Number(j.travelFee)||0)+' · Genel toplam: <strong>'+(statementAmount(j)===null?'Belirtilmemiş':money(statementAmount(j)))+'</strong></p></div>').join(""):'<p>Bu müşterinin arşivlenmiş işi yok.</p>'):'<p>Müşteri seçin.</p>';
 }
@@ -387,8 +387,8 @@ $("statementCsv").addEventListener("click",()=>{
  for(const j of jobs){const date=(j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"";rows.push([date,"Çalışma",j.machineName||j.machineId||"",j.operatorName||"",formatMs(j.elapsedMs),statementAmount(j)===null?"":Number(j.hourlyRate).toFixed(2),statementAmount(j)===null?"":billedAmount(j.elapsedMs,j.hourlyRate).toFixed(2),(Number(j.travelFee)||0).toFixed(2),statementAmount(j)===null?"":statementAmount(j).toFixed(2),""])}
  for(const p of received)rows.push([p.date,"Tahsilat",p.note||"","", "","","","","",Number(p.amount).toFixed(2)]);
  const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
- rows.push(["","TOPLAM","","","","","",total.toFixed(2),paid.toFixed(2)]);
- rows.push(["","KALAN ALACAK","","","","","",(total-paid).toFixed(2),""]);
+ rows.push(["","TOPLAM","","","","","","",total.toFixed(2),paid.toFixed(2)]);
+ rows.push(["","KALAN ALACAK","","","","","","",(total-paid).toFixed(2),""]);
  const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="puantor-musteri-ekstresi.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
