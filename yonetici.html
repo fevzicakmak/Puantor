@@ -7,11 +7,14 @@ details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-ra
 /* Telefon ekranına taşmayı ve iOS Safari otomatik yakınlaştırmasını önle */
 html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;min-width:0;overflow-x:hidden}main,section,form,details,.tool-content,.card,.grid,.toolbox-grid{min-width:0;max-width:100%}input,select,textarea,button{min-width:0;max-width:100%;font-size:16px}input[type="file"]{overflow:hidden}label{display:block;min-width:0;overflow-wrap:anywhere}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top{flex-wrap:wrap}.top>*{min-width:0}summary{overflow-wrap:anywhere}@media(max-width:480px){body{padding:10px}.toolbox-grid{display:block}.grid{grid-template-columns:minmax(0,1fr)}.stat b{font-size:23px}details.toolbox>.tool-content{padding:0 10px 14px}details.toolbox>summary{font-size:17px;min-height:64px;padding:14px 12px}.card{padding:12px}}
 .manager-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.manager-toolbar button{margin:0;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fff;color:#142033;border:1px solid #cbd5e1;border-radius:15px;font-size:28px;box-shadow:0 2px 7px #1420330a}.manager-toolbar button span{font-size:14px;font-weight:750;text-align:center;line-height:1.2}.manager-toolbar button .toolbar-hint{display:block;font-size:11px;font-weight:500;line-height:1.3;color:#64748b;text-align:center;max-width:100%;padding:0 4px}.manager-toolbar button.active .toolbar-hint{color:#375e9e}.manager-toolbar button.active{background:#dbeafe;border:2px solid #2563eb;color:#1e40af}#managerPanels{display:block}#managerPanels>details.toolbox{display:none;margin:0 0 14px}#managerPanels>details.toolbox.active-panel{display:block}#managerPanels>details.toolbox>summary{display:none}#managerPanels>details.toolbox>.tool-content{padding:14px}@media(max-width:480px){.manager-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.manager-toolbar button{min-height:90px}}.dashboard-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-stats .stat{padding:12px 8px}.dashboard-stats .stat b{font-size:27px}.dashboard-stats .stat small{font-size:12px}@media(min-width:700px){.dashboard-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}.archive-notification{position:absolute;top:7px;right:7px;min-width:24px;height:24px;border-radius:99px;background:#dc2626;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 0 0 3px #fff;z-index:2}.archive-notification[hidden]{display:none!important}button[data-panel="4"]{position:relative}
+
+/* Sesli akilli rehber */
+.guide-box{background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:12px;margin:12px 0}.guide-line{display:flex;gap:8px;align-items:center}.guide-line input{flex:1;min-width:0}.guide-line button{width:auto;flex-shrink:0;margin:0}.guide-note{font-size:13px;color:#475569;margin:8px 0 0}.guide-focus{outline:4px solid #f59e0b!important;outline-offset:3px;animation:guideBlink 1.1s ease-in-out infinite!important;scroll-margin-top:100px}@keyframes guideBlink{0%,100%{box-shadow:0 0 0 0 #f59e0b33}50%{box-shadow:0 0 0 8px #f59e0b77}}@media(prefers-reduced-motion:reduce){.guide-focus{animation:none!important}}
 </style></head><body>
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
 <section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
-<main id="dashboard" class="hidden">
+<main id="dashboard" class="hidden"><section class="guide-box" aria-label="Sesli akıllı rehber"><strong>🎙️ Puantör Akıllı Rehber</strong><div class="guide-line"><input id="guideQuery" type="text" placeholder="Örn. Muammer'e görev ata, müşteri ekstresi..." aria-label="Ne yapmak istiyorsunuz?"><button type="button" id="guideMic" aria-label="Sesle sor">🎤</button><button type="button" id="guideGo">Bul</button></div><p id="guideMessage" class="guide-note" role="status" aria-live="polite">Konuşun veya yazın; sizi adım adım yönlendireyim.</p><button type="button" id="guideStop" class="secondary" style="display:none">Rehberi kapat</button></section>
 <div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
 <nav id="managerToolbar" class="manager-toolbar" aria-label="Yönetici araçları"><button type="button" data-panel="0">➕<span>Ekle</span><small class="toolbar-hint">(Operatör, makine, müşteri)</small></button><button type="button" data-panel="1">📌<span>Operatöre Görev Ata</span><small class="toolbar-hint">(Operatör görevlendir)</small></button><button type="button" data-panel="2">📋<span>Bitirilen İşler</span><small class="toolbar-hint">(Tamamlanan işler, yedek)</small></button><button type="button" data-panel="3">👷‍♂️👷‍♂️<span>Operatör Hesapları</span><small class="toolbar-hint">(Operatör kayıt, düzenle, sil)</small></button><button type="button" data-panel="4">🚜<span>Bitirilen İşi Arşivle</span><small class="toolbar-hint">(Canlı çalışma takibi)</small></button><button type="button" data-panel="5">🧾<span>Müşteri Ekstresi</span><small class="toolbar-hint">(İşler, tahsilat, bakiye)</small></button><button type="button" data-panel="6">📊<span>Finans Özeti</span><small class="toolbar-hint">(Gelir, alacak, toplam)</small></button></nav><div class="toolbox-grid" id="managerPanels">
 <details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
@@ -50,6 +53,41 @@ window.addEventListener("DOMContentLoaded",()=>{
 window.addEventListener("error",e=>{const el=document.getElementById("status");if(el)el.textContent="Sayfa hatası: "+(e.message||"JavaScript yüklenemedi")});
 window.addEventListener("unhandledrejection",e=>{const el=document.getElementById("status");if(el)el.textContent="Bağlantı hatası: "+(e.reason?.message||String(e.reason||"Bilinmeyen hata"))});
 setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("status");if(el&&el.textContent.includes("hazırlanıyor"))el.textContent="Firebase başlatılamadı. Safari'de sayfayı yeniden yükleyin; sorun sürerse ekran görüntüsünü gönderin (modül veya ağ bağlantısı hatası)."}},9000);
+</script>
+
+<script>
+/* Ilk asama: tarayici ses tanima + yerel niyet tespiti. API anahtari veya sunucuya konusma gonderimi yok. */
+window.addEventListener("DOMContentLoaded",()=>{
+ const $=id=>document.getElementById(id),q=$("guideQuery"),msg=$("guideMessage"),stop=$("guideStop");let steps=[],step=0,recognition=null;
+ const focus=()=>{document.querySelectorAll(".guide-focus").forEach(x=>x.classList.remove("guide-focus"));if(step>=steps.length){msg.textContent="Yönlendirme tamamlandı. İşlemi kontrol edip onaylayabilirsiniz.";stop.style.display="none";return}const el=document.querySelector(steps[step]);if(!el){step++;focus();return}el.classList.add("guide-focus");el.scrollIntoView({behavior:"smooth",block:"center"});msg.textContent="Adım "+(step+1)+"/"+steps.length+": "+(el.closest("label")?.textContent.trim()||el.textContent.trim()||"Vurgulanan alana dokunun").slice(0,115);};
+ const next=()=>{if(step<steps.length){step++;focus()}};
+ function startGuide(text){const t=text.toLocaleLowerCase("tr-TR");let panel=0,kind="";
+ if(/görev|gorev|ata|görevlendir|iş ver|iş başlat/.test(t))panel=1;
+ else if(/arşivle|arsivle|canlı|çalışıyor|makine durum|nerede çalış/.test(t))panel=4;
+ else if(/ekstre|tahsilat|borç|alacak|bakiye/.test(t))panel=5;
+ else if(/finans|gelir|toplam kazanç|ciro|özet/.test(t))panel=6;
+ else if(/bitirilen|tamamlanan|geçmiş|yedek|rapor|csv/.test(t))panel=2;
+ else if(/operatör hesab|operatör sil|operatör düzen|şifre|parola/.test(t))panel=3;
+ else if(/operatör ekle|yeni operatör|operatör kaydet/.test(t)){panel=0;kind="operator"}
+ else if(/makine ekle|araç ekle|yeni makine|kepçe ekle/.test(t)){panel=0;kind="machine"}
+ else if(/müşteri ekle|yeni müşteri|müşteri kaydet/.test(t)){panel=0;kind="customer"}
+ else if(/ekle|kayıt oluştur/.test(t))panel=0;
+ else{msg.textContent="Hedefi anlayamadım. Örneğin: ‘Operatöre görev ata’, ‘Müşteri ekstresi’ veya ‘Yeni makine ekle’ deyin.";return}
+ steps=['#managerToolbar button[data-panel="'+panel+'"]'];
+ if(panel===1)steps.push('#taskMachine','#taskOperator','#taskCustomer','#taskRate','#taskSave');
+ else if(panel===0){steps.push('#addType');if(kind)steps.push(kind==="operator"?'#opUsername':kind==="machine"?'#newMachine':'#customerName');}
+ else if(panel===5)steps.push('#statementCustomer');
+ stop.style.display="block";step=0;focus();
+ }
+ $("guideGo").addEventListener("click",()=>startGuide(q.value));q.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();startGuide(q.value)}});
+ document.addEventListener("click",e=>{if(!steps.length)return;const target=document.querySelector(steps[step]);if(target&&e.target.closest("#managerToolbar button")===target){next();}});
+ document.addEventListener("change",e=>{if(!steps.length)return;const target=document.querySelector(steps[step]);if(target===e.target){if(e.target.value)next();}});
+ document.addEventListener("input",e=>{if(!steps.length)return;const target=document.querySelector(steps[step]);if(target===e.target&&e.target.matches("input")&&e.target.value.trim()){next();}});
+ stop.addEventListener("click",()=>{steps=[];document.querySelectorAll(".guide-focus").forEach(x=>x.classList.remove("guide-focus"));stop.style.display="none";msg.textContent="Rehber kapatıldı."});
+ const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Speech){$("guideMic").title="Bu tarayıcı ses tanımayı desteklemiyor; yazı alanını kullanın."}
+ $("guideMic").addEventListener("click",()=>{if(!Speech){msg.textContent="Bu tarayıcıda ses tanıma desteklenmiyor. İsteğinizi yazarak devam edebilirsiniz.";return}try{recognition=new Speech();recognition.lang="tr-TR";recognition.interimResults=false;recognition.maxAlternatives=1;recognition.onresult=e=>{q.value=e.results[0][0].transcript;startGuide(q.value)};recognition.onerror=e=>{msg.textContent="Ses tanınamadı ("+e.error+"). Mikrofon iznini kontrol edin veya yazın."};recognition.onstart=()=>{msg.textContent="Dinliyorum…"};recognition.start()}catch(e){msg.textContent="Mikrofon başlatılamadı. İsteğinizi yazabilirsiniz."}});
+});
 </script>
 <script type="module">
 import {firebaseConfig} from "./firebase-config.js";
