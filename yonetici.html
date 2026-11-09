@@ -349,14 +349,14 @@ $("paymentRows").addEventListener("click",async e=>{
   try{await deleteDoc(doc(db,"payments",id));$("paymentResult").textContent="Tahsilat silindi."}catch(err){$("paymentResult").textContent="Silinemedi: "+(err.message||err.code)}}else{
  const date=prompt("Tahsilat tarihi (YYYY-AA-GG)",p.date);if(date===null)return;
  const amountRaw=prompt("Tahsilat tutarı (TL)",String(p.amount));if(amountRaw===null)return;
- const amount=Number(amountRaw.replace(",","."));const note=prompt("Açıklama",p.note||"");if(note===null)return;
- if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(amount)||amount<=0||amount>100000000||note.length>150){$("paymentResult").textContent="Tarih, tutar veya açıklama geçersiz.";return}
+ const amount=Number(amountRaw.trim().replace(",","."));const note=prompt("Açıklama",p.note||"");if(note===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!amountRaw.trim()||!Number.isFinite(amount)||amount<=0||amount>100000000||note.length>150){$("paymentResult").textContent="Tarih, tutar veya açıklama geçersiz.";return}
  if(!confirm("Tahsilat "+money(amount)+" olarak güncellensin mi?"))return;
  try{await updateDoc(doc(db,"payments",id),{date,amount:Math.round(amount*100)/100,note});$("paymentResult").textContent="Tahsilat güncellendi."}catch(err){$("paymentResult").textContent="Düzenlenemedi: "+(err.message||err.code)}
  }
 });
 $("statementCustomer").addEventListener("change",renderStatement);
-$("paymentDate").value=new Date().toLocaleDateString("en-CA");
+$("paymentDate").value=[new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,"0"),String(new Date().getDate()).padStart(2,"0")].join("-");
 $("paymentForm").addEventListener("submit",async e=>{
  e.preventDefault();const customerName=$("statementCustomer").value,amount=Number($("paymentAmount").value),date=$("paymentDate").value,note=$("paymentNote").value.trim(),out=$("paymentResult"),btn=$("paymentSave");
  if(!customerName){out.textContent="Önce müşteri seçin.";return}
