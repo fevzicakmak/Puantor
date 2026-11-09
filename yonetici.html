@@ -226,7 +226,21 @@ window.addEventListener("DOMContentLoaded",()=>{
  function resetMic(){listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"}
  mic.addEventListener("click",()=>{if(listening){recognition.stop();return}received=false;hadError=false;try{recognition.start()}catch(e){resetMic();hint.textContent="Ses tanıma başlatılamadı. "+dictationHelp;input.focus()}});
  recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum… Konuşun."};
- recognition.onresult=e=>{let spoken="";for(let i=0;i<e.results.length;i++)spoken+=e.results[i][0]?.transcript||"";spoken=spoken.trim();if(spoken){received=true;input.value=spoken;update();hint.textContent="Algılanan: "+spoken+". Bir öneri seçin."}};
+ recognition.onresult=e=>{
+ let spoken="",final=false;
+ for(let i=0;i<e.results.length;i++){spoken+=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)final=true}
+ spoken=spoken.trim();
+ if(!spoken)return;
+ received=true;input.value=spoken;update();
+ if(!final){hint.textContent="Algılanan: "+spoken;return}
+ if(taskDraft){hint.textContent="Görev isteği algılandı. Bilgileri kontrol edip 'Görev formunu doldur' seçeneğine basın.";return}
+ const q=norm(spoken);
+ const ranked=[...items,...dynamicItems()].map(item=>({item,points:score(item,q)+bonus(item,q)})).filter(x=>score(x.item,q)>0).sort((a,b)=>b.points-a.points);
+ if(ranked.length&&ranked[0].points>ranked[1]?.points*1.2||ranked.length===1&&ranked[0].points>0){
+  select(ranked[0].item);
+  hint.textContent="Sesli yönlendirme hazır. Vurgulanan menüden devam edin.";
+ }else hint.textContent="Birden fazla işlem eşleşti. Listeden istediğinizi seçin.";
+};
  recognition.onerror=e=>{hadError=true;const errors={"not-allowed":"Mikrofon izni reddedildi. Safari site ayarlarından mikrofon izni verin.","service-not-allowed":"Bu tarayıcı konuşma tanıma servisine izin vermiyor.","audio-capture":"Mikrofona erişilemiyor. Mikrofon izinlerini kontrol edin.","network":"Konuşma tanıma servisine bağlanılamadı.","no-speech":"Konuşma algılanamadı. Tekrar deneyin.","language-not-supported":"Türkçe konuşma tanıma bu tarayıcıda desteklenmiyor."};hint.textContent=(errors[e.error]||"Ses tanıma hatası: "+e.error)+ " "+dictationHelp};
  recognition.onend=()=>{resetMic();if(!received&&!hadError)hint.textContent="Konuşma algılanmadı. "+dictationHelp};
  }else{mic.addEventListener("click",()=>{input.focus();hint.textContent="Bu tarayıcı doğrudan ses tanımayı desteklemiyor. "+dictationHelp});mic.title="Klavye diktesiyle ara"}
