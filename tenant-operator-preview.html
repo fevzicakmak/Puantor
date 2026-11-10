@@ -82,21 +82,23 @@ async function changeState(action){
  finally{busy=false;updateControls()}
 }
 for(const id of controls)$(id).addEventListener("click",()=>{ changeState(id) });
+let profileUnsubscribe=null, assignmentRevision=0;
 onAuthStateChanged(auth,async user=>{
- if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();
+ if(unsubscribe){unsubscribe();unsubscribe=null}if(profileUnsubscribe){profileUnsubscribe();profileUnsubscribe=null}assignmentRevision++;machineId=null;machineData=null;updateControls();
  $("operatorLogin").hidden=!!user;$("session").hidden=!user;
  if(!user){location.replace("./giris.html");return;}
  $("who").textContent=user.email||"Operatör";
  try{
- const profile=await getDoc(doc(db,"users",user.uid));
+ profileUnsubscribe=onSnapshot(doc(db,"users",user.uid),async profile=>{const revision=++assignmentRevision;try{
  if(!profile.exists()||profile.data().role!=="tenant_operator"||typeof profile.data().tenantId!=="string"||!profile.data().tenantId){location.replace("./giris.html");return}tenantId=profile.data().tenantId;
  const ids=profile.data().machineIds;
- if(!Array.isArray(ids)||!ids.length){showError("Makine ataması henüz tamamlanmadı.");return}
+ if(!Array.isArray(ids)||!ids.length){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;assignedIds=[];updateControls();$("machineSelect").replaceChildren();showError("Makine ataması henüz tamamlanmadı.");return}
  const selector=$("machineSelect");selector.innerHTML="";
  const matches=await Promise.all(ids.map(async id=>{try{const snap=await getDoc(doc(db,"businesses",tenantId,"machines",id));const m=snap.exists()?snap.data():null;return m&&m.operatorUid===user.uid&&m.jobReady===true&&m.status!=="done"?{id,m}:null}catch{return null}}));
+ if(revision!==assignmentRevision)return;
  const active=matches.filter(Boolean);assignedIds=active.map(x=>x.id);
  for(const {id,m} of active){const opt=document.createElement("option");opt.value=id;opt.textContent=m.machineName||m.plaka||m.plate||id;selector.appendChild(opt)}
- if(!active.length){showError("Size atanmış aktif görev bulunmuyor.");return}
+ if(!active.length){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();showError("Size atanmış aktif görev bulunmuyor.");return}
  const selected=assignedIds.includes(sessionStorage.getItem("puantor-selected-machine"))?sessionStorage.getItem("puantor-selected-machine"):assignedIds[0];selector.value=selected;
  function subscribeMachine(id){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=id;machineData=null;updateControls();showError("");$("machine").textContent=id;sessionStorage.setItem("puantor-selected-machine",id);unsubscribe=onSnapshot(doc(db,"businesses",tenantId,"machines",id),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
@@ -110,7 +112,7 @@ onAuthStateChanged(auth,async user=>{
  if(m.status==="done"||m.jobReady!==true)showError("Yeni çalışma için yönetici bekleniyor.");
  },()=>showError("Seçilen makineye erişim izni yok. Yönetici makine atamasını kontrol etmeli."));}
  selector.onchange=()=>subscribeMachine(selector.value);subscribeMachine(selected);
- }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
+ }catch(e){if(revision===assignmentRevision)showError("Atama yenilenemedi: "+(e.code||e.message))}},e=>showError("Operatör profil bağlantısı kesildi: "+(e.code||e.message)));
 });
 $("operatorLogin").addEventListener("submit",async e=>{
  e.preventDefault();showError("");const b=e.target.querySelector("button");b.disabled=true;
