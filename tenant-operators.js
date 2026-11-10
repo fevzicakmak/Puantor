@@ -60,7 +60,7 @@ export async function provisionTenantOperator(db,session,id,email,password){
     user=credential.user;
     created=true;
   }
-  await updateDoc(rosterRef,{authUid:user.uid,email:normalized,active:true,authStatus:"active"});
+  await updateDoc(rosterRef,{authUid:user.uid,email:normalized,active:false,authStatus:"provisioning"});
   rosterLinked=true;
   // The secondary user may create its own profile, but only after manager authorization.
   // Auth and Firestore use separate sessions, so initialize a secondary Firestore instance.
@@ -73,6 +73,7 @@ export async function provisionTenantOperator(db,session,id,email,password){
   }else{
     await setDoc(profileRef,{role:"tenant_operator",tenantId:session.tenantId,operatorId:id,email:normalized,active:true,createdAt:serverTimestamp()});
   }
+  await updateDoc(rosterRef,{active:true,authStatus:"active"});
   return user.uid;
  }catch(err){
   // If Firestore linking failed after a new Auth signup, remove the orphaned Auth user.
