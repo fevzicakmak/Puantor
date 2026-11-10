@@ -1,5 +1,5 @@
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require("@firebase/rules-unit-testing");
-const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require("firebase/firestore");
 (async()=>{
  const env=await initializeTestEnvironment({projectId:"puantor-tenant-rules-test",firestore:{host:"127.0.0.1",port:8080}});
  try{
@@ -42,6 +42,17 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
   await assertFails(updateDoc(doc(op,"businesses","firm-b","machines","machine1"),{status:"running"}));
   await assertSucceeds(setDoc(doc(a,"businesses","firm-a","searchPreferences","firm-a"),{preferences:{},updatedAt:serverTimestamp()}));
   await assertFails(getDoc(doc(b,"businesses","firm-a","searchPreferences","firm-a")));
+  // A legitimate operator transition must update machine and own activeMachineId atomically.
+  const machineRef=doc(op,"businesses","firm-a","machines","machine1");
+  const userRef=doc(op,"users","firm-a-op");
+  const start=writeBatch(op);
+  start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""}]});
+  start.update(userRef,{activeMachineId:"machine1"});
+  await assertSucceeds(start.commit());
+  const pause=writeBatch(op);
+  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""},{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""}]});
+  pause.update(userRef,{activeMachineId:""});
+  await assertSucceeds(pause.commit());
   console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
  }finally{await env.cleanup();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
