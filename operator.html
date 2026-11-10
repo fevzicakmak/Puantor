@@ -171,6 +171,7 @@ $("autoToggle").addEventListener("click",async()=>{
   $("autoStatus").textContent="Aktif görev olmadan pilot ölçümü başlatılamaz.";return;
  }
  latestMotionMeasurement=null;
+ motionDetector.setMode($("motionMode").value);
  const ok=await motionDetector.start();
  if(ok){autoArmed=true;$("autoToggle").textContent="Sensör ölçümünü durdur";}
 });
