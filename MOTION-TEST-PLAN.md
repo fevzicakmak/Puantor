@@ -73,3 +73,11 @@
 - Saha testinden sonra CSV dosyası mühendislik incelemesi için alınabilir; bu çalışma Firebase canlı iş kayıtlarını veya faturaları etkilemez.
 - `motion-lab.test.mjs` bağımsız sayfada ihtiyaç duyulan kontrollerin bulunmasını, istemci modülünün JavaScript sözdizimini ve Firebase bağlantısının olmadığını denetler.
 - **Laboratuvar henüz canlı HTTPS üzerinde yayımlanmadı; gerçek iPhone/Android saha testi yapılmadı.** Sadece GitHub kodunun bulunması çalışan bir web bağlantısı değildir.
+
+## Pilot v9 — HTTPS yayınlama hazırlığı
+- `.github/workflows/deploy-motion-lab.yml` ayrı statik GitHub Pages dağıtımı tanımlar. Dağıtılan pakette **yalnızca** motion-lab.html ve gerekli beş JS modülü vardır; Firebase yapılandırması, yönetici paneli veya uygulama verileri bulunmaz.
+- GitHub Pages'in repo ayarlarında **Build and deployment → Source: GitHub Actions** seçili olması gerekir. GitHub Pages yetkilendirmesi/devreye alma bağlantı izinlerine bağlıdır; otomatik çalıştığı varsayılmamalıdır.
+- **Gerçek URL doğrulanmadan kullanıcıya açılmış test adresi olarak sunulamaz.** Beklenen URL biçimi GitHub Pages etkinse `https://fevzicakmak.github.io/Puantor/` olur.
+- Yayınlama için ayrı workflow tetiklendiğinde GitHub → Actions → Deploy Standalone Motion Lab üzerinden sonucu denetleyin.
+- Saha testinde sayfayı iPhone Safari'de HTTPS üzerinde açın, telefon sabitlenince izin isteğini düğmeyle başlatın, ilk ölçümü motor kapalıyken kalibre edin.
+- Sayfanın herkese açık olması mümkündür. Sensör ölçümleri cihaz tarayıcısında tutulur; CSV'yi güvenli kanalla paylaşın.
