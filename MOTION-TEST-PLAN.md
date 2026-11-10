@@ -63,3 +63,13 @@
 - Panel yalnızca sensör verisini okur. İş başlatma, görev süresi veya Firebase durumunu değiştirmez.
 - Gerçek durum etiketleri, mod bazlı analiz, CSV dışa aktarma ve yerel kayıt sistemi mevcut işlevlerini korur.
 - GitHub Actions run #25 (42900081122) başarıyla tamamlandı. Gerçek cihazda ölçüm testi yine gereklidir.
+
+## Pilot v8 — bağımsız sensör laboratuvarı
+- `motion-lab.html` operatör hesabı, Firebase ve atanmış iş olmadan kullanılır.
+- HTTPS ortamında telefon hareket sensörü izni istenir. Dosyayı iPhone'da yalnızca yerel `file://` ile açmak sensör erişimini sağlamayabilir; güvenli web sunucusunda yayınlamak gerekir.
+- Makine tipi ve sabitleme konumu seçilebilir; motor kapalı, rölanti, kazı, ilerleme, yürüyüş ve telefon hareketi testleri etiketlenebilir.
+- Canlı sinyal puanı, RMS titreşim, jiroskop, hareket eşiği ve kesintisiz süre görülebilir.
+- En çok 1800 kayıt cihazın yerel tarayıcı depolamasında tutulur; CSV indirme ve silme vardır.
+- Saha testinden sonra CSV dosyası mühendislik incelemesi için alınabilir; bu çalışma Firebase canlı iş kayıtlarını veya faturaları etkilemez.
+- `motion-lab.test.mjs` bağımsız sayfada ihtiyaç duyulan kontrollerin bulunmasını, istemci modülünün JavaScript sözdizimini ve Firebase bağlantısının olmadığını denetler.
+- **Laboratuvar henüz canlı HTTPS üzerinde yayımlanmadı; gerçek iPhone/Android saha testi yapılmadı.** Sadece GitHub kodunun bulunması çalışan bir web bağlantısı değildir.
