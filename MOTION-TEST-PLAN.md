@@ -39,3 +39,11 @@
 - Gerçek çalışma zamanı, Firebase kayıtları ve ücretlendirme etkilenmez.
 - Skorun güvenirliği gerçek saha verileri olmadan ileri sürülemez. Sınıf ayrımı makine tipine göre doğrulanmalıdır.
 - Örnek otomatik testler: `node --test motion-classifier.test.mjs` (Node sürümüne göre .js ES modül algısı gerekebilir).
+
+## Pilot v5 — otomatik kod kontrolü (10.11.2026)
+- GitHub Actions `.github/workflows/motion-pilot.yml` Node 22 ile sensör, sınıflandırma ve analiz testlerini çalıştırır.
+- `package.json` ESM modül ayarı ve `npm run test:motion` komutunu tanımlar.
+- Sensör veri kesintisi ve sayfanın arka plandan dönmesi, daha önceki titreşim referansını sıfırlar; yeni kalibrasyon gerektirir.
+- Makineye sabit ve bilek modlarının saha test raporları birbirinden ayrılır.
+- Github Actions run #9 / 42898713835 başarılı; bu yalnızca yazılım testi sonucudur, gerçek saha testi değildir.
+- Pilot otomatik çalışma başlatma, duraklatma, bitirme ve ücret değişikliği yapmaz.
