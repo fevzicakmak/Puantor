@@ -56,3 +56,10 @@
 - Pilot kayıtları Firebase'e veya yöneticinin hesabına otomatik gönderilmez.
 - 'Test kayıtlarını sil' işlevi yalnızca bu cihazın pilot hareket verilerini temizler.
 - CSV çıktısı yetkisiz kişilere gönderilmemelidir; operatör/makine bilgileri içerir.
+
+## Pilot v7 — canlı saha test paneli
+- Operatör paneline canlı ivme RMS (m/s²), jiroskop hızı (°/sn), eşik, kesintisiz hareket süresi ve 0–100 sezgisel puan göstergeleri eklendi.
+- Test başlangıcından itibaren süre sayacı bulunur; bu sayaç faturalandırılan iş süresi değildir.
+- Panel yalnızca sensör verisini okur. İş başlatma, görev süresi veya Firebase durumunu değiştirmez.
+- Gerçek durum etiketleri, mod bazlı analiz, CSV dışa aktarma ve yerel kayıt sistemi mevcut işlevlerini korur.
+- GitHub Actions run #25 (42900081122) başarıyla tamamlandı. Gerçek cihazda ölçüm testi yine gereklidir.
