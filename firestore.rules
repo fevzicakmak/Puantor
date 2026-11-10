@@ -15,7 +15,11 @@ service cloud.firestore {
      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_operator' &&
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId &&
-     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true;
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.operatorId is string &&
+     exists(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.operatorId)) &&
+     get(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.operatorId)).data.active == true &&
+     get(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.operatorId)).data.authUid == request.auth.uid;
   }
   function activeTenantAssignment(tenantId, machine) {
     return tenantOperator(tenantId) &&
