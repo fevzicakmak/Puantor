@@ -118,8 +118,8 @@ onAuthStateChanged(auth,async user=>{
 });
 $("operatorLogin").addEventListener("submit",async e=>{
  e.preventDefault();showError("");const b=e.target.querySelector("button");b.disabled=true;
- try{await signInWithEmailAndPassword(auth,$("username").value.trim().toLowerCase().includes("@")?$("username").value.trim().toLowerCase():$("username").value.trim().toLowerCase()+"@operators.puantor.invalid",$("pin").value)}
- catch(err){showError("Giriş başarısız. E-posta ve parolayı kontrol edin.")}
+ try{await signInWithEmailAndPassword(auth,$("username").value.trim().toLowerCase(),$("pin").value)}
+ catch(err){showError("Giriş başarısız. Yöneticinizin verdiği giriş e-postasını ve şifreyi kontrol edin.")}
  finally{$("pin").value="";b.disabled=false}
 });
 $("signout").addEventListener("click",()=>signOut(auth));
