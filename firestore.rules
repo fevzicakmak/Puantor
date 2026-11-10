@@ -25,7 +25,35 @@ service cloud.firestore {
    // Their profile must be provisioned by a trusted administrator, never by self-registration.
    match /machines/{machineId} {
     allow read: if tenantAdmin(tenantId) || tenantOperator(tenantId) && resource.data.get('operatorUid', '') == request.auth.uid;
-    allow write: if tenantAdmin(tenantId);
+    allow create, delete: if tenantAdmin(tenantId);
+    allow update: if tenantAdmin(tenantId) || (
+      tenantOperator(tenantId) &&
+      resource.data.get('operatorUid', '') == request.auth.uid &&
+      resource.data.get('jobReady', false) == true &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','startedAt','elapsedMs','faultReason','jobReady','updatedAt']) &&
+      request.resource.data.updatedAt == request.time &&
+      request.resource.data.elapsedMs is number &&
+      request.resource.data.elapsedMs >= resource.data.get('elapsedMs', 0) &&
+      request.resource.data.elapsedMs <= resource.data.get('elapsedMs', 0) + 86400000 &&
+      request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
+      (
+       (request.resource.data.status == 'running' &&
+        resource.data.status in ['idle','paused','broken'] &&
+        request.resource.data.startedAt == request.time &&
+        request.resource.data.elapsedMs == resource.data.get('elapsedMs', 0) &&
+        request.resource.data.faultReason == '') ||
+       (request.resource.data.status in ['paused','broken','done'] &&
+        resource.data.status in ['idle','running','paused','broken'] &&
+        request.resource.data.startedAt == null &&
+        (resource.data.status != 'running' ||
+         (resource.data.startedAt is timestamp &&
+          request.resource.data.elapsedMs >= resource.data.get('elapsedMs', 0))) &&
+        (request.resource.data.status != 'broken' ||
+         (request.resource.data.faultReason is string &&
+          request.resource.data.faultReason.size() > 0 &&
+          request.resource.data.faultReason.size() <= 500)))
+      )
+    );
    }
    match /jobs/{jobId} {
     allow read: if tenantAdmin(tenantId) || tenantOperator(tenantId) && resource.data.get('operatorUid', '') == request.auth.uid;
