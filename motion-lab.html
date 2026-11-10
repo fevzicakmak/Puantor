@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puantör | Bağımsız Sensör Laboratuvarı</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17243a;background:#edf2f8}*{box-sizing:border-box}
+body{margin:0;padding:14px}main{max-width:540px;margin:auto}h1{font-size:24px;margin:0 0 5px}
+p{line-height:1.5;color:#526077}section{background:white;border:1px solid #d4dfec;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 20px #1420330a}
+label{display:block;font-weight:700;margin:12px 0 6px}select,input{font:inherit;font-size:16px;padding:12px;border:1px solid #c9d5e5;border-radius:9px;width:100%}
+button{font:inherit;font-weight:750;width:100%;padding:13px;border:0;border-radius:9px;background:#142d52;color:white;margin-top:9px}
+button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{background:#f0f5fa;padding:10px;border-radius:10px}
+.metric small{display:block;color:#60718b}.metric strong{font-size:21px}small{color:#60718b}
+.bar{height:9px;background:#e2e8f0;border-radius:8px;overflow:hidden;margin:5px 0 12px}.bar>div{height:100%;width:0;background:#0d9488}
+.alert{background:#fff4df;border:1px solid #f1c36a;padding:12px;border-radius:10px;color:#7b4200}
+#log{font-size:12px;white-space:pre-wrap} .status{font-size:13px}
+</style></head><body><main>
+<section><h1>🚜 Puantör – Sensör Laboratuvarı</h1>
+<p>Bağımsız saha denemesi. Operatör hesabı, görev ve Firebase bağlantısı gerekmez. <strong>Makineyi otomatik başlatmaz, ücret oluşturmaz.</strong></p>
+<div class="alert">Önce motor kapalı ve telefon sabitken 8–12 saniye kalibrasyon yapın. Telefonun konumu güvenli olmalı; sürüş veya kumanda kullanımında ekrana dokunmayın.</div>
+<label for="machineType">Makine tipi</label><select id="machineType"><option value="excavator">Ekskavatör / kepçe</option><option value="backhoe">JCB / kazıcı yükleyici</option><option value="loader">Lastikli yükleyici</option><option value="other">Diğer iş makinesi</option></select>
+<label for="mount">Telefonun konumu</label><select id="mount"><option value="machine">Kabinde sabit</option><option value="wrist">Kol / bilek (yalnızca ölçüm)</option></select>
+<label for="machineLabel">Makine etiketi (isteğe bağlı)</label><input id="machineLabel" maxlength="60" placeholder="Örnek: CAT 320">
+<label><input id="fixed" type="checkbox" style="width:auto;margin-right:7px">Telefon güvenli şekilde sabitlendi.</label>
+<div class="grid"><button id="start">Ölçümü başlat</button><button id="stop" disabled style="background:#a22b28">Durdur</button></div>
+<p class="status" id="status" aria-live="polite">Sensör bekleniyor.</p>
+</section>
+<section id="live"><div style="display:flex;justify-content:space-between"><b>Canlı ölçüm</b><span data-role="connection">Beklemede</span></div>
+<div class="grid" style="margin:12px 0"><div class="metric"><small>Sinyal puanı</small><strong data-role="score">—</strong></div><div class="metric"><small>Test süresi</small><strong data-role="elapsed">00:00</strong></div></div>
+<b data-role="classification">Ölçüm bekleniyor</b><div class="bar"><div data-role="scorebar"></div></div>
+<div class="grid"><div><small>İvme titreşimi</small><div><b data-role="accel">—</b></div><div class="bar"><div data-role="accelbar" style="background:#2563eb"></div></div></div><div><small>Jiroskop</small><div><b data-role="gyro">—</b></div><div class="bar"><div data-role="gyrobar" style="background:#7c3aed"></div></div></div></div>
+<div class="grid"><small>İvme eşiği: <b data-role="threshold">—</b></small><small>Kesintisiz: <b data-role="sustained">0 sn</b></small></div>
+</section>
+<section><h2 style="font-size:19px;margin-top:0">Gerçek durumu işaretle</h2>
+<p style="font-size:13px">İdeal olarak makine dururken test sorumlusu işaretlesin. Etiket, son 5 saniyedeki ölçümle eşleşir.</p>
+<label for="truth">Gerçek makine durumu</label>
+<select id="truth"><option value="">Bir durum seçin</option><option value="motor_off">Motor kapalı</option><option value="idle_engine">Motor rölantide</option><option value="working">Kazı / aktif çalışma</option><option value="travel">Makine ilerliyor</option><option value="walking">Operatör yürüyüşü</option><option value="phone_handled">Telefon elde oynatılıyor</option></select>
+<button id="label">Gerçek durumu kaydet</button>
+<button id="report" style="background:#0f766e">Test raporunu hesapla</button>
+<div id="summary" style="white-space:pre-wrap;font-size:13px;margin-top:12px"></div>
+</section>
+<section><h2 style="font-size:19px;margin-top:0">Veri kayıtları</h2>
+<p id="saved" style="font-size:13px">Kayıtlar bu cihazda saklanır.</p>
+<button id="export">CSV dosyası indir</button><button id="clear" style="background:#9a3412">Test kayıtlarını sil</button>
+<p style="font-size:12px">Tarayıcı depolaması kesin yedek değildir. Ölçüm sonunda CSV'yi mutlaka indirin. Veriler Firebase'e gönderilmez.</p></section>
+</main>
+<script type="module">
+import {MachineMotionDetector} from "./machine-motion.js";
+import {createMotionTestPanel} from "./motion-test-panel.js";
+import {analyzeMotionRecords} from "./motion-analysis.js";
+import {loadMotionRecords,saveMotionRecords,clearMotionRecords,MOTION_RECORD_LIMIT} from "./motion-record-store.js";
+const $=id=>document.getElementById(id);
+const panel=createMotionTestPanel($("live"));
+let records=loadMotionRecords(localStorage),latest=null,lastAt=0,lastRecord=0,lastSaved=0;
+let active=false,sessionId="",seen=0;
+function save(force=false){
+ if(!force&&Date.now()-lastSaved<10000)return;
+ lastSaved=Date.now();
+ const v=saveMotionRecords(localStorage,records);
+ $("saved").textContent=v.ok?"Bu cihazda kayıtlı "+v.count+" örnek.":"Tarayıcı kaydı başarısız: CSV indirin.";
+}
+function append(record,force=false){
+ const now=Date.now();if(!force&&now-lastRecord<1000)return;
+ lastRecord=now;
+ records.push({time:new Date(now).toISOString(),mode:$("mount").value,
+   machine:$("machineLabel").value.trim()||$("machineType").value,status:"pilot",
+   message:record.message||"",rms:record.rms??"",gyro:record.gyro??"",
+   accelActive:record.accelActive??"",gyroActive:record.gyroActive??"",
+   seconds:record.seconds??"",score:record.confidenceScore??"",
+   motionState:record.motionState??"",truth:record.truth||""});
+ if(records.length>MOTION_RECORD_LIMIT)records.shift();save(force);
+}
+const detector=new MachineMotionDetector(data=>{
+ panel.render(data);
+ if(data.stale||data.calibrating){latest=null;lastAt=0;}
+ else if(data.motionState){latest=data;lastAt=Date.now();}
+ if(active)append(data);
+ $("status").textContent=data.message||"Ölçüm bekleniyor";
+},data=>{
+ append({...data,message:"12 saniye hareket adayı",seconds:12},true);
+ $("status").textContent="12 saniye hareket adayı algılandı. Otomatik çalışma başlatılmaz.";
+});
+function stop(){
+ active=false;detector.stop();panel.stop();
+ $("start").disabled=false;$("stop").disabled=true;
+ $("mount").disabled=false;latest=null;lastAt=0;save(true);
+}
+$("start").addEventListener("click",async()=>{
+ if(!$("fixed").checked){$("status").textContent="Telefonun güvenli biçimde sabitlendiğini onaylayın.";return;}
+ detector.setMode($("mount").value);
+ const ok=await detector.start();
+ if(!ok)return;
+ active=true;panel.start();$("start").disabled=true;
+ $("stop").disabled=false;$("mount").disabled=true;
+ $("status").textContent="Sensör izni alındı; kalibrasyon bekleniyor.";
+});
+$("stop").addEventListener("click",stop);
+$("label").addEventListener("click",()=>{
+ if(!$("truth").value){$("status").textContent="Önce gerçek durumu seçin.";return;}
+ if(!active||!latest||Date.now()-lastAt>5000){
+  $("status").textContent="Güncel ölçüm yok. Kalibrasyonu tamamlayıp yeniden deneyin.";return;
+ }
+ append({...latest,message:"Saha etiketi",truth:$("truth").value},true);
+ $("status").textContent="Gerçek durum etiketlendi; CSV kaydına eklendi.";
+ showReport();
+});
+function showReport(){
+ const r=analyzeMotionRecords(records,$("mount").value);
+ const pct=x=>x===null?"Hesaplanamadı":x.toFixed(1)+"%";
+ $("summary").textContent=
+ "Etiketli örnekler: "+r.total+"\nDoğru aktif: "+r.matrix.tp+" · Doğru pasif: "+r.matrix.tn+
+ "\nYanlış aktif: "+r.matrix.fp+" · Kaçırılan aktif: "+r.matrix.fn+
+ "\nDoğruluk: "+pct(r.accuracy)+" · Yanlış alarm: "+pct(r.falsePositiveRate)+
+ (r.insufficient?"\n⚠ 30'dan az etiket: ön değerlendirme için yetersiz.":"")+
+ "\nBunlar yalnızca operatörün işaretlediği anları gösterir; motorun açık olduğunu kanıtlamaz.";
+}
+$("report").addEventListener("click",showReport);
+$("export").addEventListener("click",()=>{
+ save(true);if(!records.length){$("status").textContent="İndirilecek kayıt yok.";return;}
+ const fields=["time","mode","machine","status","message","rms","gyro","accelActive","gyroActive","seconds","score","motionState","truth"];
+ const quote=x=>'"'+String(x??"").replaceAll('"','""')+'"';
+ const csv="\uFEFF"+fields.join(";")+"\r\n"+records.map(r=>fields.map(k=>quote(r[k])).join(";")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="puantor-saha-test-"+new Date().toISOString().slice(0,10)+".csv";a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),3000);
+});
+$("clear").addEventListener("click",()=>{
+ if(!confirm("Bu cihazdaki test kayıtları silinsin mi? Önce CSV yedeği alın."))return;
+ records=[];clearMotionRecords(localStorage);
+ $("saved").textContent="Kayıtlar silindi.";showReport();
+});
+window.addEventListener("pagehide",()=>{save(true);stop();});
+$("saved").textContent="Bu cihazda kayıtlı örnek: "+records.length;
+</script></body></html>
