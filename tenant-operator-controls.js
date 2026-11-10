@@ -15,7 +15,7 @@ export async function changeTenantMachineState(db,{tenantId,operatorUid,machineI
   if(!allowed[action].includes(m.status))throw Error("Makine durumu değişti");
   const jobRef=doc(db,"businesses",tenantId,"jobs",m.currentJobId);
   const job=await tx.get(jobRef);
-  if(!job.exists()||job.data().operatorUid!==operatorUid||job.data().machineId!==machineId||job.data().status==="done")throw Error("Görev doğrulanamadı");
+  if(!job.exists()||job.data().operatorUid!==operatorUid||job.data().machineId!==machineId||job.data().status!=="assigned")throw Error("Görev doğrulanamadı");
   const now=Date.now();
   const started=m.startedAt?.toMillis?.()||0;
   if(m.status==="running"&&!started)throw Error("Başlangıç zamanı henüz eşitlenmedi");
