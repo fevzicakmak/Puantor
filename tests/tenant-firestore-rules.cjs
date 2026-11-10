@@ -11,11 +11,13 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
     await setDoc(doc(db,"businesses",tenant,"machines","machine1"),{machineName:"Test",operatorUid:tenant+"-op",status:"idle",jobReady:true,elapsedMs:0,timeline:[]});
     await setDoc(doc(db,"users",tenant+"-op"),{role:"tenant_operator",tenantId:tenant,machineIds:["machine1"],activeMachineId:""});
    }
+   await setDoc(doc(db,"users","firm-a-other-op"),{role:"tenant_operator",tenantId:"firm-a",machineIds:[],activeMachineId:""});
   });
   const a=env.authenticatedContext("firm-a").firestore();
   const b=env.authenticatedContext("firm-b").firestore();
   const op=env.authenticatedContext("firm-a-op").firestore();
   const outsider=env.unauthenticatedContext().firestore();
+  const unassigned=env.authenticatedContext("firm-a-other-op").firestore();
   await assertSucceeds(getDoc(doc(a,"businesses","firm-a","machines","machine1")));
   await assertSucceeds(updateDoc(doc(a,"businesses","firm-a","machines","machine1"),{machineName:"Yetkili yönetici düzenlemesi"}));
   await assertFails(updateDoc(doc(b,"businesses","firm-a","machines","machine1"),{machineName:"İzinsiz düzenleme"}));
@@ -23,6 +25,7 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
   await assertFails(getDoc(doc(b,"businesses","firm-a","machines","machine1")));
   await assertFails(getDoc(doc(outsider,"businesses","firm-a","machines","machine1")));
   await assertSucceeds(getDoc(doc(op,"businesses","firm-a","machines","machine1")));
+  await assertFails(getDoc(doc(unassigned,"businesses","firm-a","machines","machine1")));
   await assertFails(getDoc(doc(op,"businesses","firm-b","machines","machine1")));
   await assertFails(getDoc(doc(op,"businesses","firm-a","customers","customer1")));
   await assertFails(updateDoc(doc(op,"users","firm-b-op"),{activeMachineId:"machine1"}));
