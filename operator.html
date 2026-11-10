@@ -124,10 +124,10 @@ $("markTruth").addEventListener("click",()=>{
  showMotionReport();
 });
 function showMotionReport(){
- const r=analyzeMotionRecords(motionRecords);
+ const r=analyzeMotionRecords(motionRecords,$("motionMode").value);
  const fmt=v=>v==null?"Hesaplanamadı":v.toLocaleString("tr-TR")+"%";
  $("motionReportOutput").textContent=
-   "Etiketli örnek: "+r.total+
+   "Mod: "+($("motionMode").value==="wrist"?"Bilek/kol":"Makineye sabit")+"\nEtiketli örnek: "+r.total+
    "\nDoğru aktif: "+r.matrix.tp+" | Doğru pasif: "+r.matrix.tn+
    "\nYanlış aktif (önemli): "+r.matrix.fp+" | Kaçırılan aktif: "+r.matrix.fn+
    "\nDoğruluk: "+fmt(r.accuracy)+" | Pozitif kesinliği: "+fmt(r.precision)+
@@ -148,7 +148,8 @@ $("motionExport").addEventListener("click",()=>{
 const motionDetector=new MachineMotionDetector(
  data=>{
   recordMotion(data);
-  if(data.motionState){latestMotionMeasurement=data;latestMotionAt=Date.now();}
+  if(data.stale||data.calibrating){latestMotionMeasurement=null;latestMotionAt=0;}
+  else if(data.motionState){latestMotionMeasurement=data;latestMotionAt=Date.now();}
   $("motionScore").textContent=data.motionState?"Tahmini durum: "+data.message+" · Sinyal puanı: "+data.confidenceScore+"/100 (doğrulanmış olasılık değil)":"Durum: "+data.message;
   $("autoStatus").textContent=data.message+
    (data.rms==null?"":" · ivme "+Number(data.rms).toFixed(3)+
@@ -162,7 +163,7 @@ const motionDetector=new MachineMotionDetector(
  }
 );
 function disableAuto(){
- autoArmed=false;motionDetector.stop();
+ autoArmed=false;motionDetector.stop();latestMotionMeasurement=null;latestMotionAt=0;
  $("autoToggle").textContent=$("motionMode").value==="wrist"?"Hareket ölçümünü aç":"Otomatik algılamayı aç";
  $("fixedConfirmed").checked=false;
 }
@@ -188,7 +189,7 @@ $("motionMode").addEventListener("change",()=>{
 });
 
 $("fixedConfirmed").addEventListener("change",()=>{if(!$("fixedConfirmed").checked&&autoArmed)disableAuto();});
-window.addEventListener("pagehide",()=>motionDetector.stop());
+window.addEventListener("pagehide",disableAuto);
 
 for(const id of controls)$(id).addEventListener("click",()=>{ changeState(id) });
 onAuthStateChanged(auth,async user=>{
