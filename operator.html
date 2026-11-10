@@ -94,6 +94,7 @@ let autoArmed=false,autoStarting=false;
 let motionRecords=[];
 let motionLastRecord=0;
 let latestMotionMeasurement=null;
+let latestMotionAt=0;
 const MAX_MOTION_RECORDS=1800; // yaklaşık 30 dk, saniyede 1 özet
 function recordMotion(data){
  const now=Date.now();
@@ -110,8 +111,9 @@ function recordMotion(data){
 $("markTruth").addEventListener("click",()=>{
  const truth=$("groundTruth").value;
  if(!truth){$("autoStatus").textContent="Önce gerçek durumu seçin.";return;}
- const data=latestMotionMeasurement||{};
  const now=Date.now();
+ if(!latestMotionMeasurement||now-latestMotionAt>5000||!autoArmed){$("autoStatus").textContent="Güncel sensör ölçümü yok. Ölçümü açıp tekrar deneyin.";return;}
+ const data=latestMotionMeasurement;
  motionRecords.push({time:new Date(now).toISOString(),mode:$("motionMode").value,
   machine:machineId||"",status:machineData?.status||"",message:"Operatör saha etiketi",
   rms:data.rms??"",gyro:data.gyro??"",accelActive:data.accelActive??"",
@@ -146,7 +148,7 @@ $("motionExport").addEventListener("click",()=>{
 const motionDetector=new MachineMotionDetector(
  data=>{
   recordMotion(data);
-  if(data.motionState){latestMotionMeasurement=data;}
+  if(data.motionState){latestMotionMeasurement=data;latestMotionAt=Date.now();}
   $("motionScore").textContent=data.motionState?"Tahmini durum: "+data.message+" · Sinyal puanı: "+data.confidenceScore+"/100 (doğrulanmış olasılık değil)":"Durum: "+data.message;
   $("autoStatus").textContent=data.message+
    (data.rms==null?"":" · ivme "+Number(data.rms).toFixed(3)+
@@ -170,7 +172,7 @@ $("autoToggle").addEventListener("click",async()=>{
  if(!machineId||!machineData||machineData.jobReady!==true){
   $("autoStatus").textContent="Aktif görev olmadan pilot ölçümü başlatılamaz.";return;
  }
- latestMotionMeasurement=null;
+ latestMotionMeasurement=null;latestMotionAt=0;
  motionDetector.setMode($("motionMode").value);
  const ok=await motionDetector.start();
  if(ok){autoArmed=true;$("autoToggle").textContent="Sensör ölçümünü durdur";}
