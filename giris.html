@@ -17,7 +17,8 @@ async function route(user){if(checking)return;checking=true;$("submit").disabled
 try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
 if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="tenant_admin"){location.replace("./isletme.html");return}
+if(role==="tenant_admin"){if(profile.tenantId!==user.uid){$("status").textContent="Firma yöneticisi hesabı doğrulanamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-manager-preview.html");return}
+if(role==="tenant_operator"){if(!profile.tenantId){$("status").textContent="Operatör firma kaydı bulunamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-operator-preview.html");return}
 if(role==="business_pending"){refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
 if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
