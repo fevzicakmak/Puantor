@@ -8,6 +8,7 @@ on:
 jobs:
   syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,6 +54,7 @@ jobs:
           PY
   firestore-rules:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,6 +65,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install emulator and test dependencies
-        run: npm install --no-save firebase@^11 @firebase/rules-unit-testing@^4 firebase-tools@^14
+        run: |
+          npm init -y
+          npm install --no-save firebase@^11 @firebase/rules-unit-testing@^4 firebase-tools@^14
       - name: Run tenant isolation tests in Firestore emulator
         run: npx firebase emulators:exec --only firestore --project puantor-tenant-rules-test "node tests/tenant-firestore-rules.cjs"
