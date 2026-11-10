@@ -4,6 +4,7 @@ on:
     branches:
       - feature/single-app-multicompany-from-last-single
   pull_request:
+  workflow_dispatch:
 jobs:
   syntax:
     runs-on: ubuntu-latest
