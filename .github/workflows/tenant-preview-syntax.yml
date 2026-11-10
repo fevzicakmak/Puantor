@@ -16,6 +16,8 @@ jobs:
           node-version: '22'
       - name: Check Firebase Functions JavaScript
         run: node --check functions/index.js
+      - name: Check Firestore emulator test JavaScript
+        run: node --check tests/tenant-firestore-rules.cjs
       - name: Check inline module JavaScript
         run: |
           python3 - <<'PY'
