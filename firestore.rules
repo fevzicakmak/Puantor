@@ -12,6 +12,16 @@ service cloud.firestore {
   match /users/{uid} {
    allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
    allow create: if isAdmin() || (
+     signedIn() && request.auth.uid == uid &&
+     request.auth.token.email == request.resource.data.email &&
+     request.auth.token.email !~ '.*@operators\\.puantor\\.invalid' &&
+     request.resource.data.keys().hasOnly(['role','tenantId','businessName','managerName','email','createdAt']) &&
+     request.resource.data.role == 'business_pending' &&
+     request.resource.data.tenantId == uid &&
+     request.resource.data.businessName is string && request.resource.data.businessName.size() >= 2 && request.resource.data.businessName.size() <= 100 &&
+     request.resource.data.managerName is string && request.resource.data.managerName.size() >= 2 && request.resource.data.managerName.size() <= 80 &&
+     request.resource.data.createdAt == request.time
+   ) || (
      signedIn() && request.auth.token.email == request.resource.data.username + "@operators.puantor.invalid" &&
      request.resource.data.keys().hasOnly(["role","username","email","machineIds","createdAt"]) &&
      request.resource.data.role == "pending" &&
