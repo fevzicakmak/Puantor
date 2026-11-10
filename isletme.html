@@ -2,9 +2,48 @@
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {resolveTenant,watchTenantRecords,addNamedRecord,updateNamedRecord,deleteNamedRecord} from "./tenant-data.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let unsub=[];
 $("logout").onclick=()=>signOut(auth).then(()=>location.replace("./giris.html"));
-onAuthStateChanged(auth,async user=>{unsub.forEach(f=>f());unsub=[];if(!user){location.replace("./giris.html");return;}try{const profile=await getDoc(doc(db,"users",user.uid));if(!profile.exists()||profile.data().role!=="tenant_admin"||profile.data().tenantId!==user.uid){location.replace("./giris.html");return;}const id=user.uid;$("businessName").textContent=profile.data().businessName+" · Yönetici: "+profile.data().managerName;$("app").hidden=false;for(const type of ["machines","customers"]){unsub.push(onSnapshot(collection(db,"businesses",id,type),snap=>{$(type).replaceChildren(...snap.docs.map(d=>{const li=document.createElement("li");li.textContent=d.data().name||"—";return li;}));},err=>$("status").textContent="Kayıt okuma hatası: "+err.code));}
-for(const [form,input,type] of [["machineForm","machineName","machines"],["customerForm","customerName","customers"]]){$(form).onsubmit=async e=>{e.preventDefault();const name=$(input).value.trim();if(!name)return;const b=$(form).querySelector("button");b.disabled=true;try{await addDoc(collection(db,"businesses",id,type),{name,createdAt:serverTimestamp()});$(input).value="";$("status").textContent="";}catch(err){$("status").textContent="Kayıt hatası: "+err.code;}finally{b.disabled=false;}};}}catch(err){$("status").textContent="Yetki kontrolü hatası: "+(err.code||err.message);}});
+onAuthStateChanged(auth,async user=>{
+  unsub.forEach(f=>f());unsub=[];
+  if(!user){location.replace("./giris.html");return;}
+  try{
+    const session=await resolveTenant(db,user);
+    $("businessName").textContent=session.businessName+" · Yönetici: "+session.managerName;
+    $("app").hidden=false;
+    for(const type of ["machines","customers"]){
+      unsub.push(watchTenantRecords(db,session,type,records=>{
+        const items=records.map(record=>{
+          const li=document.createElement("li");
+          const label=document.createElement("span");label.textContent=record.name||"—";
+          const edit=document.createElement("button");edit.type="button";edit.className="secondary";edit.textContent="Düzenle";
+          const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Sil";
+          edit.onclick=async()=>{
+            const name=prompt("Yeni ad",record.name||"");
+            if(name===null)return;
+            try{await updateNamedRecord(db,session,type,record.id,name);$("status").textContent="";}
+            catch(err){$("status").textContent="Düzenleme hatası: "+(err.code||err.message);}
+          };
+          remove.onclick=async()=>{
+            if(!confirm("Bu kaydı silmek istediğinize emin misiniz?"))return;
+            try{await deleteNamedRecord(db,session,type,record.id);$("status").textContent="";}
+            catch(err){$("status").textContent="Silme hatası: "+(err.code||err.message);}
+          };
+          li.append(label,edit,remove);return li;
+        });
+        $(type).replaceChildren(...items);
+      },err=>$("status").textContent="Kayıt okuma hatası: "+(err.code||err.message)));
+    }
+    for(const [form,input,type] of [["machineForm","machineName","machines"],["customerForm","customerName","customers"]]){
+      $(form).onsubmit=async e=>{
+        e.preventDefault();const b=$(form).querySelector("button");b.disabled=true;
+        try{await addNamedRecord(db,session,type,$(input).value);$(input).value="";$("status").textContent="";}
+        catch(err){$("status").textContent="Kayıt hatası: "+(err.code||err.message);}
+        finally{b.disabled=false;}
+      };
+    }
+  }catch(err){$("status").textContent="Yetki kontrolü hatası: "+(err.code||err.message);}
+});
 </script></body></html>
