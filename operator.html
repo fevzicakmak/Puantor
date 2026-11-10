@@ -25,11 +25,11 @@ input,select,textarea{font-size:16px!important}
 <button type="submit">Giriş yap</button>
 </form>
 <p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><label for="machineSelect">Atanan makineyi seç</label><select id="machineSelect" style="width:100%;padding:13px;font-size:17px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"></select><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Müşteri: <strong id="customerName">—</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p>Anlık iş tutarı: <strong id="liveAmount">—</strong></p><p id="rateInfo" style="font-size:13px;margin-top:-8px">Saatlik ücret: —</p><div id="autoMotionPanel" class="notice" style="margin:14px 0;border:1px solid #b8c7d9">
-  <strong>📡 Akıllı hareket algılama (pilot)</strong><label for="motionMode" style="font-size:13px;margin:9px 0 4px">Telefonun konumu</label><select id="motionMode" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:white"><option value="machine">Makineye sabit (otomatik başlatma denemesi)</option><option value="wrist">Operatör kolu/bileği (yalnızca ölçüm)</option></select>
+  <strong>📡 Akıllı hareket algılama (pilot)</strong><label for="motionMode" style="font-size:13px;margin:9px 0 4px">Telefonun konumu</label><select id="motionMode" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:white"><option value="machine">Makineye sabit (sensör testi)</option><option value="wrist">Operatör kolu/bileği (yalnızca ölçüm)</option></select>
   <p style="font-size:13px;margin:8px 0">Otomatik başlatma için telefonu makinenin kabininde sağlam ve sabit bir yere yerleştirin. Telefon elde veya cepteyken kullanmayın. Sayfayı açık ve ekranda tutun.</p>
   <label style="font-size:13px;margin:8px 0"><input type="checkbox" id="fixedConfirmed" style="width:auto;margin-right:7px">Telefonu seçtiğim konuma güvenli biçimde sabitledim.</label>
-  <p id="motionModeNote" style="font-size:12px;color:#92400e">Makine modu: titreşimden otomatik başlatma denemesi. Saha testi yapılmadan gerçek ücretlendirme için kullanmayın.</p><button type="button" id="autoToggle" style="margin-top:8px;background:#166534">Otomatik algılamayı aç</button>
-  <p id="autoStatus" role="status" aria-live="polite" style="font-size:13px;margin:8px 0">Kapalı. Manuel çalışma kontrolleri aktif.</p>
+  <p id="motionModeNote" style="font-size:12px;color:#92400e">Makine modu: ivmeölçer + jiroskop ile hareket adayı ölçülür. Otomatik başlatma güvenlik nedeniyle saha doğrulamasına kadar kapalı.</p><button type="button" id="autoToggle" style="margin-top:8px;background:#166534">Otomatik algılamayı aç</button>
+  <button type="button" id="motionExport" style="margin-top:8px;background:#334155">Test sonuçlarını CSV indir</button><p id="autoStatus" role="status" aria-live="polite" style="font-size:13px;margin:8px 0">Kapalı. Manuel çalışma kontrolleri aktif.</p>
 </div><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Çalışma durumunuz burada görünür.</p><button type="button" id="signout">Çıkış yap</button></section>
 
 
@@ -90,16 +90,42 @@ async function changeState(action){
 }
 
 let autoArmed=false,autoStarting=false;
+let motionRecords=[];
+let motionLastRecord=0;
+const MAX_MOTION_RECORDS=1800; // yaklaşık 30 dk, saniyede 1 özet
+function recordMotion(data){
+ const now=Date.now();
+ if(now-motionLastRecord<1000)return;
+ motionLastRecord=now;
+ const entry={time:new Date(now).toISOString(),mode:$("motionMode").value,
+  machine:machineId||"",status:machineData?.status||"",
+  message:data.message||"",rms:data.rms??"",gyro:data.gyro??"",
+  accelActive:data.accelActive??"",gyroActive:data.gyroActive??"",
+  seconds:data.seconds??""};
+ motionRecords.push(entry);
+ if(motionRecords.length>MAX_MOTION_RECORDS)motionRecords.shift();
+}
+$("motionExport").addEventListener("click",()=>{
+ if(!motionRecords.length){$("autoStatus").textContent="Henüz kaydedilmiş sensör ölçümü yok.";return;}
+ const keys=["time","mode","machine","status","message","rms","gyro","accelActive","gyroActive","seconds"];
+ const esc=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+ const csv="\uFEFF"+keys.join(";")+"\r\n"+motionRecords.map(row=>keys.map(k=>esc(row[k])).join(";")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const link=document.createElement("a");link.href=url;link.download="puantor-hareket-test-"+new Date().toISOString().slice(0,10)+".csv";link.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
 const motionDetector=new MachineMotionDetector(
- data=>{$("autoStatus").textContent=data.message+(data.rms==null?"":" · sinyal "+data.rms+" / eşik "+data.threshold+" · "+data.seconds+" sn");},
- async()=>{
-   if(!autoArmed||$("motionMode").value!=="machine"||autoStarting||busy||clockMismatch||document.hidden)return;
-   if(!auth.currentUser||!machineId||!machineData||machineData.jobReady!==true||!["idle","paused"].includes(machineData.status)){
-     $("autoStatus").textContent="Otomatik başlatma engellendi: yeni ve hazır görev yok.";return;
-   }
-   autoStarting=true;
-   $("autoStatus").textContent="Hareket doğrulandı; Firebase üzerinden iş başlatılıyor…";
-   try{await changeState("start");}finally{autoStarting=false;}
+ data=>{
+  recordMotion(data);
+  $("autoStatus").textContent=data.message+
+   (data.rms==null?"":" · ivme "+Number(data.rms).toFixed(3)+
+    " · jiroskop "+(data.gyro==null?"yok":Number(data.gyro).toFixed(1))+
+    " · "+(data.seconds||0)+" sn");
+ },
+ data=>{
+  recordMotion({message:"12 sn hareket adayı: pilot algılama",...data,seconds:12});
+  // Pilot güvenlik kuralı: çalışmayı / ücreti otomatik başlatma.
+  $("autoStatus").textContent="12 saniye hareket algılandı. Pilot mod: otomatik başlatma kapalı, manuel başlatma kullanılabilir.";
  }
 );
 function disableAuto(){
@@ -122,7 +148,7 @@ $("motionMode").addEventListener("change",()=>{
  const wrist=$("motionMode").value==="wrist";
  $("motionModeNote").textContent=wrist
  ? "Kol/bilek modu yalnızca sensör hareketini gösterir. Makineyi otomatik başlatmaz; kol hareketi iş yapıldığını kanıtlamaz. Aparat kumandaları engellememelidir."
- : "Makine modu: titreşimden otomatik başlatma denemesi. Saha testi yapılmadan gerçek ücretlendirme için kullanmayın.";
+ : "Makine modu: ivmeölçer + jiroskop ile hareket adayı ölçülür. Pilot aşamada otomatik başlatma kapalıdır.";
  $("autoToggle").textContent=wrist?"Hareket ölçümünü aç":"Otomatik algılamayı aç";
 });
 
@@ -151,7 +177,7 @@ onAuthStateChanged(auth,async user=>{
  const m=snap.data();if(m.operatorUid!==user.uid||m.jobReady===false||m.status==="done"){disableAuto();machineData=null;updateControls();showError("Bu makinede size atanmış aktif görev yok.");return}
  const serverUpdated=m.updatedAt?.toMillis?.();
  // The latest update timestamp is not the current server clock.
- if(m.status==="running"&&autoArmed)disableAuto();machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
+ machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
  if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
