@@ -19,9 +19,9 @@ export async function assignTenantJob(db,session,{machineId,customerId,operatorI
     const operatorRef=ref(db,session,"operators",operatorId);
     const [machine,customer,operator]=await Promise.all([tx.get(machineRef),tx.get(customerRef),tx.get(operatorRef)]);
     if(!machine.exists()||!customer.exists()||!operator.exists())throw Error("Makine, müşteri veya operatör bulunamadı");
-    if(operator.data().active===false)throw Error("Operatör pasif");
+    if(operator.data().active!==true || operator.data().authStatus!=="active")throw Error("Operatör hesabı etkin değil");
     if(!operator.data().authUid)throw Error("Operatörün giriş hesabı henüz etkin değil");
-    if(machine.data().jobReady===true || ["running","paused","broken"].includes(machine.data().status))throw Error("Makinede tamamlanmamış görev var");
+    if(machine.data().jobReady===true || ["idle","running","paused","broken"].includes(machine.data().status) && !!machine.data().currentJobId)throw Error("Makinede tamamlanmamış görev var");
     tx.set(jobRef,{machineId,customerId,operatorId,operatorUid:operator.data().authUid,description:note,status:"assigned",createdAt:serverTimestamp()});
     tx.update(machineRef,{operatorUid:operator.data().authUid,operatorId,customerId,currentJobId:jobRef.id,jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
   });
