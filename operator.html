@@ -25,10 +25,10 @@ input,select,textarea{font-size:16px!important}
 <button type="submit">Giriş yap</button>
 </form>
 <p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><label for="machineSelect">Atanan makineyi seç</label><select id="machineSelect" style="width:100%;padding:13px;font-size:17px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"></select><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Müşteri: <strong id="customerName">—</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p>Anlık iş tutarı: <strong id="liveAmount">—</strong></p><p id="rateInfo" style="font-size:13px;margin-top:-8px">Saatlik ücret: —</p><div id="autoMotionPanel" class="notice" style="margin:14px 0;border:1px solid #b8c7d9">
-  <strong>📡 Akıllı hareket algılama (deneme)</strong>
+  <strong>📡 Akıllı hareket algılama (pilot)</strong><label for="motionMode" style="font-size:13px;margin:9px 0 4px">Telefonun konumu</label><select id="motionMode" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:white"><option value="machine">Makineye sabit (otomatik başlatma denemesi)</option><option value="wrist">Operatör kolu/bileği (yalnızca ölçüm)</option></select>
   <p style="font-size:13px;margin:8px 0">Otomatik başlatma için telefonu makinenin kabininde sağlam ve sabit bir yere yerleştirin. Telefon elde veya cepteyken kullanmayın. Sayfayı açık ve ekranda tutun.</p>
-  <label style="font-size:13px;margin:8px 0"><input type="checkbox" id="fixedConfirmed" style="width:auto;margin-right:7px">Telefonu makineye sabitledim.</label>
-  <button type="button" id="autoToggle" style="margin-top:8px;background:#166534">Otomatik algılamayı aç</button>
+  <label style="font-size:13px;margin:8px 0"><input type="checkbox" id="fixedConfirmed" style="width:auto;margin-right:7px">Telefonu seçtiğim konuma güvenli biçimde sabitledim.</label>
+  <p id="motionModeNote" style="font-size:12px;color:#92400e">Makine modu: titreşimden otomatik başlatma denemesi. Saha testi yapılmadan gerçek ücretlendirme için kullanmayın.</p><button type="button" id="autoToggle" style="margin-top:8px;background:#166534">Otomatik algılamayı aç</button>
   <p id="autoStatus" role="status" aria-live="polite" style="font-size:13px;margin:8px 0">Kapalı. Manuel çalışma kontrolleri aktif.</p>
 </div><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Çalışma durumunuz burada görünür.</p><button type="button" id="signout">Çıkış yap</button></section>
 
@@ -93,7 +93,7 @@ let autoArmed=false,autoStarting=false;
 const motionDetector=new MachineMotionDetector(
  data=>{$("autoStatus").textContent=data.message+(data.rms==null?"":" · sinyal "+data.rms+" / eşik "+data.threshold+" · "+data.seconds+" sn");},
  async()=>{
-   if(!autoArmed||autoStarting||busy||clockMismatch||document.hidden)return;
+   if(!autoArmed||$("motionMode").value!=="machine"||autoStarting||busy||clockMismatch||document.hidden)return;
    if(!auth.currentUser||!machineId||!machineData||machineData.jobReady!==true||!["idle","paused"].includes(machineData.status)){
      $("autoStatus").textContent="Otomatik başlatma engellendi: yeni ve hazır görev yok.";return;
    }
@@ -104,7 +104,7 @@ const motionDetector=new MachineMotionDetector(
 );
 function disableAuto(){
  autoArmed=false;motionDetector.stop();
- $("autoToggle").textContent="Otomatik algılamayı aç";
+ $("autoToggle").textContent=$("motionMode").value==="wrist"?"Hareket ölçümünü aç":"Otomatik algılamayı aç";
  $("fixedConfirmed").checked=false;
 }
 $("autoToggle").addEventListener("click",async()=>{
@@ -114,9 +114,18 @@ $("autoToggle").addEventListener("click",async()=>{
   $("autoStatus").textContent="Yönetici tarafından yeni görev atanmış, makine hazır veya duraklatılmış olmalı.";return;
  }
  const ok=await motionDetector.start();
- if(ok){autoArmed=true;$("autoToggle").textContent="Otomatik algılamayı kapat";}
+ if(ok){autoArmed=true;$("autoToggle").textContent="Sensör ölçümünü durdur";}
 });
 $("machineSelect").addEventListener("change",disableAuto);
+$("motionMode").addEventListener("change",()=>{
+ disableAuto();
+ const wrist=$("motionMode").value==="wrist";
+ $("motionModeNote").textContent=wrist
+ ? "Kol/bilek modu yalnızca sensör hareketini gösterir. Makineyi otomatik başlatmaz; kol hareketi iş yapıldığını kanıtlamaz. Aparat kumandaları engellememelidir."
+ : "Makine modu: titreşimden otomatik başlatma denemesi. Saha testi yapılmadan gerçek ücretlendirme için kullanmayın.";
+ $("autoToggle").textContent=wrist?"Hareket ölçümünü aç":"Otomatik algılamayı aç";
+});
+
 $("fixedConfirmed").addEventListener("change",()=>{if(!$("fixedConfirmed").checked&&autoArmed)disableAuto();});
 window.addEventListener("pagehide",()=>motionDetector.stop());
 
