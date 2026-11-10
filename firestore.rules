@@ -47,6 +47,14 @@ service cloud.firestore {
       request.resource.data.elapsedMs >= resource.data.get('elapsedMs', 0) &&
       request.resource.data.elapsedMs <= resource.data.get('elapsedMs', 0) + 86400000 &&
       request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
+      (request.resource.data.status != 'done' || (
+        resource.data.get('currentJobId', '') is string &&
+        resource.data.currentJobId != '' &&
+        get(/databases/$(database)/documents/businesses/$(tenantId)/jobs/$(resource.data.currentJobId)).data.status == 'assigned' &&
+        get(/databases/$(database)/documents/businesses/$(tenantId)/jobs/$(resource.data.currentJobId)).data.operatorUid == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/businesses/$(tenantId)/jobs/$(resource.data.currentJobId)).data.status == 'done' &&
+        getAfter(/databases/$(database)/documents/businesses/$(tenantId)/jobs/$(resource.data.currentJobId)).data.finishedAt == request.time
+      )) &&
       (
        (request.resource.data.status == 'running' &&
         resource.data.status in ['idle','paused','broken'] &&
