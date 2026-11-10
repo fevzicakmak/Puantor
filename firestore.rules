@@ -57,7 +57,18 @@ service cloud.firestore {
    }
    match /jobs/{jobId} {
     allow read: if tenantAdmin(tenantId) || tenantOperator(tenantId) && resource.data.get('operatorUid', '') == request.auth.uid;
-    allow write: if tenantAdmin(tenantId);
+    allow create, delete: if tenantAdmin(tenantId);
+    allow update: if tenantAdmin(tenantId) || (
+      tenantOperator(tenantId) &&
+      resource.data.get('operatorUid', '') == request.auth.uid &&
+      resource.data.status == 'assigned' &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','finishedAt']) &&
+      request.resource.data.status == 'done' &&
+      request.resource.data.finishedAt == request.time &&
+      getAfter(/databases/$(database)/documents/businesses/$(tenantId)/machines/$(resource.data.machineId)).data.status == 'done' &&
+      getAfter(/databases/$(database)/documents/businesses/$(tenantId)/machines/$(resource.data.machineId)).data.jobReady == false &&
+      getAfter(/databases/$(database)/documents/businesses/$(tenantId)/machines/$(resource.data.machineId)).data.currentJobId == jobId
+    );
    }
    match /customers/{customerId} {
     allow read, write: if tenantAdmin(tenantId);
