@@ -25,6 +25,9 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   await assertFails(updateDoc(doc(a,"users","firm-b-op"),{displayName:"İzinsiz"}));
   await assertFails(updateDoc(doc(b,"users","firm-a-op"),{machineIds:[]}));
   await assertFails(updateDoc(doc(op,"users","firm-a"),{role:"tenant_operator"}));
+  await assertFails(updateDoc(doc(a,"users","firm-a-op"),{tenantId:"firm-b",updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(a,"users","firm-a-op"),{role:"tenant_admin",updatedAt:serverTimestamp()}));
+  await assertSucceeds(updateDoc(doc(a,"users","firm-a-op"),{displayName:"Operatör Test",updatedAt:serverTimestamp()}));
   await assertSucceeds(getDoc(doc(a,"businesses","firm-a")));
   await assertSucceeds(updateDoc(doc(a,"businesses","firm-a"),{name:"Firma A Güncel"}));
   await assertFails(updateDoc(doc(a,"businesses","firm-a"),{ownerUid:"firm-b"}));
