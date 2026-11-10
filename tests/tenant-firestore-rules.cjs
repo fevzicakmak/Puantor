@@ -17,11 +17,15 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
   const op=env.authenticatedContext("firm-a-op").firestore();
   const outsider=env.unauthenticatedContext().firestore();
   await assertSucceeds(getDoc(doc(a,"businesses","firm-a","machines","machine1")));
+  await assertSucceeds(updateDoc(doc(a,"businesses","firm-a","machines","machine1"),{machineName:"Yetkili yönetici düzenlemesi"}));
+  await assertFails(updateDoc(doc(b,"businesses","firm-a","machines","machine1"),{machineName:"İzinsiz düzenleme"}));
   await assertFails(getDoc(doc(a,"businesses","firm-b","machines","machine1")));
   await assertFails(getDoc(doc(b,"businesses","firm-a","machines","machine1")));
   await assertFails(getDoc(doc(outsider,"businesses","firm-a","machines","machine1")));
   await assertSucceeds(getDoc(doc(op,"businesses","firm-a","machines","machine1")));
   await assertFails(getDoc(doc(op,"businesses","firm-b","machines","machine1")));
+  await assertFails(getDoc(doc(op,"businesses","firm-a","customers","customer1")));
+  await assertFails(updateDoc(doc(op,"users","firm-b-op"),{activeMachineId:"machine1"}));
   await assertFails(updateDoc(doc(op,"businesses","firm-a","machines","machine1"),{hourlyRate:1000}));
   await assertFails(updateDoc(doc(op,"businesses","firm-a","machines","machine1"),{jobReady:false}));
   await assertFails(updateDoc(doc(op,"businesses","firm-b","machines","machine1"),{status:"running"}));
