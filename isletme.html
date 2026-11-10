@@ -1,9 +1,10 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puantör | İşletme</title><style>*{box-sizing:border-box}body{font-family:system-ui;background:#eef3f9;color:#162235;margin:0;padding:16px}main{max-width:850px;margin:auto}header{display:flex;justify-content:space-between;align-items:center}h1{font-size:24px}.card{background:white;border-radius:16px;padding:18px;margin:12px 0;border:1px solid #dce5ef}input,button{font:inherit;font-size:16px;padding:12px;border-radius:9px;border:1px solid #cad5e2;width:100%;margin:5px 0}button{background:#1d4ed8;color:white;font-weight:700}button.secondary{background:#e2e8f0;color:#172033}li{padding:8px;border-bottom:1px solid #e5e7eb}small{color:#64748b}#status{color:#b91c1c}</style></head><body><main><header><h1>🚜 Puantör İşletme</h1><button id="logout" class="secondary" style="width:auto">Çıkış</button></header><p id="businessName">İşletme yükleniyor…</p><p id="status"></p><section id="app" hidden><div class="card"><h2>Makine ekle</h2><form id="machineForm"><input id="machineName" placeholder="Makine adı" required maxlength="100"><button>Makine Kaydet</button></form><ul id="machines"></ul></div><div class="card"><h2>Müşteri ekle</h2><form id="customerForm"><input id="customerName" placeholder="Müşteri adı" required maxlength="100"><button>Müşteri Kaydet</button></form><ul id="customers"></ul></div><div class="card"><h2>Operatörler ve iş atamaları</h2><p>Bu yeni işletme alanında operatör hesabı ve iş atama modülü henüz etkin değil. Eski işletmenin kayıtları bu alana karışmaz.</p></div></section></main><script type="module">
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puantör | İşletme</title><style>*{box-sizing:border-box}body{font-family:system-ui;background:#eef3f9;color:#162235;margin:0;padding:16px}main{max-width:850px;margin:auto}header{display:flex;justify-content:space-between;align-items:center}h1{font-size:24px}.card{background:white;border-radius:16px;padding:18px;margin:12px 0;border:1px solid #dce5ef}input,select,button{font:inherit;font-size:16px;padding:12px;border-radius:9px;border:1px solid #cad5e2;width:100%;margin:5px 0}button{background:#1d4ed8;color:white;font-weight:700}button.secondary{background:#e2e8f0;color:#172033}li{padding:8px;border-bottom:1px solid #e5e7eb}small{color:#64748b}#status{color:#b91c1c}</style></head><body><main><header><h1>🚜 Puantör İşletme</h1><button id="logout" class="secondary" style="width:auto">Çıkış</button></header><p id="businessName">İşletme yükleniyor…</p><p id="status"></p><section id="app" hidden><div class="card"><h2>Makine ekle</h2><form id="machineForm"><input id="machineName" placeholder="Makine adı" required maxlength="100"><button>Makine Kaydet</button></form><ul id="machines"></ul></div><div class="card"><h2>Müşteri ekle</h2><form id="customerForm"><input id="customerName" placeholder="Müşteri adı" required maxlength="100"><button>Müşteri Kaydet</button></form><ul id="customers"></ul></div><div class="card"><h2>Operatörler ve iş atamaları</h2><p id="operatorHelp">Operatör hesaplarının güvenli oluşturulması henüz hazırlanıyor. Yalnızca etkin hesabı bulunan operatörlere iş atanabilir.</p><form id="jobForm"><label>Makine<select id="jobMachine" required></select></label><label>Müşteri<select id="jobCustomer" required></select></label><label>Operatör<select id="jobOperator" required></select></label><input id="jobDescription" placeholder="İş açıklaması (isteğe bağlı)" maxlength="500"><button id="assignJob" disabled>Görev Ata</button></form><h3>Görevler</h3><ul id="jobs"></ul></div></section></main><script type="module">
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 import {resolveTenant,watchTenantRecords,addNamedRecord,updateNamedRecord,deleteNamedRecord} from "./tenant-data.js";
+import {assignTenantJob} from "./tenant-jobs.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let unsub=[];
 $("logout").onclick=()=>signOut(auth).then(()=>location.replace("./giris.html"));
 onAuthStateChanged(auth,async user=>{
@@ -13,8 +14,20 @@ onAuthStateChanged(auth,async user=>{
     const session=await resolveTenant(db,user);
     $("businessName").textContent=session.businessName+" · Yönetici: "+session.managerName;
     $("app").hidden=false;
+    const state={machines:[],customers:[],operators:[],jobs:[]};
+    const populate=()=>{
+      for(const [type,id] of [["machines","jobMachine"],["customers","jobCustomer"],["operators","jobOperator"]]){
+        const select=$(id),previous=select.value;
+        const rows=type==="operators"?state.operators.filter(x=>x.authUid&&x.active!==false):state[type];
+        const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent=type==="operators"?"Operatör seçin":"Seçin";
+        select.replaceChildren(placeholder,...rows.map(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name||x.username||x.id;return o;}));
+        if(rows.some(x=>x.id===previous))select.value=previous;
+      }
+      $("assignJob").disabled=!state.machines.length||!state.customers.length||!state.operators.some(x=>x.authUid&&x.active!==false);
+    };
     for(const type of ["machines","customers"]){
       unsub.push(watchTenantRecords(db,session,type,records=>{
+        state[type]=records;populate();
         const items=records.map(record=>{
           const li=document.createElement("li");
           const label=document.createElement("span");label.textContent=record.name||"—";
@@ -36,6 +49,9 @@ onAuthStateChanged(auth,async user=>{
         $(type).replaceChildren(...items);
       },err=>$("status").textContent="Kayıt okuma hatası: "+(err.code||err.message)));
     }
+    unsub.push(watchTenantRecords(db,session,"operators",records=>{state.operators=records;populate();},err=>$("status").textContent="Operatör okuma hatası: "+(err.code||err.message)));
+    unsub.push(watchTenantRecords(db,session,"jobs",records=>{state.jobs=records;const rows=records.map(job=>{const li=document.createElement("li");li.textContent=(job.description||"Görev")+" · "+(job.status||"—");return li;});$("jobs").replaceChildren(...rows);},err=>$("status").textContent="Görev okuma hatası: "+(err.code||err.message)));
+    $("jobForm").onsubmit=async e=>{e.preventDefault();const b=$("assignJob");b.disabled=true;try{await assignTenantJob(db,session,{machineId:$("jobMachine").value,customerId:$("jobCustomer").value,operatorId:$("jobOperator").value,description:$("jobDescription").value});$("jobDescription").value="";$("status").textContent="Görev atandı";}catch(err){$("status").textContent="Görev atama hatası: "+(err.code||err.message);}finally{populate();}};
     for(const [form,input,type] of [["machineForm","machineName","machines"],["customerForm","customerName","customers"]]){
       $(form).onsubmit=async e=>{
         e.preventDefault();const b=$(form).querySelector("button");b.disabled=true;
