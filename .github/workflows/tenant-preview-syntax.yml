@@ -71,4 +71,14 @@ jobs:
           npm init -y
           npm install --no-save firebase@^11 @firebase/rules-unit-testing@^4 firebase-tools@^14
       - name: Run tenant isolation tests in Firestore emulator
-        run: npx firebase emulators:exec --only firestore --project puantor-tenant-rules-test "node tests/tenant-firestore-rules.cjs"
+        run: |
+          set -o pipefail
+          npx firebase emulators:exec --only firestore --project puantor-tenant-rules-test "node tests/tenant-firestore-rules.cjs" 2>&1 | tee tenant-firestore-test.log
+      - name: Upload emulator test log even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-firestore-test-log
+          path: tenant-firestore-test.log
+          if-no-files-found: warn
+          retention-days: 14
