@@ -5,6 +5,8 @@ on:
       - feature/otomatik-hareket-algilama
     paths:
       - 'machine-motion.js'
+      - 'motion-test-panel.js'
+      - 'motion-record-store.js'
       - 'motion-classifier.js'
       - 'motion-analysis.js'
       - '*.test.mjs'
@@ -13,6 +15,8 @@ on:
   pull_request:
     paths:
       - 'machine-motion.js'
+      - 'motion-test-panel.js'
+      - 'motion-record-store.js'
       - 'motion-classifier.js'
       - 'motion-analysis.js'
       - '*.test.mjs'
