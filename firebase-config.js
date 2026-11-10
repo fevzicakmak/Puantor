@@ -1,10 +1,11 @@
-// Puantör Live - Firebase web configuration (public client configuration).
+// Puantör isolated staging Firebase web configuration.
+// Test branch only: NEVER point this configuration to puantor-live.
 export const firebaseConfig = {
-  apiKey: "AIzaSyAFFXYaGa3JlCD_v4wP_CkWgXDkqP4PcJk",
-  authDomain: "puantor-live.firebaseapp.com",
-  projectId: "puantor-live",
-  storageBucket: "puantor-live.firebasestorage.app",
-  messagingSenderId: "834643918968",
-  appId: "1:834643918968:web:dfff967121011a83bc2d8d",
-  measurementId: "G-5WZM3DB1VS"
+  apiKey: "AIzaSyDN2uN3G-WCrKupyzmqCUD45R3M0-w_PGM",
+  authDomain: "puantor-staging.firebaseapp.com",
+  projectId: "puantor-staging",
+  storageBucket: "puantor-staging.firebasestorage.app",
+  messagingSenderId: "587333598841",
+  appId: "1:587333598841:web:a7d919cb61c6a34e029ea8",
+  measurementId: "G-KPWYD2MMK7"
 };
