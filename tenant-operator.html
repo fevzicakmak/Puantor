@@ -1,0 +1,27 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puantör | İşletme Operatörü</title><style>*{box-sizing:border-box}body{font:16px system-ui;background:#eef3f9;color:#142033;margin:0;padding:16px}main{max-width:680px;margin:auto}.card{background:white;padding:20px;border-radius:16px;margin:12px 0}button{font:inherit;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:white}#status{color:#b91c1c}li{padding:12px 0;border-bottom:1px solid #ddd}</style></head><body><main><h1>🚜 Puantör Operatör</h1><p id="who">Hesap doğrulanıyor…</p><button id="logout">Çıkış</button><p id="status"></p><div class="card"><h2>Bana Atanan Görevler</h2><ul id="jobs"></ul><p>Çalışma başlatma, duraklatma ve bitirme işlevleri güvenlik kuralları tamamlanınca etkinleştirilecek.</p></div></main><script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,collection,query,where,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let stop=null;
+$("logout").onclick=()=>signOut(auth).then(()=>location.replace("./giris.html"));
+onAuthStateChanged(auth,async user=>{
+ if(stop){stop();stop=null}
+ if(!user){location.replace("./giris.html");return}
+ try{
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists()||snap.data().role!=="tenant_operator"||snap.data().active!==true||!snap.data().tenantId)throw Error("Operatör hesabı yetkilendirilmemiş");
+  const tenantId=snap.data().tenantId;
+  $("who").textContent=user.email||"Operatör";
+  const q=query(collection(db,"businesses",tenantId,"jobs"),where("operatorUid","==",user.uid));
+  stop=onSnapshot(q,result=>{
+   $("jobs").replaceChildren(...result.docs.map(d=>{
+    const li=document.createElement("li"),job=d.data();
+    li.textContent=(job.description||"Görev")+" · "+(job.status||"Atandı");
+    return li;
+   }));
+   $("status").textContent=result.empty?"Henüz atanmış görev yok.":"";
+  },err=>$("status").textContent="Görevler okunamadı: "+(err.code||err.message));
+ }catch(err){$("status").textContent=err.message||String(err)}
+});
+</script></body></html>
