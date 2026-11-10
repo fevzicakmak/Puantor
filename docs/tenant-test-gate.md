@@ -27,3 +27,17 @@ npx firebase emulators:exec --only firestore --project puantor-tenant-rules-test
 8. iPhone Safari'de ekranlar, giriş ve veri kalıcılığı kontrol edilir.
 
 **Geçiş koşulu:** CI testleri başarılı + iki firma uçtan uca cihaz testleri başarılı + Firebase Functions ve Firestore kuralları test projesinde doğrulanmış olmalı. Bu olmadan `main` birleştirmesi veya üretim dağıtımı yapılmaz.
+
+## Ayrı Firebase test projesi (zorunlu)
+
+**Canlı proje:** `puantor-live`. Bu projede deneme hesabı oluşturmayın veya test için kuralları/Functions'ı dağıtmayın.
+
+1. Firebase Console'da yeni ve bağımsız bir test projesi oluşturun (ör. `puantor-staging`; adın müsait olması gerekir).
+2. Test projesinde Authentication → Email/Password yöntemini etkinleştirin, Firestore veritabanını oluşturun ve Web App kaydedin.
+3. Firebase Console'dan test projesinin **Web App configuration** bilgilerini alın. Bunlar test uygulamasının `firebase-config.js` dosyasında kullanılacak; canlı yapılandırma değiştirilmemeli.
+4. Firebase CLI ile **yalnızca test proje kimliği açıkça seçilerek** `firestore.rules` ve `functions` dağıtımı yapılmalı. Test projesinin Functions bölgesi `europe-west1` olmalı; gerekirse Blaze planı istenebilir.
+5. Test web uygulamasını ayrı bir test adresinde yayınlayın. Authentication → Settings → Authorized domains altında test adresini yetkilendirin.
+6. Test yöneticisi A ve B'yi, operatörleri, makineleri ve görevleri **yalnızca test projesinde** oluşturun. İki firmanın veri ayrımı, görev akışı ve silme/şifre değiştirme senaryolarını iPhone'da doğrulayın.
+7. Test tamamlanana kadar canlı `puantor-live` projesine dağıtım yapmayın.
+
+**Dağıtım öncesi kontrol:** CLI projesi ve `firebase-config.js` içindeki `projectId` aynı **test** projesini göstermeli; `puantor-live` görülürse işlemi durdurun.
