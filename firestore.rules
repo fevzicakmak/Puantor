@@ -14,7 +14,7 @@ service cloud.firestore {
    allow create: if isAdmin() || (
      signedIn() && request.auth.uid == uid &&
      request.auth.token.email == request.resource.data.email &&
-     request.auth.token.email !~ '.*@operators\\.puantor\\.invalid' &&
+     !request.auth.token.email.matches('.*@operators\\.puantor\\.invalid') &&
      request.resource.data.keys().hasOnly(['role','tenantId','businessName','managerName','email','createdAt']) &&
      request.resource.data.role == 'business_pending' &&
      request.resource.data.tenantId == uid &&
