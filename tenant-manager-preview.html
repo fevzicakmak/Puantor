@@ -608,14 +608,8 @@ $("manageDelete").onclick=async()=>{
    const assigned=cached.filter(m=>m.operatorUid===op.authUid||m.operatorUsername===op.username);
    if(assigned.length)throw Error("Operatöre bağlı "+assigned.length+" makine/görev var. Önce görevleri güvenli biçimde tamamlayıp bağlantılarını kaldırın. Operatör silinmedi.");
    if(!confirm(op.displayName+" operatörünü kaldırmak istiyor musunuz? Geçmiş işler korunacak."))return;
-   await runTransaction(db,async tx=>{
-    const opRef=doc(db,"businesses",tenantId,"operators",id),uRefs=[...new Set([op.authUid,op.pendingUid].filter(Boolean))].map(uid=>doc(db,"users",uid));
-    const snaps=await Promise.all([tx.get(opRef),...uRefs.map(ref=>tx.get(ref))]);
-    if(!snaps[0].exists())throw Error("Operatör zaten silinmiş.");
-    for(let i=1;i<snaps.length;i++){if(!snaps[i].exists()||snaps[i].data().tenantId!==tenantId||snaps[i].data().role!=="tenant_operator")throw Error("Operatörün firma üyeliği doğrulanamadı; hesaplar silinmedi.");}
-    tx.delete(opRef);for(const ref of uRefs)tx.delete(ref);
-   });
-   out.textContent="Operatörün uygulama erişimi kaldırıldı. Geçmiş işler korundu. Firebase Authentication hesabı ayrıca yönetilmelidir.";
+   await tenantOperatorAdmin({action:"delete",username:op.username});
+   out.textContent="Operatör hesabı devre dışı bırakıldı; giriş erişimi kapatıldı. Geçmiş işler korundu.";
   }else if(type==="machine"){
    const m=cached.find(x=>x.id===id);if(!m)throw Error("Makine bulunamadı.");
    if(machineBusy(m)||m.operatorUid||m.operatorUsername)throw Error("Makineye atanmış operatör veya açık görev var. Önce bağlantıları kaldırın; kayıt silinmedi.");
