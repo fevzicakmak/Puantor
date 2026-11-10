@@ -4,12 +4,13 @@ import {classifyMotion} from "./motion-classifier.js";
 export class MachineMotionDetector {
  constructor(onUpdate,onDetected){
   this.onUpdate=onUpdate;this.onDetected=onDetected;
-  this.running=false;this.samples=[];this.baseline=[];this.detectedAt=0;
+  this.mode="machine";this.running=false;this.samples=[];this.baseline=[];this.detectedAt=0;
   this.lastTrigger=-Infinity;this.lastSample=0;this.lastReport=0;this.lastEvent=0;
   this.motionListener=e=>this.handleMotion(e);
   this.visibilityListener=()=>{if(document.hidden){this.detectedAt=0;this.report("Ekran arka planda: ölçüm güvenilir değil; algılama duraklatıldı");}};
   this.watchdog=null;
  }
+ setMode(mode){if(this.running)throw Error("Sensör çalışırken mod değiştirilemez");this.mode=mode==="wrist"?"wrist":"machine";}
  report(message,extra={}){this.onUpdate({message,...extra});}
  async start(){
   if(this.running)return true;
@@ -85,7 +86,7 @@ export class MachineMotionDetector {
   if(candidate){if(!this.detectedAt)this.detectedAt=now;}
   else this.detectedAt=0;
   const seconds=this.detectedAt?Math.floor((now-this.detectedAt)/1000):0;
-  const classification=classifyMotion({rms,gyro:gyroMean,accelThreshold,gyroThreshold,seconds});
+  const classification=classifyMotion({rms,gyro:gyroMean,accelThreshold,gyroThreshold,seconds,mode:this.mode});
   if(now-this.lastReport>=1100){
    this.report(classification.label,
     {rms:+rms.toFixed(3),gyro:gyroMean===null?null:+gyroMean.toFixed(2),
