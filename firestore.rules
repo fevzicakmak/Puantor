@@ -114,7 +114,8 @@ service cloud.firestore {
         resource.data.status in ['idle','paused','broken'] &&
         request.resource.data.startedAt == request.time &&
         request.resource.data.elapsedMs == resource.data.elapsedMs &&
-        request.resource.data.faultReason == '') ||
+        request.resource.data.faultReason == '' &&
+        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeMachineId == machineId) ||
        (request.resource.data.status in ['paused','broken','done'] &&
         resource.data.status in ['idle','running','paused','broken'] &&
         request.resource.data.startedAt == null &&
@@ -132,6 +133,23 @@ service cloud.firestore {
    allow read: if isAdmin() || (signedIn() && resource.data.operatorUid == request.auth.uid);
    allow create: if isAdmin() || (signedIn() && request.resource.data.operatorUid == request.auth.uid);
    allow update, delete: if isAdmin();
+  }
+  match /payments/{paymentId} {
+   allow read: if isAdmin();
+   allow create: if isAdmin() &&
+     request.resource.data.keys().hasAll(['customerName','amount','date','note','createdAt']) &&
+     request.resource.data.keys().hasOnly(['customerName','amount','date','note','createdAt']) &&
+     request.resource.data.customerName is string && request.resource.data.customerName.size() > 0 &&
+     request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 100000000 &&
+     request.resource.data.date is string && request.resource.data.date.size() == 10 &&
+     request.resource.data.note is string && request.resource.data.note.size() <= 150 &&
+     request.resource.data.createdAt == request.time;
+   allow update: if isAdmin() &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date','amount','note']) &&
+     request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 100000000 &&
+     request.resource.data.date is string && request.resource.data.date.size() == 10 &&
+     request.resource.data.note is string && request.resource.data.note.size() <= 150;
+   allow delete: if isAdmin();
   }
   match /{document=**} { allow read, write: if false; }
  }
