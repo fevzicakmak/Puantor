@@ -10,12 +10,27 @@ service cloud.firestore {
      machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
   }
   function tenantAdmin(tenantId) { return signedIn() && request.auth.uid == tenantId && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId; }
+  function tenantOperator(tenantId) {
+   return signedIn() &&
+     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_operator' &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+  }
+  function tenantMachineAssigned(tenantId, machineId) {
+   return tenantOperator(tenantId) &&
+     machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds &&
+     resource.data.operatorUid == request.auth.uid;
+  }
   match /businesses/{tenantId} {
    allow create: if signedIn() && request.auth.uid == tenantId && request.resource.data.keys().hasOnly(['name','managerName','ownerUid','createdAt']) && request.resource.data.ownerUid == tenantId && request.resource.data.name is string && request.resource.data.managerName is string && request.resource.data.createdAt == request.time;
    allow read, update: if tenantAdmin(tenantId);
    allow delete: if false;
    match /{subcollection}/{recordId} {
     allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','payments'];
+    // Operators can only read machines assigned to them, never other tenant records.
+    allow get: if subcollection == 'machines' && tenantMachineAssigned(tenantId, recordId);
+    // Operator writes intentionally denied until the transaction model and rules are tested.
+
    }
   }
   match /users/{uid} {
