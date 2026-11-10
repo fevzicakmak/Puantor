@@ -45,6 +45,14 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
   await assertFails(getDoc(doc(unassigned,"businesses","firm-a","machines","machine1")));
   await assertFails(getDoc(doc(op,"businesses","firm-b","machines","machine1")));
   await assertFails(getDoc(doc(op,"businesses","firm-a","customers","customer1")));
+  await assertFails(setDoc(doc(op,"businesses","firm-a","customers","injected"),{name:"İzinsiz müşteri"}));
+  await assertFails(setDoc(doc(op,"businesses","firm-a","machines","injected"),{machineName:"İzinsiz makine"}));
+  await assertFails(deleteDoc(doc(op,"businesses","firm-a","machines","machine1")));
+  await assertFails(setDoc(doc(b,"businesses","firm-a","payments","injected"),{amount:100}));
+  await assertFails(setDoc(doc(b,"businesses","firm-a","jobs","injected"),{status:"done"}));
+  await assertSucceeds(setDoc(doc(a,"businesses","firm-a","customers","customer1"),{name:"Yetkili müşteri"}));
+  await assertFails(getDoc(doc(b,"businesses","firm-a","customers","customer1")));
+
   await assertFails(updateDoc(doc(op,"users","firm-b-op"),{activeMachineId:"machine1"}));
   await assertFails(updateDoc(doc(op,"businesses","firm-a","machines","machine1"),{hourlyRate:1000}));
   await assertFails(updateDoc(doc(op,"businesses","firm-a","machines","machine1"),{jobReady:false}));
