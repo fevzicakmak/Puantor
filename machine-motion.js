@@ -4,7 +4,7 @@ export class MachineMotionDetector {
  constructor(onUpdate,onDetected){
   this.onUpdate=onUpdate;this.onDetected=onDetected;
   this.running=false;this.samples=[];this.baseline=[];this.detectedAt=0;
-  this.lastTrigger=0;this.lastSample=0;this.lastReport=0;this.lastEvent=0;
+  this.lastTrigger=-Infinity;this.lastSample=0;this.lastReport=0;this.lastEvent=0;
   this.motionListener=e=>this.handleMotion(e);
   this.visibilityListener=()=>{if(document.hidden){this.detectedAt=0;this.report("Ekran arka planda: ölçüm güvenilir değil; algılama duraklatıldı");}};
   this.watchdog=null;
@@ -21,7 +21,7 @@ export class MachineMotionDetector {
     this.report("Sensör izni reddedildi.");return false;
    }
    this.samples=[];this.baseline=[];this.detectedAt=0;this.lastEvent=performance.now();
-   this.lastTrigger=0;this.lastSample=0;this.running=true;
+   this.lastTrigger=-Infinity;this.lastSample=0;this.running=true;
    window.addEventListener("devicemotion",this.motionListener,{passive:true});
    document.addEventListener("visibilitychange",this.visibilityListener);
    this.watchdog=setInterval(()=>{
