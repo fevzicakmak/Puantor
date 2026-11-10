@@ -21,11 +21,18 @@ export async function renameTenantOperator(db,session,id,name){
 }
 export async function disableTenantOperator(db,session,id){
   if(!id)throw Error("Operatör kimliği gerekli");
-  // Disabling a roster record does not revoke Firebase Auth access;
-  // backend authorization and rules must enforce active=false.
+  // Firestore authorization checks the active roster flag on each protected request.
   return updateDoc(doc(operatorsRef(db,session),id),{active:false});
 }
 
+export async function enableTenantOperator(db,session,id){
+ if(!id)throw Error("Operatör kimliği gerekli");
+ const ref=doc(operatorsRef(db,session),id);
+ const snap=await getDoc(ref);
+ if(!snap.exists())throw Error("Operatör bulunamadı");
+ if(!snap.data().authUid||snap.data().authStatus!=="active")throw Error("Önce operatör giriş hesabını etkinleştirin");
+ return updateDoc(ref,{active:true});
+}
 /**
  * Uses an isolated secondary Auth app, so the manager remains signed in.
  * Provisioning is not atomic across Auth and Firestore; failures require retry/support.
