@@ -14,7 +14,7 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$
 function refreshBusinessRegistration(){$("showBusinessRegister").hidden=false;}
 let checking=false,registering=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;refreshBusinessRegistration();
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
-try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
+try{const snap=await getDoc(doc(db,"users",user.uid));const profile=snap.exists()?snap.data():{};const role=profile.role||null;
 if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
 if(role==="tenant_admin"){if(profile.tenantId!==user.uid){$("status").textContent="Firma yöneticisi hesabı doğrulanamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-manager-preview.html");return}
