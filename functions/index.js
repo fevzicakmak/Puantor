@@ -93,13 +93,14 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
   const snap=await ref.get();
   if(!snap.exists||!snap.data().authUid)throw new HttpsError("not-found","Operatör bulunamadı.");
   const uid=snap.data().authUid;
-  const [profile,machines]=await Promise.all([
+  const [profile,machines,legacyAssignments]=await Promise.all([
    db.collection("users").doc(uid).get(),
-   db.collection("businesses").doc(tenantId).collection("machines").where("operatorUid","==",uid).limit(1).get()
+   db.collection("businesses").doc(tenantId).collection("machines").where("operatorUid","==",uid).limit(1).get(),
+   db.collection("businesses").doc(tenantId).collection("machines").where("operatorUsername","==",name).limit(1).get()
   ]);
   if(!profile.exists||profile.data().tenantId!==tenantId||profile.data().role!=="tenant_operator")
    throw new HttpsError("permission-denied","Operatör firma eşleşmesi geçersiz.");
-  if(!machines.empty||profile.data().activeMachineId)
+  if(!machines.empty||!legacyAssignments.empty||profile.data().activeMachineId)
    throw new HttpsError("failed-precondition","Operatörün atanmış makinesi veya aktif işi var. Önce atamaları kaldırın.");
   await auth.updateUser(uid,{disabled:true});
   await auth.revokeRefreshTokens(uid);
