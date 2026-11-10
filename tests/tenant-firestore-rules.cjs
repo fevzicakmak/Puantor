@@ -18,6 +18,10 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
   const op=env.authenticatedContext("firm-a-op").firestore();
   const outsider=env.unauthenticatedContext().firestore();
   const unassigned=env.authenticatedContext("firm-a-other-op").firestore();
+  await assertSucceeds(getDoc(doc(a,"users","firm-a-op")));
+  await assertFails(getDoc(doc(a,"users","firm-b-op")));
+  await assertSucceeds(getDoc(doc(op,"users","firm-a-op")));
+  await assertFails(getDoc(doc(op,"users","firm-b-op")));
   await assertSucceeds(getDoc(doc(a,"businesses","firm-a")));
   await assertSucceeds(updateDoc(doc(a,"businesses","firm-a"),{name:"Firma A Güncel"}));
   await assertFails(updateDoc(doc(a,"businesses","firm-a"),{ownerUid:"firm-b"}));
