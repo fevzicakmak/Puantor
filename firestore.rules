@@ -63,14 +63,7 @@ service cloud.firestore {
     );
    }
    match /jobs/{jobId} {
-    allow read: if tenantAdmin(tenantId) || (
-      tenantOperator(tenantId) &&
-      resource.data.get('operatorUid', '') == request.auth.uid &&
-      resource.data.get('operatorId', '') is string &&
-      exists(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(resource.data.operatorId)) &&
-      get(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(resource.data.operatorId)).data.active == true &&
-      get(/databases/$(database)/documents/businesses/$(tenantId)/operators/$(resource.data.operatorId)).data.authUid == request.auth.uid
-    );
+    allow read: if tenantAdmin(tenantId) || tenantOperator(tenantId) && resource.data.get('operatorUid', '') == request.auth.uid;
     allow create, delete: if tenantAdmin(tenantId);
     allow update: if tenantAdmin(tenantId) || (
       tenantOperator(tenantId) &&
