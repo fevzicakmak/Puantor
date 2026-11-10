@@ -16,7 +16,8 @@ async function route(user){if(checking)return;checking=true;$("submit").disabled
 try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
 if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="business_pending"){$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}\nif(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
+if(role==="business_pending"){$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
+if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
