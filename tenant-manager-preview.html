@@ -287,7 +287,7 @@ import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "htt
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);window.__puantorReady=true;let tenantId=null;
 let learningUnsub=null,learningUid=null;
-function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=uid;const ref=doc(db,"searchPreferences",uid);
+function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=uid;const ref=doc(db,"businesses",tenantId,"searchPreferences",uid);
  window.__puantorSaveLearning=async prefs=>{if(learningUid!==uid)throw Error("Oturum değişti");await setDoc(ref,{preferences:prefs,updatedAt:serverTimestamp()},{merge:true})};
  learningUnsub=onSnapshot(ref,snap=>{if(snap.exists())window.dispatchEvent(new CustomEvent("puantor-learning-remote",{detail:snap.data().preferences||{}}));window.dispatchEvent(new Event("puantor-learning-ready"))},()=>window.dispatchEvent(new Event("puantor-learning-disabled")));
 }
