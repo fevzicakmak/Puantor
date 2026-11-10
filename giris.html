@@ -18,7 +18,8 @@ async function route(user){if(checking)return;checking=true;$("submit").disabled
 try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
 if(role==="admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="tenant_admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./isletme.html");return}\nif(role==="business_pending"){localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
+if(role==="tenant_admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./isletme.html");return}
+if(role==="business_pending"){localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
 if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
@@ -34,7 +35,8 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  cred=await createUserWithEmailAndPassword(auth,email,password);
  const uid=cred.user.uid;
  $("businessStatus").textContent="Kimlik hesabı oluşturuldu. İşletme kaydı tamamlanıyor…";
- await setDoc(doc(db,"users",uid),{role:"tenant_admin",tenantId:uid,businessName:company,managerName:manager,email,createdAt:serverTimestamp()});\n await setDoc(doc(db,"businesses",uid),{name:company,managerName:manager,ownerUid:uid,createdAt:serverTimestamp()});
+ await setDoc(doc(db,"users",uid),{role:"tenant_admin",tenantId:uid,businessName:company,managerName:manager,email,createdAt:serverTimestamp()});
+ await setDoc(doc(db,"businesses",uid),{name:company,managerName:manager,ownerUid:uid,createdAt:serverTimestamp()});
  localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();
  $("businessStatus").textContent="İşletme kaydedildi. Doğrulama e-postası gönderiliyor…";
  await sendEmailVerification(cred.user).catch(()=>{});
