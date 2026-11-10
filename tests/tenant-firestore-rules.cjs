@@ -45,13 +45,14 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   // A legitimate operator transition must update machine and own activeMachineId atomically.
   const machineRef=doc(op,"businesses","firm-a","machines","machine1");
   const userRef=doc(op,"users","firm-a-op");
-  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""}]}));
+  const startEvent={action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""};
+  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent]}));
   const start=writeBatch(op);
-  start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""}]});
+  start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent]});
   start.update(userRef,{activeMachineId:"machine1"});
   await assertSucceeds(start.commit());
   const pause=writeBatch(op);
-  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""},{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""}]});
+  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""}]});
   pause.update(userRef,{activeMachineId:""});
   await assertSucceeds(pause.commit());
   console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
