@@ -51,13 +51,16 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent]});
   start.update(userRef,{activeMachineId:"machine1"});
   await assertSucceeds(start.commit());
+  const pauseEvent={action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""};
   const pause=writeBatch(op);
-  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""}]});
+  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent]});
   pause.update(userRef,{activeMachineId:""});
   await assertSucceeds(pause.commit());
   const finish=writeBatch(op);
-  finish.update(machineRef,{status:"done",startedAt:null,elapsedMs:2,faultReason:"",jobReady:false,updatedAt:serverTimestamp(),timeline:[startEvent,{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""},{action:"finish",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:""}]});
+  finish.update(machineRef,{status:"done",startedAt:null,elapsedMs:2,faultReason:"",jobReady:false,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,{action:"finish",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:""}]});
   await assertSucceeds(finish.commit());
+  await assertFails(updateDoc(userRef,{role:"tenant_admin"}));
+  await assertFails(updateDoc(userRef,{machineIds:["machine1","machine2"]}));
   await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),jobReady:true,updatedAt:serverTimestamp()}));
   console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
  }finally{await env.cleanup();}
