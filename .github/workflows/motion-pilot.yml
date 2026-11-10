@@ -6,6 +6,7 @@ on:
     paths:
       - 'machine-motion.js'
       - 'motion-test-panel.js'
+      - 'motion-lab.html'
       - 'motion-record-store.js'
       - 'motion-classifier.js'
       - 'motion-analysis.js'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'machine-motion.js'
       - 'motion-test-panel.js'
+      - 'motion-lab.html'
       - 'motion-record-store.js'
       - 'motion-classifier.js'
       - 'motion-analysis.js'
