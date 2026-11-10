@@ -45,6 +45,7 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   // A legitimate operator transition must update machine and own activeMachineId atomically.
   const machineRef=doc(op,"businesses","firm-a","machines","machine1");
   const userRef=doc(op,"users","firm-a-op");
+  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""}]}));
   const start=writeBatch(op);
   start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""}]});
   start.update(userRef,{activeMachineId:"machine1"});
