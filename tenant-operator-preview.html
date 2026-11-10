@@ -47,7 +47,7 @@ function renderTime(){
  const totalMs=elapsed+delta;$("machineTime").textContent=fmt(totalMs);const rate=Number(machineData.hourlyRate);$("liveAmount").textContent=machineData.hourlyRate==null||!Number.isFinite(rate)?"Ücret belirlenmemiş":(totalMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});$("rateInfo").textContent="Saatlik ücret: "+(machineData.hourlyRate==null||!Number.isFinite(rate)?"Belirlenmemiş":rate.toLocaleString("tr-TR",{style:"currency",currency:"TRY"}));
 }
 setInterval(renderTime,1000);
-function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&clockMismatch)||(id==="start"&&machineData.jobReady===false)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
+function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&clockMismatch)||(id==="start"&&machineData.jobReady!==true)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
  if(action==="start"){await checkDeviceClock();if(clockMismatch){$("controlInfo").textContent="Telefon saati yanlış. Otomatik tarih ve saati açıp tekrar deneyin.";return}}if(!machineId||busy){$("controlInfo").textContent="Başlatma engellendi: "+(!machineId?"makine bulunamadı":"işlem devam ediyor");return}let reason="";
  if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
@@ -59,7 +59,7 @@ async function changeState(action){
    if(!snap.exists())throw Error("Makine bulunamadı");if(action==="start"){
     const otherIds=[...new Set(Array.isArray(userSnap.data().machineIds)?userSnap.data().machineIds:[])].filter(id=>id!==machineId);
     const otherSnaps=await Promise.all(otherIds.map(id=>tx.get(doc(db,"businesses",tenantId,"machines",id))));
-    for(const other of otherSnaps){if(!other.exists())continue;const om=other.data();if(om.operatorUid===auth.currentUser.uid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Başka makinede arşivlenmemiş işiniz var ("+(om.machineName||other.id)+"). Yönetici onayıyla arşivlenmeden yeni işe başlayamazsınız.");}
+    for(const other of otherSnaps){if(!other.exists())continue;const om=other.data();if(om.operatorUid===auth.currentUser.uid&&(oom.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Başka makinede arşivlenmemiş işiniz var ("+(om.machineName||other.id)+"). Yönetici onayıyla arşivlenmeden yeni işe başlayamazsınız.");}
    }
    
    const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");const activeMachine=userSnap.data().activeMachineId||"";if(action==="start"&&activeMachine&&activeMachine!==machineId)throw Error("Başka bir makinede çalışmanız devam ediyor. Önce o makineyi duraklatın veya bitirin.");
@@ -67,12 +67,12 @@ async function changeState(action){
    // A device clock behind Firestore must not erase active working time.
    const serverNow=Math.max(Date.now(),m.updatedAt?.toMillis?.()||0);
    const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
-   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady===false)throw Error("Yeni iş yönetici tarafından açılmadı.");
+   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady!==true)throw Error("Yeni iş yönetici tarafından açılmadı.");
    if(m.status==="running"&&!start)throw Error("Firebase başlangıç zamanı henüz alınamadı. Birkaç saniye sonra tekrar deneyin.");const previous=Math.max(0,Number(m.elapsedMs)||0);
    const elapsed=previous+(m.status==="running"&&start?Math.max(0,serverNow-start):0);
    const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
    const event={action,at:Timestamp.fromMillis(serverNow),elapsedMs:Math.floor(elapsed),operatorName:m.operatorName||"",reason:action==="fault"?reason.trim():""};const timeline=Array.isArray(m.timeline)?m.timeline:[];if(timeline.length>=250)throw Error("Zaman çizelgesi doldu; yöneticiden işi arşivlemesini isteyin.");
-   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady!==false),updatedAt:serverTimestamp(),timeline:[...timeline,event]});
+   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady===true),updatedAt:serverTimestamp(),timeline:[...timeline,event]});
    if(action==="start")tx.update(userRef,{activeMachineId:machineId});else if(activeMachine===machineId)tx.update(userRef,{activeMachineId:""});
   });
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
@@ -93,21 +93,21 @@ onAuthStateChanged(auth,async user=>{
  const ids=profile.data().machineIds;
  if(!Array.isArray(ids)||!ids.length){showError("Makine ataması henüz tamamlanmadı.");return}
  const selector=$("machineSelect");selector.innerHTML="";
- const matches=await Promise.all(ids.map(async id=>{try{const snap=await getDoc(doc(db,"businesses",tenantId,"machines",id));const m=snap.exists()?snap.data():null;return m&&m.operatorUid===user.uid&&m.jobReady!==false&&m.status!=="done"?{id,m}:null}catch{return null}}));
+ const matches=await Promise.all(ids.map(async id=>{try{const snap=await getDoc(doc(db,"businesses",tenantId,"machines",id));const m=snap.exists()?snap.data():null;return m&&m.operatorUid===user.uid&&m.jobReady===true&&m.status!=="done"?{id,m}:null}catch{return null}}));
  const active=matches.filter(Boolean);assignedIds=active.map(x=>x.id);
  for(const {id,m} of active){const opt=document.createElement("option");opt.value=id;opt.textContent=m.machineName||m.plaka||m.plate||id;selector.appendChild(opt)}
  if(!active.length){showError("Size atanmış aktif görev bulunmuyor.");return}
  const selected=assignedIds.includes(sessionStorage.getItem("puantor-selected-machine"))?sessionStorage.getItem("puantor-selected-machine"):assignedIds[0];selector.value=selected;
  function subscribeMachine(id){if(unsubscribe){unsubscribe();unsubscribe=null}machineId=id;machineData=null;updateControls();showError("");$("machine").textContent=id;sessionStorage.setItem("puantor-selected-machine",id);unsubscribe=onSnapshot(doc(db,"businesses",tenantId,"machines",id),snap=>{
  if(!snap.exists()){showError("Atanan makine bulunamadı.");return}
- const m=snap.data();if(m.operatorUid!==user.uid||m.jobReady===false||m.status==="done"){machineData=null;updateControls();showError("Bu makinede size atanmış aktif görev yok.");return}
+ const m=snap.data();if(m.operatorUid!==user.uid||m.jobReady!==true||m.status==="done"){machineData=null;updateControls();showError("Bu makinede size atanmış aktif görev yok.");return}
  const serverUpdated=m.updatedAt?.toMillis?.();
  // The latest update timestamp is not the current server clock.
  machineData=m;$("customerName").textContent=m.customerName||"Belirtilmemiş";updateControls();$("machine").textContent=m.machineName||m.plaka||id;
  $("machineStatus").textContent=({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",done:"Tamamlandı",idle:"Hazır"})[m.status]||"Bilinmiyor";
  renderTime();
- if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady!==false) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
- if(m.status==="done"||m.jobReady===false)showError("Yeni çalışma için yönetici bekleniyor.");
+ if(!snap.metadata.hasPendingWrites && !busy && m.status!=="done" && m.jobReady===true) $("controlInfo").textContent="Canlı durum: "+({running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arızalı",idle:"Hazır"})[m.status]+". Süre Firebase ile eşitlendi.";
+ if(m.status==="done"||m.jobReady!==true)showError("Yeni çalışma için yönetici bekleniyor.");
  },()=>showError("Seçilen makineye erişim izni yok. Yönetici makine atamasını kontrol etmeli."));}
  selector.onchange=()=>subscribeMachine(selector.value);subscribeMachine(selected);
  }catch(e){showError("Yetki kontrolü başarısız: "+(e.code||e.message))}
