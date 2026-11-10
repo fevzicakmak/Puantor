@@ -55,6 +55,10 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""}]});
   pause.update(userRef,{activeMachineId:""});
   await assertSucceeds(pause.commit());
+  const finish=writeBatch(op);
+  finish.update(machineRef,{status:"done",startedAt:null,elapsedMs:2,faultReason:"",jobReady:false,updatedAt:serverTimestamp(),timeline:[startEvent,{action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""},{action:"finish",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:""}]});
+  await assertSucceeds(finish.commit());
+  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),jobReady:true,updatedAt:serverTimestamp()}));
   console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
  }finally{await env.cleanup();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
