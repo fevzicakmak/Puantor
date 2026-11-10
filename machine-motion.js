@@ -7,10 +7,19 @@ export class MachineMotionDetector {
   this.mode="machine";this.running=false;this.samples=[];this.baseline=[];this.detectedAt=0;
   this.lastTrigger=-Infinity;this.lastSample=0;this.lastReport=0;this.lastEvent=0;
   this.motionListener=e=>this.handleMotion(e);
-  this.visibilityListener=()=>{if(document.hidden){this.detectedAt=0;this.report("Ekran arka planda: ölçüm güvenilir değil; algılama duraklatıldı");}};
+  this.visibilityListener=()=>{
+   if(document.hidden){
+    this.resetSignal();
+    this.report("Ekran arka planda: ölçüm duraklatıldı, dönüşte yeniden kalibrasyon gerekir.",{stale:true});
+   }else{
+    this.resetSignal();
+    this.report("Ekrana dönüldü: yeniden kalibrasyon yapılıyor.",{calibrating:true});
+   }
+  };
   this.watchdog=null;
  }
  setMode(mode){if(this.running)throw Error("Sensör çalışırken mod değiştirilemez");this.mode=mode==="wrist"?"wrist":"machine";}
+ resetSignal(){this.detectedAt=0;this.samples=[];this.baseline=[];this.lastSample=0;}
  report(message,extra={}){this.onUpdate({message,...extra});}
  async start(){
   if(this.running)return true;
@@ -22,7 +31,7 @@ export class MachineMotionDetector {
       await DeviceMotionEvent.requestPermission()!=="granted"){
     this.report("Sensör izni reddedildi.");return false;
    }
-   this.samples=[];this.baseline=[];this.detectedAt=0;this.lastEvent=performance.now();
+   this.resetSignal();this.lastEvent=performance.now();
    this.lastTrigger=-Infinity;this.lastSample=0;this.running=true;
    window.addEventListener("devicemotion",this.motionListener,{passive:true});
    document.addEventListener("visibilitychange",this.visibilityListener);
@@ -30,8 +39,8 @@ export class MachineMotionDetector {
     if(!this.running)return;
     if(document.hidden)return;
     if(performance.now()-this.lastEvent>3500){
-     this.detectedAt=0;this.samples=[];
-     this.report("Sensör verisi kesildi: otomatik tespit devre dışı.",{stale:true});
+     this.resetSignal();
+     this.report("Sensör verisi kesildi: yeniden kalibrasyon gerekli.",{stale:true});
     }
    },2000);
    this.report("Kalibrasyon başlıyor: cihazı yerinden oynatmayın.");
@@ -39,7 +48,7 @@ export class MachineMotionDetector {
   }catch(e){this.report("Sensör izni alınamadı: "+e.message);return false;}
  }
  stop(){
-  this.running=false;this.detectedAt=0;this.samples=[];this.baseline=[];
+  this.running=false;this.resetSignal();
   window.removeEventListener("devicemotion",this.motionListener);
   document.removeEventListener("visibilitychange",this.visibilityListener);
   if(this.watchdog!==null)clearInterval(this.watchdog);
