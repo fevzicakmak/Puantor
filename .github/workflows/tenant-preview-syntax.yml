@@ -1,0 +1,52 @@
+name: Puantor tenant preview syntax checks
+on:
+  push:
+    branches:
+      - feature/single-app-multicompany-from-last-single
+  pull_request:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Firebase Functions JavaScript
+        run: node --check functions/index.js
+      - name: Check inline module JavaScript
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          import subprocess
+          import tempfile
+          class Extract(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.inside = False
+                  self.parts = []
+                  self.modules = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script' and dict(attrs).get('type') == 'module' and 'src' not in dict(attrs):
+                      self.inside = True
+                      self.parts = []
+              def handle_data(self, data):
+                  if self.inside:
+                      self.parts.append(data)
+              def handle_endtag(self, tag):
+                  if tag == 'script' and self.inside:
+                      self.modules.append(''.join(self.parts))
+                      self.inside = False
+          for name in ('giris.html','tenant-manager-preview.html','tenant-operator-preview.html'):
+              parser = Extract()
+              parser.feed(Path(name).read_text(encoding='utf-8'))
+              if not parser.modules:
+                  raise SystemExit(f'No module scripts found in {name}')
+              for index, code in enumerate(parser.modules):
+                  with tempfile.NamedTemporaryFile(mode='w', suffix='.mjs', encoding='utf-8') as file:
+                      file.write(code)
+                      file.flush()
+                      subprocess.run(['node','--check',file.name],check=True)
+              print(f'{name}: {len(parser.modules)} module script(s) parsed')
+          PY
