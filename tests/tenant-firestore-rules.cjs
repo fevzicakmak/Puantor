@@ -67,6 +67,8 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   resume.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent]});
   resume.update(userRef,{activeMachineId:"machine1"});
   await assertSucceeds(resume.commit());
+  // An operator cannot falsify a fault reason by changing unrelated machine fields.
+  await assertFails(updateDoc(machineRef,{hourlyRate:999999,status:"broken",startedAt:null,elapsedMs:2,faultReason:"Hidrolik arıza",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent,{action:"fault",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:"Hidrolik arıza"}]}));
   const fault=writeBatch(op);
   const faultEvent={action:"fault",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:"Hidrolik arıza"};
   fault.update(machineRef,{status:"broken",startedAt:null,elapsedMs:2,faultReason:"Hidrolik arıza",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent,faultEvent]});
