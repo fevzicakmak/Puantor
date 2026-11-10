@@ -1,7 +1,7 @@
 // Tenant operator roster and isolated-session Firebase Auth provisioning.
 import {collection,doc,addDoc,updateDoc,setDoc,getDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,deleteUser,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {firebaseConfig} from "./firebase-config.js";
 function operatorsRef(db,session){
   if(!session?.uid||session.uid!==session.tenantId)throw Error("İşletme oturumu geçersiz");
@@ -38,7 +38,7 @@ export async function provisionTenantOperator(db,session,id,email,password){
  if(String(password||"").length<8)throw Error("Şifre en az 8 karakter olmalı");
  const secondary=initializeApp(firebaseConfig,"operator-provision-"+Date.now()+"-"+Math.random().toString(36).slice(2));
  const secondaryAuth=getAuth(secondary);
- let user=null;
+ let user=null,created=false,rosterLinked=false;
  try{
   const rosterRef=doc(operatorsRef(db,session),id);
   const roster=await getDoc(rosterRef);
@@ -51,8 +51,10 @@ export async function provisionTenantOperator(db,session,id,email,password){
   }else{
     const credential=await createUserWithEmailAndPassword(secondaryAuth,normalized,password);
     user=credential.user;
+    created=true;
   }
   await updateDoc(rosterRef,{authUid:user.uid,email:normalized,active:true,authStatus:"active"});
+  rosterLinked=true;
   // The secondary user may create its own profile, but only after manager authorization.
   // Auth and Firestore use separate sessions, so initialize a secondary Firestore instance.
   const {getFirestore}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
@@ -65,6 +67,13 @@ export async function provisionTenantOperator(db,session,id,email,password){
     await setDoc(profileRef,{role:"tenant_operator",tenantId:session.tenantId,operatorId:id,email:normalized,active:true,createdAt:serverTimestamp()});
   }
   return user.uid;
+ }catch(err){
+  // If Firestore linking failed after a new Auth signup, remove the orphaned Auth user.
+  // Once the roster is linked, retain the account for safe retry of profile creation.
+  if(created&&!rosterLinked&&user){
+   try{await deleteUser(user);}catch(cleanupErr){throw Error("Hesap kaydı tamamlanamadı ve kimlik hesabı temizlenemedi. Destek gerekli: "+(cleanupErr.code||cleanupErr.message));}
+  }
+  throw err;
  }finally{
   await signOut(secondaryAuth).catch(()=>{});
   await deleteApp(secondary).catch(()=>{});
