@@ -102,6 +102,20 @@ service cloud.firestore {
      request.resource.data.managerName is string && request.resource.data.managerName.size() >= 2 && request.resource.data.managerName.size() <= 80 &&
      request.resource.data.createdAt == request.time
    ) || (
+     signedIn() && request.auth.uid == uid &&
+     request.resource.data.keys().hasOnly(['role','tenantId','operatorId','email','active','createdAt']) &&
+     request.resource.data.role == 'tenant_operator' &&
+     request.resource.data.active == true &&
+     request.resource.data.email == request.auth.token.email &&
+     request.resource.data.tenantId is string &&
+     request.resource.data.operatorId is string &&
+     request.resource.data.createdAt == request.time &&
+     exists(/databases/$(database)/documents/businesses/$(request.resource.data.tenantId)/operators/$(request.resource.data.operatorId)) &&
+     get(/databases/$(database)/documents/businesses/$(request.resource.data.tenantId)/operators/$(request.resource.data.operatorId)).data.authUid == uid &&
+     get(/databases/$(database)/documents/businesses/$(request.resource.data.tenantId)/operators/$(request.resource.data.operatorId)).data.active == true &&
+     get(/databases/$(database)/documents/businesses/$(request.resource.data.tenantId)/operators/$(request.resource.data.operatorId)).data.authStatus == 'active' &&
+     get(/databases/$(database)/documents/businesses/$(request.resource.data.tenantId)/operators/$(request.resource.data.operatorId)).data.email == request.auth.token.email
+   ) || (
      signedIn() && request.auth.token.email == request.resource.data.username + "@operators.puantor.invalid" &&
      request.resource.data.keys().hasOnly(["role","username","email","machineIds","createdAt"]) &&
      request.resource.data.role == "pending" &&
