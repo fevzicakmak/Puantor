@@ -47,3 +47,12 @@
 - Makineye sabit ve bilek modlarının saha test raporları birbirinden ayrılır.
 - Github Actions run #9 / 42898713835 başarılı; bu yalnızca yazılım testi sonucudur, gerçek saha testi değildir.
 - Pilot otomatik çalışma başlatma, duraklatma, bitirme ve ücret değişikliği yapmaz.
+
+## Pilot v6 — saha kayıtlarının korunması
+- Son 1800 adet sensör özeti cihazın localStorage alanında, yaklaşık 10 saniyede bir veya sayfa kapatılırken yazılır.
+- Operatör etiketli doğrulama örnekleri hemen yazılır.
+- Tarayıcının depolama engeli veya kota doluluğu durumunda uyarı verilir; CSV dışa aktarımı desteklenir.
+- Yerel kayıtlar yalnızca o tarayıcı/profilde tutulur; özel gezinti, temizleme veya cihaz arızasında kaybolabilir.
+- Pilot kayıtları Firebase'e veya yöneticinin hesabına otomatik gönderilmez.
+- 'Test kayıtlarını sil' işlevi yalnızca bu cihazın pilot hareket verilerini temizler.
+- CSV çıktısı yetkisiz kişilere gönderilmemelidir; operatör/makine bilgileri içerir.
