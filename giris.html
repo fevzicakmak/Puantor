@@ -11,19 +11,21 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
-let checking=false,registering=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;
+const deviceBusinessKey="puantor_device_business_initialized";
+function refreshBusinessRegistration(){const locked=localStorage.getItem(deviceBusinessKey)==="1";$("showBusinessRegister").hidden=locked;if(locked&& !$("businessRegister").hidden){$("businessRegister").hidden=true;$("login").hidden=false;}}
+let checking=false,registering=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;refreshBusinessRegistration();
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
 try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
-if(role==="admin"){location.replace("./yonetici.html");return}
+if(role==="admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="business_pending"){$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
+if(role==="business_pending"){localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
 if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
 onAuthStateChanged(auth,user=>{if(registering)return;if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
-$("showBusinessRegister").onclick=()=>{$("login").hidden=true;$("showRegister").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;$("status").textContent="Yeni işletme kaydı";};
-$("businessBack").onclick=()=>{$("businessRegister").hidden=true;$("login").hidden=false;$("showRegister").hidden=false;$("showBusinessRegister").hidden=false;};
+$("showBusinessRegister").onclick=()=>{if(localStorage.getItem(deviceBusinessKey)==="1"){refreshBusinessRegistration();return;}$("login").hidden=true;$("showRegister").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;$("status").textContent="Yeni işletme kaydı";};
+$("businessBack").onclick=()=>{$("businessRegister").hidden=true;$("login").hidden=false;$("showRegister").hidden=false;refreshBusinessRegistration();};
 $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();const b=$("businessSubmit");b.disabled=true;b.textContent="Hesap oluşturuluyor…";$("businessStatus").textContent="Firebase bağlantısı ve hesap kaydı yapılıyor. Lütfen bekleyin…";registering=true;let cred;try{
  const company=$("businessName").value.trim(),manager=$("businessManager").value.trim(),email=$("businessEmail").value.trim().toLowerCase(),password=$("businessPassword").value;
  if(company.length<2||manager.length<2||password.length<8)throw Error("İşletme, yönetici adı ve şifreyi kontrol edin.");
@@ -32,6 +34,7 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  const uid=cred.user.uid;
  $("businessStatus").textContent="Kimlik hesabı oluşturuldu. İşletme kaydı tamamlanıyor…";
  await setDoc(doc(db,"users",uid),{role:"business_pending",tenantId:uid,businessName:company,managerName:manager,email,createdAt:serverTimestamp()});
+ localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();
  $("businessStatus").textContent="İşletme kaydedildi. Doğrulama e-postası gönderiliyor…";
  await sendEmailVerification(cred.user);
  $("status").textContent="İşletme hesabı oluşturuldu. E-postanızı doğrulayın. İşletme yönetim yetkisi etkinleştirilene kadar giriş beklemede kalacaktır.";
