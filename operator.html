@@ -29,7 +29,21 @@ input,select,textarea{font-size:16px!important}
   <p style="font-size:13px;margin:8px 0">Otomatik başlatma için telefonu makinenin kabininde sağlam ve sabit bir yere yerleştirin. Telefon elde veya cepteyken kullanmayın. Sayfayı açık ve ekranda tutun.</p>
   <label style="font-size:13px;margin:8px 0"><input type="checkbox" id="fixedConfirmed" style="width:auto;margin-right:7px">Telefonu seçtiğim konuma güvenli biçimde sabitledim.</label>
   <p id="motionModeNote" style="font-size:12px;color:#92400e">Makine modu: ivmeölçer + jiroskop ile hareket adayı ölçülür. Otomatik başlatma güvenlik nedeniyle saha doğrulamasına kadar kapalı.</p><button type="button" id="autoToggle" style="margin-top:8px;background:#166534">Sensör ölçümünü aç</button>
-  <div id="motionScore" style="background:#e2e8f0;border-radius:8px;padding:9px;margin-top:8px;font-weight:700">Durum: ölçüm bekleniyor</div><label for="groundTruth" style="font-size:13px">Gerçek durum (saha notu)</label><select id="groundTruth" style="width:100%;padding:10px;background:white;border:1px solid #cbd5e1;border-radius:8px"><option value="">Gerçek durumu seç</option><option value="motor_off">Motor kapalı</option><option value="idle_engine">Motor rölantide</option><option value="working">Aktif çalışma / kazı</option><option value="travel">Makine ilerliyor</option><option value="walking">Operatör yürüyor</option><option value="phone_handled">Telefon oynatılıyor</option></select><button type="button" id="markTruth" style="margin-top:8px;background:#1d4ed8">Gerçek durumu kaydet</button><button type="button" id="motionReport" style="margin-top:8px;background:#0f766e">Saha test raporunu göster</button><div id="motionReportOutput" style="font-size:12px;white-space:pre-wrap;margin-top:8px"></div><button type="button" id="motionClear" style="margin-top:8px;background:#9a3412">Test kayıtlarını sil</button><p id="motionSavedStatus" style="font-size:12px;margin:5px 0">Kayıtlar yalnızca bu cihazda saklanır.</p><button type="button" id="motionExport" style="margin-top:8px;background:#334155">Test sonuçlarını CSV indir</button><p id="autoStatus" role="status" aria-live="polite" style="font-size:13px;margin:8px 0">Kapalı. Manuel çalışma kontrolleri aktif.</p>
+  <section id="motionDashboard" aria-label="Canlı hareket test paneli" style="background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:12px;margin:12px 0">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong>📊 Canlı Saha Testi</strong><span data-role="connection" style="font-size:12px;color:#64748b">Beklemede</span></div>
+ <p style="font-size:12px;margin:6px 0">Deneme ölçümü · iş süresi veya ücretlendirmeyi değiştirmez</p>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">
+  <div style="background:#f1f5f9;padding:9px;border-radius:9px"><small>Sinyal puanı</small><div data-role="score" style="font-size:23px;font-weight:800">—</div></div>
+  <div style="background:#f1f5f9;padding:9px;border-radius:9px"><small>Test süresi</small><div data-role="elapsed" style="font-size:23px;font-weight:800">00:00</div></div>
+ </div>
+ <div style="font-size:13px"><b data-role="classification">Ölçüm bekleniyor</b></div>
+ <div style="background:#e2e8f0;height:9px;border-radius:9px;overflow:hidden;margin:6px 0 10px"><div data-role="scorebar" style="height:100%;width:0;background:#0d9488"></div></div>
+ <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span>İvme titreşimi</span><strong data-role="accel">—</strong></div>
+ <div style="background:#e2e8f0;height:7px;border-radius:9px;overflow:hidden;margin:4px 0 10px"><div data-role="accelbar" style="height:100%;width:0;background:#2563eb"></div></div>
+ <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span>Jiroskop</span><strong data-role="gyro">—</strong></div>
+ <div style="background:#e2e8f0;height:7px;border-radius:9px;overflow:hidden;margin:4px 0 10px"><div data-role="gyrobar" style="height:100%;width:0;background:#7c3aed"></div></div>
+ <div style="display:flex;justify-content:space-between;font-size:12px;gap:8px"><span>İvme eşiği: <b data-role="threshold">—</b></span><span>Kesintisiz: <b data-role="sustained">0 sn</b></span></div>
+</section><div id="motionScore" style="background:#e2e8f0;border-radius:8px;padding:9px;margin-top:8px;font-weight:700">Durum: ölçüm bekleniyor</div><label for="groundTruth" style="font-size:13px">Gerçek durum (saha notu)</label><select id="groundTruth" style="width:100%;padding:10px;background:white;border:1px solid #cbd5e1;border-radius:8px"><option value="">Gerçek durumu seç</option><option value="motor_off">Motor kapalı</option><option value="idle_engine">Motor rölantide</option><option value="working">Aktif çalışma / kazı</option><option value="travel">Makine ilerliyor</option><option value="walking">Operatör yürüyor</option><option value="phone_handled">Telefon oynatılıyor</option></select><button type="button" id="markTruth" style="margin-top:8px;background:#1d4ed8">Gerçek durumu kaydet</button><button type="button" id="motionReport" style="margin-top:8px;background:#0f766e">Saha test raporunu göster</button><div id="motionReportOutput" style="font-size:12px;white-space:pre-wrap;margin-top:8px"></div><button type="button" id="motionClear" style="margin-top:8px;background:#9a3412">Test kayıtlarını sil</button><p id="motionSavedStatus" style="font-size:12px;margin:5px 0">Kayıtlar yalnızca bu cihazda saklanır.</p><button type="button" id="motionExport" style="margin-top:8px;background:#334155">Test sonuçlarını CSV indir</button><p id="autoStatus" role="status" aria-live="polite" style="font-size:13px;margin:8px 0">Kapalı. Manuel çalışma kontrolleri aktif.</p>
 </div><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Çalışma durumunuz burada görünür.</p><button type="button" id="signout">Çıkış yap</button></section>
 
 
@@ -37,6 +51,7 @@ input,select,textarea{font-size:16px!important}
 <script type="module">
 import {firebaseConfig} from "./firebase-config.js";
 import {MachineMotionDetector} from "./machine-motion.js";
+import {createMotionTestPanel} from "./motion-test-panel.js";
 import {analyzeMotionRecords} from "./motion-analysis.js";
 import {loadMotionRecords,saveMotionRecords,clearMotionRecords,MOTION_RECORD_LIMIT} from "./motion-record-store.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
@@ -92,6 +107,7 @@ async function changeState(action){
 }
 
 let autoArmed=false,autoStarting=false;
+const motionPanel=createMotionTestPanel($("motionDashboard"));
 let motionRecords=loadMotionRecords(localStorage);
 let motionLastRecord=0;
 let latestMotionMeasurement=null;
@@ -163,6 +179,7 @@ $("motionExport").addEventListener("click",()=>{
 });
 const motionDetector=new MachineMotionDetector(
  data=>{
+  motionPanel.render(data);
   recordMotion(data);
   if(data.stale||data.calibrating){latestMotionMeasurement=null;latestMotionAt=0;}
   else if(data.motionState){latestMotionMeasurement=data;latestMotionAt=Date.now();}
@@ -179,6 +196,7 @@ const motionDetector=new MachineMotionDetector(
  }
 );
 function disableAuto(){
+ motionPanel.stop();
  autoArmed=false;motionDetector.stop();latestMotionMeasurement=null;latestMotionAt=0;
  $("autoToggle").textContent=$("motionMode").value==="wrist"?"Hareket ölçümünü aç":"Otomatik algılamayı aç";
  $("fixedConfirmed").checked=false;
@@ -192,7 +210,7 @@ $("autoToggle").addEventListener("click",async()=>{
  latestMotionMeasurement=null;latestMotionAt=0;
  motionDetector.setMode($("motionMode").value);
  const ok=await motionDetector.start();
- if(ok){autoArmed=true;$("autoToggle").textContent="Sensör ölçümünü durdur";}
+ if(ok){autoArmed=true;motionPanel.start();$("autoToggle").textContent="Sensör ölçümünü durdur";}
 });
 $("machineSelect").addEventListener("change",disableAuto);
 $("motionMode").addEventListener("change",()=>{
