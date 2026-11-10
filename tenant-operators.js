@@ -1,7 +1,7 @@
 // Tenant operator roster and isolated-session Firebase Auth provisioning.
 import {collection,doc,addDoc,updateDoc,setDoc,getDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,updatePassword,deleteUser,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,updatePassword,deleteUser,signOut,setPersistence,inMemoryPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {firebaseConfig} from "./firebase-config.js";
 function operatorsRef(db,session){
   if(!session?.uid||session.uid!==session.tenantId)throw Error("İşletme oturumu geçersiz");
@@ -47,6 +47,7 @@ export async function provisionTenantOperator(db,session,id,email,password){
  const secondaryAuth=getAuth(secondary);
  let user=null,created=false,rosterLinked=false;
  try{
+  await setPersistence(secondaryAuth,inMemoryPersistence);
   const rosterRef=doc(operatorsRef(db,session),id);
   const roster=await getDoc(rosterRef);
   if(!roster.exists()||roster.data().active===true&&roster.data().authStatus==="active")throw Error("Operatör zaten etkin veya kayıt bulunamadı");
@@ -101,6 +102,7 @@ export async function changeTenantOperatorPassword(db,session,id,currentPassword
  const secondary=initializeApp(firebaseConfig,"operator-password-"+Date.now()+"-"+Math.random().toString(36).slice(2));
  const secondaryAuth=getAuth(secondary);
  try{
+  await setPersistence(secondaryAuth,inMemoryPersistence);
   const credential=await signInWithEmailAndPassword(secondaryAuth,roster.data().email,String(currentPassword||""));
   if(credential.user.uid!==roster.data().authUid)throw Error("Operatör hesabı eşleşmedi");
   await updatePassword(credential.user,String(newPassword));
