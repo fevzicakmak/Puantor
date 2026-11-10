@@ -113,6 +113,7 @@ onAuthStateChanged(auth,async user=>{
  },()=>showError("Seçilen makineye erişim izni yok. Yönetici makine atamasını kontrol etmeli."));}
  selector.onchange=()=>subscribeMachine(selector.value);subscribeMachine(selected);
  }catch(e){if(revision===assignmentRevision)showError("Atama yenilenemedi: "+(e.code||e.message))}},e=>showError("Operatör profil bağlantısı kesildi: "+(e.code||e.message)));
+ }catch(e){showError("Profil izleme başlatılamadı: "+(e.code||e.message))}
 });
 $("operatorLogin").addEventListener("submit",async e=>{
  e.preventDefault();showError("");const b=e.target.querySelector("button");b.disabled=true;
