@@ -23,7 +23,17 @@ service cloud.firestore {
   }
   match /businesses/{tenantId} {
    allow create: if signedIn() && request.auth.uid == tenantId && request.resource.data.keys().hasOnly(['name','managerName','ownerUid','createdAt']) && request.resource.data.ownerUid == tenantId && request.resource.data.name is string && request.resource.data.managerName is string && request.resource.data.createdAt == request.time;
-   allow read, update: if tenantAdmin(tenantId);
+   allow read: if tenantAdmin(tenantId);
+   // The owner and original creation timestamp must remain immutable.
+   allow update: if tenantAdmin(tenantId) &&
+     request.resource.data.ownerUid == resource.data.ownerUid &&
+     resource.data.ownerUid == tenantId &&
+     request.resource.data.createdAt == resource.data.createdAt &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','managerName']) &&
+     request.resource.data.name is string &&
+     request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100 &&
+     request.resource.data.managerName is string &&
+     request.resource.data.managerName.size() >= 2 && request.resource.data.managerName.size() <= 80;
    allow delete: if false;
    match /{subcollection}/{recordId} {
     allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','payments','searchPreferences'];
