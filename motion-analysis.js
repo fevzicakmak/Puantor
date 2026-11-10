@@ -2,8 +2,8 @@
 // İş durumu doğrulaması yerine kullanılmaz.
 const positive=new Set(["working","travel"]);
 const negative=new Set(["motor_off","idle_engine","walking","phone_handled"]);
-export function analyzeMotionRecords(records=[]){
- const rows=records.filter(r=>r&&r.truth&&r.motionState&&r.motionState!=="unknown"&&r.motionState!=="calibrating"&&r.motionState!=="sensor_lost");
+export function analyzeMotionRecords(records=[],mode=null){
+ const rows=records.filter(r=>(mode===null||r?.mode===mode)&&r&&r.truth&&r.motionState&&r.motionState!=="unknown"&&r.motionState!=="calibrating"&&r.motionState!=="sensor_lost");
  const matrix={tp:0,tn:0,fp:0,fn:0};
  const byTruth={};
  for(const row of rows){
