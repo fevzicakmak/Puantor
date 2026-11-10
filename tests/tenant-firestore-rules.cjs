@@ -1,5 +1,5 @@
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require("@firebase/rules-unit-testing");
-const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require("firebase/firestore");
+const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestamp}=require("firebase/firestore");
 (async()=>{
  const env=await initializeTestEnvironment({projectId:"puantor-tenant-rules-test",firestore:{host:"127.0.0.1",port:8080}});
  try{
@@ -28,6 +28,9 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp,writeBatch,Timestamp}=require
   await assertFails(updateDoc(doc(a,"users","firm-a-op"),{tenantId:"firm-b",updatedAt:serverTimestamp()}));
   await assertFails(updateDoc(doc(a,"users","firm-a-op"),{role:"tenant_admin",updatedAt:serverTimestamp()}));
   await assertSucceeds(updateDoc(doc(a,"users","firm-a-op"),{displayName:"Operatör Test",updatedAt:serverTimestamp()}));
+  await assertFails(setDoc(doc(outsider,"businesses","anonymous-firm"),{name:"Sahte Firma",managerName:"Anonim",ownerUid:"anonymous-firm",createdAt:serverTimestamp()}));
+  await assertFails(deleteDoc(doc(a,"businesses","firm-a")));
+  await assertFails(deleteDoc(doc(b,"businesses","firm-a")));
   await assertSucceeds(getDoc(doc(a,"businesses","firm-a")));
   await assertSucceeds(updateDoc(doc(a,"businesses","firm-a"),{name:"Firma A Güncel"}));
   await assertFails(updateDoc(doc(a,"businesses","firm-a"),{ownerUid:"firm-b"}));
