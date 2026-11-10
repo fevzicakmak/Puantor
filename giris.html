@@ -41,7 +41,7 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  $("businessStatus").textContent="İşletme kaydedildi. Doğrulama e-postası gönderiliyor…";
  await sendEmailVerification(cred.user).catch(()=>{});
  $("status").textContent="İşletme hesabı oluşturuldu. Giriş yaparak işletme panelini açabilirsiniz. E-posta doğrulama bağlantısını da kontrol edin.";
- $("businessRegister").hidden=true;$("login").hidden=false;$("showRegister").hidden=false;$("showBusinessRegister").hidden=false;
+ $("businessRegister").hidden=true;$("login").hidden=false;$("showRegister").hidden=false;refreshBusinessRegistration();
  await signOut(auth);
  }catch(err){$("businessStatus").textContent="Kayıt hatası: "+(err.code||err.message)+(err.code==="permission-denied"?" — Firebase güvenlik kuralları henüz yayımlanmamış olabilir.":"");$("status").textContent=$("businessStatus").textContent;if(cred)await signOut(auth).catch(()=>{});}finally{registering=false;b.disabled=false;b.textContent="İşletme Hesabı Oluştur";$("businessPassword").value="";}
 });
