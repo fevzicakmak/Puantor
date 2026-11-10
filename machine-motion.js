@@ -1,3 +1,4 @@
+import {classifyMotion} from "./motion-classifier.js";
 // Puantör hareket pilotu v2 — ivmeölçer + jiroskop. Çalışma kanıtı değildir.
 // Veriler yalnızca cihazda işlenir; uygulama sunucusuna sensör akışı gönderilmez.
 export class MachineMotionDetector {
@@ -84,16 +85,17 @@ export class MachineMotionDetector {
   if(candidate){if(!this.detectedAt)this.detectedAt=now;}
   else this.detectedAt=0;
   const seconds=this.detectedAt?Math.floor((now-this.detectedAt)/1000):0;
+  const classification=classifyMotion({rms,gyro:gyroMean,accelThreshold,gyroThreshold,seconds});
   if(now-this.lastReport>=1100){
-   this.report(candidate?"Hareket adayı algılandı":"Hareket saptanmadı",
+   this.report(classification.label,
     {rms:+rms.toFixed(3),gyro:gyroMean===null?null:+gyroMean.toFixed(2),
      threshold:+accelThreshold.toFixed(3),gyroThreshold:+gyroThreshold.toFixed(2),
-     accelActive,gyroActive,seconds,candidate});
+     accelActive,gyroActive,seconds,candidate,confidenceScore:classification.score,motionState:classification.state});
    this.lastReport=now;
   }
   if(seconds>=12&&now-this.lastTrigger>=60000){
    this.lastTrigger=now;this.detectedAt=0;
-   this.onDetected({rms,gyro:gyroMean,accelActive,gyroActive});
+   this.onDetected({rms,gyro:gyroMean,accelActive,gyroActive,confidenceScore:classification.score,motionState:classification.state});
   }
  }
 }
