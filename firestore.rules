@@ -62,6 +62,22 @@ service cloud.firestore {
      getAfter(/databases/$(database)/documents/operators/$(request.resource.data.username)).data.pendingUid == uid
    );
    allow update: if isAdmin() || (
+     signedIn() && request.auth.uid == uid &&
+     resource.data.get('role', '') == 'tenant_operator' &&
+     resource.data.get('tenantId', '') is string &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
+     request.resource.data.get('activeMachineId', '') is string &&
+     (
+       (request.resource.data.activeMachineId != '' &&
+        resource.data.get('activeMachineId', '') == '' &&
+        request.resource.data.activeMachineId in resource.data.get('machineIds', []) &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.operatorUid == uid &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.status == 'running') ||
+       (request.resource.data.activeMachineId == '' &&
+        resource.data.get('activeMachineId', '') != '' &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(resource.data.activeMachineId)).data.status != 'running')
+     )
+   ) || (
      tenantManagerForUser(resource.data) &&
      request.resource.data.get('tenantId', '') == resource.data.tenantId &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','displayName','machineIds','updatedAt']) &&
