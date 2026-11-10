@@ -7,7 +7,7 @@ const {doc,setDoc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore"
    const db=ctx.firestore();
    for(const tenant of ["firm-a","firm-b"]){
     await setDoc(doc(db,"users",tenant),{role:"tenant_admin",tenantId:tenant});
-    await setDoc(doc(db,"businesses",tenant),{ownerUid:tenant,name:tenant});
+    await setDoc(doc(db,"businesses",tenant),{ownerUid:tenant,name:tenant,managerName:"Test Yönetici",createdAt:serverTimestamp()});
     await setDoc(doc(db,"businesses",tenant,"machines","machine1"),{machineName:"Test",operatorUid:tenant+"-op",status:"idle",jobReady:true,elapsedMs:0,timeline:[]});
     await setDoc(doc(db,"users",tenant+"-op"),{role:"tenant_operator",tenantId:tenant,machineIds:["machine1"],activeMachineId:""});
    }
