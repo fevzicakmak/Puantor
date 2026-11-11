@@ -9,6 +9,7 @@ on:
       - 'motion-test-panel.js'
       - 'motion-analysis.js'
       - 'motion-record-store.js'
+      - 'motion-field-archive.js'
       - '*.test.mjs'
       - 'package.json'
       - '.github/workflows/package-motion-lab.yml'
@@ -30,9 +31,9 @@ jobs:
         run: |
           mkdir -p motion-lab-dist
           cp motion-lab.html motion-lab-dist/index.html
-          cp machine-motion.js motion-classifier.js motion-test-panel.js motion-analysis.js motion-record-store.js motion-lab-dist/
+          cp machine-motion.js motion-classifier.js motion-test-panel.js motion-analysis.js motion-record-store.js motion-field-archive.js motion-lab-dist/
           touch motion-lab-dist/.nojekyll
-          test "$(find motion-lab-dist -maxdepth 1 -type f | wc -l)" -eq 7
+          test "$(find motion-lab-dist -maxdepth 1 -type f | wc -l)" -eq 8
           ! grep -R -E 'firebase-config|gstatic.com/firebase|runTransaction\(' motion-lab-dist
       - uses: actions/upload-artifact@v4
         with:
