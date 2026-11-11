@@ -81,3 +81,10 @@
 - Yayınlama için ayrı workflow tetiklendiğinde GitHub → Actions → Deploy Standalone Motion Lab üzerinden sonucu denetleyin.
 - Saha testinde sayfayı iPhone Safari'de HTTPS üzerinde açın, telefon sabitlenince izin isteğini düğmeyle başlatın, ilk ölçümü motor kapalıyken kalibre edin.
 - Sayfanın herkese açık olması mümkündür. Sensör ölçümleri cihaz tarayıcısında tutulur; CSV'yi güvenli kanalla paylaşın.
+
+## Pilot v10 — GitHub Pages güvenliği ve cihaz kontrolü
+- GitHub depo metaverisi `has_pages=true` gösteriyor. Pages depo genelinde tek yayın alanı olduğundan izinsiz otomatik dağıtım var olan siteyi değiştirebilir.
+- Bu nedenle `.github/workflows/deploy-motion-lab.yml` otomatik push tetikleyicisinden çıkarıldı; yalnızca `workflow_dispatch` ile bilinçli şekilde çalışır. Mevcut Pages içeriği incelenmeden tetiklenmemeli.
+- Bağımsız laboratuvarda HTTPS/güvenli bağlantı, devicemotion desteği, sayfanın önde olup olmadığı ve iPhone izin uyarısı görüntülenir.
+- Desteklenmeyen cihazda ölçümü başlat düğmesi pasifleştirilir; sahada çekim yapılması için telefon ekranının açık/önde kalması gerekir.
+- **Canlı URL doğrulanamadı; laboratuvar yayınlandı denemez.** Gelecek aşamada Pages içeriğinin korunması şartıyla ayrı bir alt dizin ya da ayrı depo/hosting tercih edilmeli.
