@@ -53,3 +53,69 @@ exports.operatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async
  }
  throw new HttpsError("invalid-argument","Geçersiz işlem.");
 });
+
+function tenantOperatorName(v) {
+ const value=String(v||"").trim().toLowerCase();
+ if(!/^[a-z0-9._-]{3,32}$/.test(value))throw new HttpsError("invalid-argument","Operatör kullanıcı adı geçersiz.");
+ return value;
+}
+async function requireTenantManager(request) {
+ if(!request.auth)throw new HttpsError("unauthenticated","Oturum açmanız gerekiyor.");
+ const uid=request.auth.uid;
+ const [profile,business]=await Promise.all([db.collection("users").doc(uid).get(),db.collection("businesses").doc(uid).get()]);
+ if(!profile.exists||profile.data().role!=="tenant_admin"||profile.data().tenantId!==uid||!business.exists||business.data().ownerUid!==uid)
+  throw new HttpsError("permission-denied","Firma yöneticisi doğrulanamadı.");
+ return uid;
+}
+exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async request=>{
+ const tenantId=await requireTenantManager(request),data=request.data||{},action=data.action;
+ const name=tenantOperatorName(data.username),ref=db.collection("businesses").doc(tenantId).collection("operators").doc(name);
+ if(action==="create"){
+  const displayName=String(data.displayName||"").trim();
+  if(!displayName||displayName.length>80)throw new HttpsError("invalid-argument","Operatör adı gerekli.");
+  const existing=await ref.get();
+  if(existing.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
+  // A globally unique Auth email; users still sign in using the generated login email.
+  const email=tenantId+"."+name+"@operators.puantor.invalid";
+  let created;
+  try{
+   created=await auth.createUser({email,password:password(data.password),displayName,emailVerified:true});
+   await db.runTransaction(async tx=>{
+    const current=await tx.get(ref);
+    if(current.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
+    tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:admin.firestore.FieldValue.serverTimestamp()});
+    tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:admin.firestore.FieldValue.serverTimestamp()});
+   });
+  }catch(err){if(created)await auth.deleteUser(created.uid).catch(()=>{});throw err;}
+  return {username:name,loginEmail:email};
+ }
+ if(action==="delete"){
+  const snap=await ref.get();
+  if(!snap.exists||!snap.data().authUid)throw new HttpsError("not-found","Operatör bulunamadı.");
+  const uid=snap.data().authUid;
+  const [profile,machines,legacyAssignments]=await Promise.all([
+   db.collection("users").doc(uid).get(),
+   db.collection("businesses").doc(tenantId).collection("machines").where("operatorUid","==",uid).limit(1).get(),
+   db.collection("businesses").doc(tenantId).collection("machines").where("operatorUsername","==",name).limit(1).get()
+  ]);
+  if(!profile.exists||profile.data().tenantId!==tenantId||profile.data().role!=="tenant_operator")
+   throw new HttpsError("permission-denied","Operatör firma eşleşmesi geçersiz.");
+  if(!machines.empty||!legacyAssignments.empty||profile.data().activeMachineId)
+   throw new HttpsError("failed-precondition","Operatörün atanmış makinesi veya aktif işi var. Önce atamaları kaldırın.");
+  await auth.updateUser(uid,{disabled:true});
+  await auth.revokeRefreshTokens(uid);
+  const batch=db.batch();batch.delete(ref);batch.delete(db.collection("users").doc(uid));await batch.commit();
+  return {ok:true};
+ }
+ if(action==="password"){
+  const snap=await ref.get();
+  if(!snap.exists||snap.data().authStatus!=="active"||!snap.data().authUid)throw new HttpsError("not-found","Aktif operatör bulunamadı.");
+  const uid=snap.data().authUid,profile=await db.collection("users").doc(uid).get();
+  if(!profile.exists||profile.data().tenantId!==tenantId||profile.data().role!=="tenant_operator")
+   throw new HttpsError("permission-denied","Operatör firma eşleşmesi geçersiz.");
+  await auth.updateUser(uid,{password:password(data.password)});
+  await auth.revokeRefreshTokens(uid);
+  return {ok:true};
+ }
+ throw new HttpsError("invalid-argument","Geçersiz operatör işlemi.");
+});

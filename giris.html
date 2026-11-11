@@ -11,22 +11,22 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
-const deviceBusinessKey="puantor_device_business_initialized";
-function refreshBusinessRegistration(){const locked=localStorage.getItem(deviceBusinessKey)==="1";$("showBusinessRegister").hidden=locked;if(locked&& !$("businessRegister").hidden){$("businessRegister").hidden=true;$("login").hidden=false;}}
+function refreshBusinessRegistration(){$("showBusinessRegister").hidden=false;}
 let checking=false,registering=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;refreshBusinessRegistration();
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
-try{const snap=await getDoc(doc(db,"users",user.uid));const role=snap.exists()?snap.data().role:null;
-if(role==="admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./yonetici.html");return}
+try{const snap=await getDoc(doc(db,"users",user.uid));const profile=snap.exists()?snap.data():{};const role=profile.role||null;
+if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="tenant_admin"){localStorage.setItem(deviceBusinessKey,"1");location.replace("./isletme.html");return}
-if(role==="business_pending"){localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
+if(role==="tenant_admin"){if(profile.tenantId!==user.uid){$("status").textContent="Firma yöneticisi hesabı doğrulanamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-manager-preview.html");return}
+if(role==="tenant_operator"){if(!profile.tenantId){$("status").textContent="Operatör firma kaydı bulunamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-operator-preview.html");return}
+if(role==="business_pending"){refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
 if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
 onAuthStateChanged(auth,user=>{if(registering)return;if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
 $("resetManagerPassword").onclick=async()=>{const email=$("email").value.trim().toLowerCase();if(!email.includes("@")||email.endsWith("@operators.puantor.invalid")){$("status").textContent="Şifre sıfırlamak için önce yönetici e-posta adresinizi yazın.";return;}const b=$("resetManagerPassword");b.disabled=true;$("status").textContent="Şifre sıfırlama bağlantısı gönderiliyor…";try{await sendPasswordResetEmail(auth,email);$("status").textContent="E-posta adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu kontrol edin.";}catch(err){$("status").textContent="Şifre sıfırlama işlemi başarısız: "+(err.code||err.message);}finally{b.disabled=false;}};
-$("showBusinessRegister").onclick=()=>{if(localStorage.getItem(deviceBusinessKey)==="1"){refreshBusinessRegistration();return;}$("login").hidden=true;$("showRegister").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;$("status").textContent="Yeni işletme kaydı";};
+$("showBusinessRegister").onclick=()=>{$("login").hidden=true;$("showRegister").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;$("status").textContent="Yeni işletme kaydı";};
 $("businessBack").onclick=()=>{$("businessRegister").hidden=true;$("login").hidden=false;$("showRegister").hidden=false;refreshBusinessRegistration();};
 $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();const b=$("businessSubmit");b.disabled=true;b.textContent="Hesap oluşturuluyor…";$("businessStatus").textContent="Firebase bağlantısı ve hesap kaydı yapılıyor. Lütfen bekleyin…";registering=true;let cred;try{
  const company=$("businessName").value.trim(),manager=$("businessManager").value.trim(),email=$("businessEmail").value.trim().toLowerCase(),password=$("businessPassword").value;
@@ -37,7 +37,7 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  $("businessStatus").textContent="Kimlik hesabı oluşturuldu. İşletme kaydı tamamlanıyor…";
  await setDoc(doc(db,"users",uid),{role:"tenant_admin",tenantId:uid,businessName:company,managerName:manager,email,createdAt:serverTimestamp()});
  await setDoc(doc(db,"businesses",uid),{name:company,managerName:manager,ownerUid:uid,createdAt:serverTimestamp()});
- localStorage.setItem(deviceBusinessKey,"1");refreshBusinessRegistration();
+ refreshBusinessRegistration();
  $("businessStatus").textContent="İşletme kaydedildi. Doğrulama e-postası gönderiliyor…";
  await sendEmailVerification(cred.user).catch(()=>{});
  $("status").textContent="İşletme hesabı oluşturuldu. Giriş yaparak işletme panelini açabilirsiniz. E-posta doğrulama bağlantısını da kontrol edin.";

@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puantör | Firma Yönetici Taslağı</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5}*{box-sizing:border-box}body{margin:0;padding:14px;max-width:960px;margin-inline:auto}header{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:23px;margin:12px 0 2px}.muted{color:#64748b;font-size:12px}.card{background:white;border:1px solid #d6e0ed;border-radius:14px;padding:15px;margin:12px 0;box-shadow:0 2px 7px #1420330a}input,select,button{font:inherit;border-radius:9px;padding:12px;width:100%;margin:5px 0;border:1px solid #cbd5e1}button{background:#0f172a;color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.5}button.secondary{background:#e2e8f0;color:#142033}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:14px;background:white;border-radius:12px;text-align:center}.stat b{display:block;font-size:26px}.machine{border-left:5px solid #94a3b8}.machine.running{border-color:#16a34a}.machine.paused{border-color:#eab308}.machine.broken{border-color:#dc2626}.machine.done{border-color:#3b82f6}.tag{border-radius:30px;background:#e2e8f0;padding:5px 9px;font-size:12px;font-weight:700}.top{display:flex;justify-content:space-between;align-items:center;gap:8px}.hidden{display:none!important}#error{color:#b91c1c;white-space:pre-wrap}#status{font-size:12px}small{color:#64748b} .machine p{margin:7px 0;font-size:14px}
+details.toolbox{margin:12px 0;background:#fff;border:1px solid #d6e0ed;border-radius:15px;overflow:hidden;box-shadow:0 2px 7px #1420330a}details.toolbox>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:18px 16px;min-height:76px;font-size:19px;font-weight:800;color:#142033;user-select:none}details.toolbox>summary::-webkit-details-marker{display:none}details.toolbox>summary .tool-icon{font-size:28px;width:40px;text-align:center}details.toolbox>summary .tool-arrow{margin-left:auto;color:#64748b;font-size:22px}details.toolbox[open]>summary .tool-arrow{transform:rotate(180deg)}details.toolbox>summary:focus-visible{outline:3px solid #2563eb;outline-offset:-4px}details.toolbox>.tool-content{padding:0 14px 16px}details.toolbox .card{margin:0;box-shadow:none;border:0;padding:8px 0}details.toolbox[open]{border-color:#94a3b8} @media(min-width:700px){.toolbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.toolbox-grid details.toolbox{margin:0}} 
+.operator-approval-badge{position:absolute;top:5px;right:5px;min-width:23px;height:23px;padding:2px 6px;border-radius:99px;background:#dc2626;color:#fff!important;font-size:13px!important;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px #fff}.operator-approval-badge[hidden]{display:none!important}
+.operator-toolbar-group{background:#fff;border:1px solid #cbd5e1;border-radius:15px;padding:8px;box-shadow:0 2px 7px #1420330a;min-width:0}.operator-toolbar-title{display:block;text-align:center;font-size:14px;color:#142033;margin:1px 0 7px}.operator-toolbar-group .operator-toolbar-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+.operator-toolbar-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-content:start}.manager-toolbar .operator-toolbar-buttons button{min-height:45px;padding:7px 4px;font-size:15px;gap:0;background:#eef2ff;border-color:#b6c5e7}.manager-toolbar .operator-toolbar-buttons button.selected{background:#1d4ed8;color:white}.operator-toolbar-buttons .muted{font-size:12px;align-self:center;text-align:center}
+/* Telefon ekranına taşmayı ve iOS Safari otomatik yakınlaştırmasını önle */
+html{width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}body{width:100%;min-width:0;overflow-x:hidden}main,section,form,details,.tool-content,.card,.grid,.toolbox-grid{min-width:0;max-width:100%}input,select,textarea,button{min-width:0;max-width:100%;font-size:16px}input[type="file"]{overflow:hidden}label{display:block;min-width:0;overflow-wrap:anywhere}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top{flex-wrap:wrap}.top>*{min-width:0}summary{overflow-wrap:anywhere}@media(max-width:480px){body{padding:10px}.toolbox-grid{display:block}.grid{grid-template-columns:minmax(0,1fr)}.stat b{font-size:23px}details.toolbox>.tool-content{padding:0 10px 14px}details.toolbox>summary{font-size:17px;min-height:64px;padding:14px 12px}.card{padding:12px}}
+.manager-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.manager-toolbar button{margin:0;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fff;color:#142033;border:1px solid #cbd5e1;border-radius:15px;font-size:28px;box-shadow:0 2px 7px #1420330a}.manager-toolbar button span{font-size:14px;font-weight:750;text-align:center;line-height:1.2}.manager-toolbar button .toolbar-hint{display:block;font-size:11px;font-weight:500;line-height:1.3;color:#64748b;text-align:center;max-width:100%;padding:0 4px}.manager-toolbar button.active .toolbar-hint{color:#375e9e}.manager-toolbar button.active{background:#dbeafe;border:2px solid #2563eb;color:#1e40af}#managerPanels{display:block}#managerPanels>details.toolbox{display:none;margin:0 0 14px}#managerPanels>details.toolbox.active-panel{display:block}#managerPanels>details.toolbox>summary{display:none}#managerPanels>details.toolbox>.tool-content{padding:14px}@media(max-width:480px){.manager-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.manager-toolbar button{min-height:90px}}.dashboard-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-stats .stat{padding:12px 8px}.dashboard-stats .stat b{font-size:27px}.dashboard-stats .stat small{font-size:12px}@media(min-width:700px){.dashboard-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}.archive-notification{position:absolute;top:7px;right:7px;min-width:24px;height:24px;border-radius:99px;background:#dc2626;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 0 0 3px #fff;z-index:2}.archive-notification[hidden]{display:none!important}button[data-panel="4"]{position:relative}
+
+
+.search-assist{position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:13px;margin:12px 0}.search-assist input{margin:8px 0 0}.search-results{position:relative;z-index:5;max-height:280px;overflow-y:auto;border:1px solid #cbd5e1;border-radius:10px;margin-top:5px}.search-results[hidden]{display:none}.search-results button{display:block;text-align:left;background:#fff;color:#142033;border:0;border-bottom:1px solid #e2e8f0;border-radius:0;margin:0;padding:12px}.search-results button:focus,.search-results button:hover{background:#dbeafe}.search-results small{display:block;font-weight:400}.search-step{font-size:13px;color:#475569;line-height:1.5;margin:9px 0}.search-blink{outline:4px solid #f59e0b!important;outline-offset:2px;animation:searchPulse 1s infinite;scroll-margin-top:100px}@keyframes searchPulse{50%{box-shadow:0 0 0 8px #f59e0b66}}@media(prefers-reduced-motion:reduce){.search-blink{animation:none}}
+
+/* Chat-style compact search composer */
+.search-assist{background:transparent!important;border:0!important;padding:0!important;margin:16px 0 12px!important;max-width:100%}
+.search-shell{display:flex;align-items:center;gap:9px;padding:6px 7px 6px 15px;background:#f4f4f4;border:1px solid #e5e7eb;border-radius:999px;min-height:54px;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:border-color .2s,box-shadow .2s}
+.search-shell:focus-within{background:#fff;border-color:#b5beca;box-shadow:0 0 0 3px rgba(148,163,184,.14)}
+.search-leading{display:flex;align-items:center;color:#68717d;flex:none}.search-leading svg{width:21px;height:21px}
+.search-assist .search-shell input#actionSearch{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;margin:0!important;padding:10px 0!important;flex:1;min-width:0;width:100%;font-size:16px!important;color:#18212f;border-radius:0!important}
+.search-shell input::-webkit-search-cancel-button{display:none}
+.search-assist .search-shell button.search-mic{display:grid!important;place-items:center!important;flex:none;width:41px!important;height:41px!important;min-width:41px!important;margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:#202123!important;color:#fff!important;box-shadow:none!important;cursor:pointer}
+.search-shell button.search-mic svg{width:21px;height:21px;display:block}
+.search-shell button.search-mic.listening{background:#c0392b!important;animation:searchMicPulse 1.2s infinite}
+.search-shell button.search-mic:disabled{background:#9ca3af!important;opacity:.7}
+.search-assist .search-step{margin:7px 12px 0;font-size:12px;color:#68717d}
+.search-assist .search-results{margin-top:8px;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.08);background:#fff}
+.search-assist .search-results button{width:100%;border-radius:0!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@keyframes searchMicPulse{50%{box-shadow:0 0 0 7px rgba(192,57,43,.14)}}
+@media(prefers-reduced-motion:reduce){.search-shell button.search-mic.listening{animation:none}}
+
+/* iOS Safari: prevent automatic focus zoom while retaining user pinch zoom */
+input,select,textarea{font-size:16px!important}
+
+.voice-task-review{background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:12px;margin-top:9px}.voice-task-review[hidden]{display:none}.voice-task-review p{font-size:14px;line-height:1.5}.voice-task-review button{margin-top:6px}
+
+/* Machine status: full-card color coding */
+#machines .machine{border:1px solid #cbd5e1;border-left:6px solid #94a3b8;background:#f8fafc}
+#machines .machine.running{background:#e9f9ef;border-color:#86d7a0;border-left-color:#15803d}
+#machines .machine.paused{background:#fff7df;border-color:#f4d27a;border-left-color:#d97706}
+#machines .machine.done{background:#eaf2ff;border-color:#9ec5fe;border-left-color:#2563eb}
+#machines .machine.broken{background:#fff0f0;border-color:#f4a5a5;border-left-color:#dc2626}
+#machines .machine .tag{display:inline-block;max-width:100%;overflow-wrap:anywhere;line-height:1.35;text-align:center}
+#machines .machine.running .tag{background:#bbf7d0;color:#14532d}
+#machines .machine.paused .tag{background:#fde68a;color:#78350f}
+#machines .machine.done .tag{background:#bfdbfe;color:#1e40af}
+#machines .machine.broken .tag{background:#fecaca;color:#991b1b}
+
+.timeline-details{margin:9px 0;border:1px solid #cbd5e1;border-radius:10px;padding:9px;background:#ffffffa8}.timeline-details summary{font-weight:700;cursor:pointer;font-size:14px}.work-timeline{padding-left:22px;margin:10px 0}.work-timeline li{padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:13px}.work-timeline small{display:block;margin-top:4px}
+
+.history-group{margin:12px 0;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;overflow:hidden}.history-group>summary{cursor:pointer;padding:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}.history-group>summary span{font-size:12px;color:#475569}.history-group-items{padding:0 10px 10px}.history-group-items>.card{margin:8px 0}
+
+/* Puantör colorful dashboard refresh: presentation only */
+:root{background:#edf3fb}
+body{background:radial-gradient(ellipse at 10% 0%,#dbeafe 0,transparent 48%),radial-gradient(ellipse at 100% 20%,#f3e8ff 0,transparent 42%),#edf3fb;min-height:100vh}
+.manager-toolbar>button:not(#legacyTaskNav){position:relative;overflow:hidden;border:1px solid var(--tile-edge,#bfdbfe);background:linear-gradient(145deg,#fff 0%,var(--tile-bg,#eff6ff) 100%);color:var(--tile-ink,#1d4ed8);box-shadow:0 5px 16px #243b6817,0 1px 2px #243b680d;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.manager-toolbar>button:not(#legacyTaskNav)::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--tile-accent,#3b82f6)}
+.manager-toolbar>button:not(#legacyTaskNav):active{transform:scale(.97)}
+.manager-toolbar>button:not(#legacyTaskNav):focus-visible{outline:3px solid var(--tile-accent,#2563eb);outline-offset:2px}
+.manager-toolbar>button:not(#legacyTaskNav).active{background:linear-gradient(145deg,#fff,var(--tile-bg,#dbeafe));border:2px solid var(--tile-accent,#2563eb);color:var(--tile-ink,#1d4ed8);box-shadow:0 7px 21px #243b6826}
+.manager-toolbar>button:not(#legacyTaskNav) span{color:inherit}
+.manager-toolbar>button:not(#legacyTaskNav) .toolbar-hint,.manager-toolbar>button:not(#legacyTaskNav).active .toolbar-hint{color:#53647b}
+.manager-toolbar>button[data-panel="0"]{--tile-accent:#2563eb;--tile-bg:#dbeafe;--tile-ink:#1d4ed8;--tile-edge:#bfdbfe}
+.manager-toolbar>button[data-panel="2"]{--tile-accent:#7c3aed;--tile-bg:#ede9fe;--tile-ink:#6d28d9;--tile-edge:#ddd6fe}
+.manager-toolbar>button[data-panel="3"]{--tile-accent:#0891b2;--tile-bg:#cffafe;--tile-ink:#0e7490;--tile-edge:#a5f3fc}
+.manager-toolbar>button[data-panel="4"]{--tile-accent:#ea580c;--tile-bg:#ffedd5;--tile-ink:#c2410c;--tile-edge:#fed7aa}
+.manager-toolbar>button[data-panel="5"]{--tile-accent:#059669;--tile-bg:#d1fae5;--tile-ink:#047857;--tile-edge:#a7f3d0}
+.manager-toolbar>button[data-panel="6"]{--tile-accent:#be185d;--tile-bg:#fce7f3;--tile-ink:#9d174d;--tile-edge:#fbcfe8}
+.operator-toolbar-group{border:1px solid #c4b5fd;background:linear-gradient(145deg,#fff,#f5f3ff);box-shadow:0 5px 16px #4c1d9515}
+.operator-toolbar-title{color:#6d28d9}
+.manager-toolbar .operator-toolbar-buttons button{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+.manager-toolbar .operator-toolbar-buttons button.selected{background:linear-gradient(135deg,#6d28d9,#4f46e5);color:#fff}
+.dashboard-stats .stat{border:1px solid #dbeafe;box-shadow:0 3px 12px #1e3a8a10}
+#managerPanels>details.toolbox.active-panel{border:1px solid #d9e4f5;box-shadow:0 8px 25px #243b6812}
+button:not(:disabled){transition:filter .15s ease,transform .15s ease}
+button:not(:disabled):active{filter:brightness(.96)}
+@media(hover:hover){.manager-toolbar>button:not(#legacyTaskNav):hover{transform:translateY(-3px);box-shadow:0 10px 23px #243b6824}}
+@media(prefers-reduced-motion:reduce){.manager-toolbar>button:not(#legacyTaskNav),button:not(:disabled){transition:none}.manager-toolbar>button:not(#legacyTaskNav):hover{transform:none}}
+</style></head><body><div role="status" style="padding:10px;background:#fff3cd;border:1px solid #f59e0b;border-radius:10px">GELİŞTİRME TASLAĞI — Canlı kullanıma açılmamıştır. Operatör kayıtları ve iş akışları henüz firma modeline uyarlanmadı.</div>
+<header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
+<div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
+<section id="login" class="card hidden"><h2>Yönetici girişi</h2><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form><p id="error" role="alert"></p><small>Yalnızca yönetici yetkisi verilen hesaplar erişebilir.</small></section>
+<main id="dashboard" class="hidden"><section class="search-assist" aria-label="Akıllı işlem arama">
+ <div class="search-shell">
+  <span class="search-leading" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.6"/><path d="m16 16 5 5"/></svg></span>
+  <input id="actionSearch" type="search" autocomplete="off" placeholder="Puantör'e bir şey sor..." aria-label="İşlem veya kayıt ara" aria-autocomplete="list" aria-controls="actionResults">
+  <button type="button" id="actionMic" class="search-mic" aria-label="Sesle ara" title="Sesle ara"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4m-4 0h8"/></svg><span class="sr-only">Sesle ara</span></button>
+ </div>
+ <div id="actionResults" class="search-results" role="listbox" hidden></div>
+ <div id="voiceTaskReview" class="voice-task-review" hidden><strong>Görev taslağı</strong><p id="voiceTaskSummary"></p><button type="button" id="voiceTaskPrepare">Görev formunu doldur</button><button type="button" id="voiceTaskDismiss" class="secondary">Vazgeç</button></div>
+ 
+ <p id="actionHint" class="search-step" role="status">İşlem, müşteri, operatör veya makine arayın.</p>
+ <button id="actionCancel" type="button" class="secondary" style="display:none">Yönlendirmeyi bitir</button>
+ </section><div class="grid dashboard-stats" style="margin-top:12px"><div class="stat"><b id="total">0</b><small>Toplam makine</small></div><div class="stat"><b id="running">0</b><small>Çalışıyor</small></div><div class="stat"><b id="paused">0</b><small>Duraklatıldı</small></div><div class="stat"><b id="broken">0</b><small>Arızalı</small></div></div>
+<nav id="managerToolbar" class="manager-toolbar" aria-label="Yönetici araçları"><button type="button" data-panel="0">➕<span>Ekle</span><small class="toolbar-hint">(Operatör, makine, müşteri)</small></button><button type="button" data-panel="1" id="legacyTaskNav" style="display:none" aria-hidden="true" tabindex="-1">Görev Ata</button><div class="operator-toolbar-group" role="group" aria-label="Görevlendir"><strong class="operator-toolbar-title">Görevlendir</strong><div id="operatorToolbarButtons" class="operator-toolbar-buttons" aria-label="Operatör görev butonları"></div></div><button type="button" data-panel="2">📋<span>Bitirilen İşler</span><small class="toolbar-hint">(Tamamlanan işler, yedek)</small></button><button type="button" data-panel="3" id="operatorAccountsNav" style="position:relative">👷‍♂️👷‍♂️<span>Operatör Hesapları</span><small class="toolbar-hint">(Operatör kayıt, düzenle, sil)</small><span id="operatorApprovalBadge" class="operator-approval-badge" hidden aria-live="polite"></span></button><button type="button" data-panel="4">🚜<span>Bitirilen İşi Arşivle</span><small class="toolbar-hint">(Canlı çalışma takibi)</small></button><button type="button" data-panel="5">🧾<span>Müşteri Ekstresi</span><small class="toolbar-hint">(İşler, tahsilat, bakiye)</small></button><button type="button" data-panel="6">📊<span>Finans Özeti</span><small class="toolbar-hint">(Gelir, alacak, toplam)</small></button></nav><div class="toolbox-grid" id="managerPanels">
+<details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
+<label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
+<div id="addMachinePanel" class="hidden"><form id="machineForm"><label>Makine adı / plaka<input id="newMachine" maxlength="80" required placeholder="35 CJV 827"></label><label>Makine saatlik ücreti (TL)<input id="newMachineRate" type="number" min="0" max="100000000" step="0.01" required></label><button type="submit" id="addMachine">Makineyi kaydet</button></form><p id="machineError" role="alert"></p></div>
+<div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><label>İlk giriş şifresi<input id="opPassword" type="password" required minlength="8" maxlength="128" autocomplete="new-password"></label><p class="muted">Operatörün giriş şifresini yönetici belirler. Makine seçimi Görev Ekle bölümünde yapılır.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
+<div id="addCustomerPanel" class="hidden"><form id="customerForm"><label>Müşteri adı<input id="customerName" required maxlength="100" placeholder="Çakmak Yapı"></label><button type="submit" id="customerSave">Müşteriyi kaydet</button></form><p id="customerResult" role="status"></p></div>
+</div></details>
+<details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Operatöre Görev Ata<span class="tool-arrow">⌄</span></summary><div class="tool-content"><p id="operatorTaskHint" class="muted">Görevlendir grubundan operatör seçin.</p><div id="operatorTaskCard" class="hidden"><form id="taskForm">
+<label>Makine<select id="taskMachine" required><option value="">Makine seçiniz</option></select></label>
+<div class="card" style="background:#eef2ff;padding:10px;margin:8px 0"><strong>Operatör: <span id="selectedTaskOperator">Seçilmedi</span></strong></div><select id="taskOperator" required class="hidden" aria-label="Seçili operatör"><option value="">Operatör seçiniz</option></select>
+<label>Müşteri<select id="taskCustomer" required><option value="">Müşteri seçiniz</option></select></label>
+<label>Yol ücreti (TL)<input id="taskRate" type="number" min="0" step="0.01" placeholder="Örn. 2400" required></label><button type="submit" id="taskSave">Seçili Operatöre Görev Ata</button></form></div><p id="taskResult" role="status"></p><button type="button" id="repairAssignments">Mevcut makine atamalarını onar</button><small>Operatörlerin halen bağlı olduğu makineleri yeniden listelerine ekler; işlere ve sayaçlara dokunmaz.</small><small>Yeni görev, makineye çalışma izni verir. Mevcut çalışma sürüyorsa yeni görev açılamaz.</small></div></details>
+<section id="editSection" class="card hidden"><strong>Makineyi düzenle</strong><form id="editForm"><input type="hidden" id="editId"><label>Makine adı / plaka<input id="editMachine" maxlength="80" required></label><label>Makine saatlik ücreti (TL)<input id="editMachineRate" type="number" min="0" max="100000000" step="0.01" required></label><label>Operatör adı<input id="editOperator" maxlength="80"></label><label>Operatör kullanıcı adı<input id="editUsername" maxlength="32" pattern="[a-z0-9._-]{3,32}" title="3-32 karakter: küçük harf, rakam, nokta, tire veya alt çizgi"></label><label>Müşteri adı<input id="editCustomer" maxlength="100"></label><button id="saveEdit" type="submit">Değişiklikleri kaydet</button><button id="cancelEdit" type="button" class="secondary">Vazgeç</button></form><p id="editError" role="alert" style="color:#b91c1c"></p><small>Bu işlem çalışma süresini ve makinenin mevcut durumunu değiştirmez.</small></section>
+<details class="toolbox"><summary><span class="tool-icon">📋</span>Çalışma geçmişi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><section class="card"><div class="top"><strong>Çalışma geçmişi</strong><button type="button" id="exportJobs" class="secondary" style="width:auto">CSV indir</button><button type="button" id="backupAll" class="secondary" style="width:auto">JSON yedek</button></div><p class="muted">Tamamlanan ve yeni çalışma hazırlanırken arşivlenen işler.</p><label>Yedek dosyasını kontrol et (verileri değiştirmez)<input id="backupPreviewFile" type="file" accept=".json,application/json"></label><button type="button" id="restoreAll" class="secondary" disabled>Yedekten Geri Yükle</button><div class="hidden"><button type="button" id="restoreArchives" disabled>İşler</button><button type="button" id="restorePayments" disabled>Tahsilatlar</button></div><p id="backupPreviewResult" class="muted" role="status">JSON yedek seçildiğinde içerik ve mevcut kayıtlarla farklar gösterilir. Otomatik geri yükleme yapılmaz.</p><div class="grid"><label>Müşteri seçin<select id="historyCustomer"><option value="">Müşteri seçin</option></select></label><label>Listeyi grupla<select id="historyGroup"><option value="none">Gruplama yok</option><option value="machine">Plakaya / makineye göre</option><option value="operator">Operatöre göre</option><option value="date">Tarihe göre (günlük)</option></select></label><label>Tarih sıralaması<select id="historySort"><option value="desc">Yeniden eskiye (Z–A)</option><option value="asc">Eskiden yeniye (A–Z)</option></select></label></div><div class="grid"><div class="stat"><b id="jobCount">0</b><small>Filtrelenen iş</small></div><div class="stat"><b id="jobTotal">00:00:00</b><small>Toplam çalışma</small></div></div><div class="stat"><b id="jobAmount">—</b><small>Toplam tutar (TL)</small></div><div id="jobsHistory"><p class="muted">Geçmiş kayıtlar yükleniyor.</p></div></section></div></details>
+<details class="toolbox"><summary><span class="tool-icon">🛠️</span>Kayıt Yönetimi<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><label>Kayıt türü<select id="manageType"><option value="operator">Operatör</option><option value="customer">Müşteri</option><option value="machine">Makine</option><option value="job">İş kaydı</option></select></label><label>Kayıt<select id="manageItem"></select></label><label>Yeni ad (operatör adı / müşteri adı / makine adı)<input id="manageName"></label><p class="muted">Operatör şifresini yalnızca firma yöneticisi belirler veya değiştirir.</p><label>Operatörün yeni şifresi<input id="manageOperatorPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="En az 8 karakter"></label><button type="button" id="managePassword" class="secondary">Operatör şifresini değiştir</button><button type="button" id="manageRename" class="secondary">Adı güncelle</button><button type="button" id="manageDelete" style="background:#991b1b">Kaydı sil</button><p id="manageResult" role="status"></p></div></div></details><details class="toolbox"><summary><span class="tool-icon">📡</span>Makine durumları<span class="tool-arrow">⌄</span></summary><div class="tool-content"><div class="card"><div class="top"><strong>Makine durumları</strong><span class="muted" id="updated">Henüz veri yok</span></div><div id="machines"><p class="muted">Makine kayıtları bekleniyor.</p></div></div></div></details>
+<details class="toolbox"><summary>🧾 Müşteri Ekstresi</summary><div class="tool-content"><section class="card">
+<label>Müşteri<select id="statementCustomer"><option value="">Müşteri seçin</option></select></label>
+<div class="grid"><div class="stat"><b id="statementCount">0</b><small>İş sayısı</small></div><div class="stat"><b id="statementDuration">00:00:00</b><small>Toplam süre</small></div></div>
+<div class="stat"><b id="statementTotal">₺0,00</b><small>Toplam çalışma bedeli (tahsilatlar hariç)</small></div>
+<div class="grid"><div class="stat"><b id="statementPaid">₺0,00</b><small>Toplam tahsilat</small></div><div class="stat"><b id="statementBalance">₺0,00</b><small>Kalan alacak (bilinen)</small></div></div><p id="statementWarning" class="muted"></p><form id="paymentForm"><strong>Tahsilat ekle</strong><label>Tarih<input id="paymentDate" type="date" required></label><label>Tutar (TL)<input id="paymentAmount" type="number" min="0.01" max="100000000" step="0.01" required></label><label>Açıklama<input id="paymentNote" maxlength="150" placeholder="Örn. Havale"></label><button id="paymentSave" type="submit">Tahsilatı kaydet</button><p id="paymentResult" role="status"></p></form><strong>Tahsilat geçmişi</strong><div id="paymentRows" class="muted">Müşteri seçin.</div><div class="grid"><button type="button" class="secondary" id="statementCsv">Ekstreyi CSV indir</button><button type="button" id="statementPdf">PDF Ekstre Hazırla</button></div>
+<div id="statementRows" class="muted">Müşteri seçildiğinde işler listelenir.</div>
+</section></div></details><details class="toolbox"><summary>📊 Finans Özeti</summary><div class="tool-content"><section class="card"><h3>Müşteri bazında finans özeti</h3><div class="grid"><div class="stat"><b id="financeGross">₺0,00</b><small>İş bedelleri</small></div><div class="stat"><b id="financePaid">₺0,00</b><small>Tahsilatlar</small></div></div><div class="stat"><b id="financeBalance">₺0,00</b><small>Net kalan alacak</small></div><p class="muted" id="financeNote"></p><div id="financeRows"></div></section></div></details></div>
+</main>
+<script>
+window.__puantorReady=false;
+window.addEventListener("DOMContentLoaded",()=>{
+ const panels=[...document.querySelectorAll("#managerPanels>details.toolbox")];
+ const buttons=[...document.querySelectorAll("#managerToolbar button")];
+ buttons.forEach(b=>b.addEventListener("click",()=>{
+  const index=Number(b.dataset.panel);
+  panels.forEach((p,i)=>{p.classList.toggle("active-panel",i===index);p.open=i===index});
+  buttons.forEach((x,i)=>{x.classList.toggle("active",i===index);x.setAttribute("aria-pressed",String(i===index))});
+ }));
+});
+window.addEventListener("error",e=>{const el=document.getElementById("status");if(el)el.textContent="Sayfa hatası: "+(e.message||"JavaScript yüklenemedi")});
+window.addEventListener("unhandledrejection",e=>{const el=document.getElementById("status");if(el)el.textContent="Bağlantı hatası: "+(e.reason?.message||String(e.reason||"Bilinmeyen hata"))});
+setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("status");if(el&&el.textContent.includes("hazırlanıyor"))el.textContent="Firebase başlatılamadı. Safari'de sayfayı yeniden yükleyin; sorun sürerse ekran görüntüsünü gönderin (modül veya ağ bağlantısı hatası)."}},9000);
+</script>
+
+
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+ const el=id=>document.getElementById(id),input=el("actionSearch"),results=el("actionResults"),hint=el("actionHint"),cancel=el("actionCancel"),mic=el("actionMic");
+ const items=[
+ ["Yeni operatör ekle",0,"addType","operator","opUsername","opName","opSave","personel çalışan kayıt oluştur"],
+ ["Yeni makine / kepçe ekle",0,"addType","machine","newMachine","addMachine","araç iş makinesi plaka ekskavatör"],
+ ["Yeni müşteri ekle",0,"addType","customer","customerName","customerSave","firma cari şirket"],
+ ["Operatöre yeni görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","iş ver iş emri kepçe görevlendir"],
+ ["Bitirilen işleri görüntüle",2,"jobsHistory","tamamlanan geçmiş iş kayıtları"],
+ ["İş kayıtlarını yedekle",2,"exportJobs","json indir dışa aktar"],
+ ["Operatör hesaplarını yönet",3,"operatör hesapları kullanıcı parola şifre düzenle sil"],
+ ["Canlı makine durumlarını izle",4,"canlı çalışma takip makine kepçe arıza duraklama"],
+ ["Bitirilen işi arşivle",4,"tamamlanan makine arşiv sıfırla"],
+ ["Müşteri ekstresi görüntüle",5,"statementCustomer","müşteri borç cari hesap hareketleri"],
+ ["Tahsilat kaydet",5,"statementCustomer","paymentAmount","paymentSave","ödeme para alındı tahsilat"],
+ ["Müşteri ekstresi PDF indir",5,"statementCustomer","statementPdf","pdf rapor çıktı"],
+ ["Müşteri ekstresi CSV indir",5,"statementCustomer","statementCsv","excel csv rapor"],
+ ["Finans özetini görüntüle",6,"financeGross","gelir toplam ciro alacak bakiye kazanç"]
+ ];
+ const norm=t=>String(t||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+
+ const preferenceKey="puantor-search-learning-v1";
+ let preferences={};
+ try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||"{}")||{}}catch{}
+ function category(item){return item[1]+":"+norm(item[0]).replace(/^(musteri|operator|makine) [^ ]+ /,"").slice(-28)}
+ function bonus(item,q){const key=category(item);let n=Number(preferences[q+"|"+key])||0;for(const word of q.split(" ").filter(w=>w.length>2))n+=Math.min(3,Number(preferences[word+"|"+key])||0);return Math.min(25,Math.round(Math.log2(n+1)*8))}
+ function learn(item,q){const key=category(item);for(const term of [q,...q.split(" ").filter(w=>w.length>2)]){const k=term+"|"+key;preferences[k]=Math.min(30,(Number(preferences[k])||0)+1)}preferences=Object.fromEntries(Object.entries(preferences).sort((a,b)=>b[1]-a[1]).slice(0,250));try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}scheduleSync()}
+
+ let syncTimer=null,remoteReady=false,dirty=false;
+ function scheduleSync(){dirty=true;clearTimeout(syncTimer);syncTimer=setTimeout(()=>{syncTimer=null;if(dirty&&remoteReady&&window.__puantorSaveLearning){dirty=false;window.__puantorSaveLearning(preferences).catch(()=>{dirty=true})}},4000)}
+ window.addEventListener("puantor-learning-remote",e=>{const remote=e.detail;if(!remote||typeof remote!=="object"||Array.isArray(remote))return;const merged={...remote};for(const [k,v] of Object.entries(preferences))merged[k]=Math.max(Number(v)||0,Number(merged[k])||0);preferences=Object.fromEntries(Object.entries(merged).sort((a,b)=>b[1]-a[1]).slice(0,250));remoteReady=true;try{localStorage.setItem(preferenceKey,JSON.stringify(preferences))}catch{}});
+ window.addEventListener("puantor-learning-ready",()=>{remoteReady=true;if(dirty)scheduleSync()});
+ window.addEventListener("puantor-learning-disabled",()=>{remoteReady=false});
+ let selectedRecord=null;
+ function dynamicItems(){const data=window.__puantorSearchData||{customers:[],operators:[],machines:[]};const out=[];
+ for(const c of data.customers||[]){const name=String(c.name||"").trim();if(!name)continue;const x=["Müşteri: "+name+" — Ekstre",5,"statementCustomer","müşteri firma cari borç alacak bakiye "+name];x.record={id:"statementCustomer",value:name};out.push(x);const y=["Müşteri: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","müşteriye iş ver görev ata "+name];y.record={id:"taskCustomer",value:name};out.push(y)}
+ for(const o of data.operators||[]){const name=String(o.displayName||o.name||o.username||"").trim();if(!name)continue;const uname=String(o.username||"");const x=["Operatör: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","operatör personel usta iş ver "+name+" "+uname];x.record={id:"taskOperator",match:"(@"+uname+")",name};out.push(x);out.push(["Operatör: "+name+" — Hesapları yönet",3,"operatör hesap düzenle şifre "+name+" "+uname])}
+ for(const m of data.machines||[]){const name=String(m.machineName||m.plaka||m.plate||m.id||"").trim();if(!name)continue;const x=["Makine: "+name+" — Görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","makine kepçe plaka iş ver "+name];x.record={id:"taskMachine",value:name};out.push(x);out.push(["Makine: "+name+" — Canlı takip",4,"makine durum nerede çalışıyor "+name])}
+ return out.slice(0,400);
+ }
+ function applyRecord(){if(!selectedRecord)return;const field=document.getElementById(selectedRecord.id);if(!field||!field.options)return;const option=[...field.options].find(o=>selectedRecord.value?norm(o.value)===norm(selectedRecord.value):o.value.includes(selectedRecord.match));if(option){field.value=option.value;field.dispatchEvent(new Event("change",{bubbles:true}));selectedRecord=null}}
+ let steps=[],idx=0;
+ const clear=()=>document.querySelectorAll(".search-blink").forEach(x=>x.classList.remove("search-blink"));
+ function showStep(){clear();if(idx>=steps.length){hint.textContent="Yönlendirme tamamlandı. İşlemi kontrol edip onaylayabilirsiniz.";cancel.style.display="none";steps=[];return}
+ const target=document.getElementById(steps[idx]);if(!target){idx++;showStep();return}
+ target.classList.add("search-blink");target.scrollIntoView({behavior:"smooth",block:"center"});hint.textContent="Adım "+(idx+1)+"/"+steps.length+": "+(target.closest("label")?.textContent.trim()||target.textContent.trim()||"Vurgulanan alan").slice(0,110);}
+ const advance=()=>{idx++;if(idx===1)queueMicrotask(applyRecord);showStep()};
+ function select(item){learn(item,norm(input.value));selectedRecord=item.record||null;input.value=item[0];results.hidden=true;const panel=item[1];steps=["__toolbar__"+panel];let extra=item.slice(2);if(panel===0&&["operator","machine","customer"].includes(extra[1])){steps.push("addType");steps.push(...extra.slice(2).filter(x=>document.getElementById(x)));}else steps.push(...extra.filter(x=>document.getElementById(x)));idx=0;cancel.style.display="block";hint.textContent="İlk olarak vurgulanan menüye dokunun.";const button=document.querySelector('#managerToolbar button[data-panel="'+panel+'"]');if(button){button.id="__toolbar__"+panel;}showStep();}
+ const synonyms=[
+ ["operatör","operator","personel","eleman","adam","usta","şoför","sofor","sürücü","surucu","çalışan","calisan","işçi","isci"],
+ ["makine","kepçe","kepce","araç","arac","ekskavatör","ekskavator","iş makinesi","kamyon","plaka","ekipman"],
+ ["müşteri","musteri","cari","firma","şirket","sirket","işveren","isveren"],
+ ["görev","gorev","atama","görevlendir","gorevlendir","iş ver","is ver","gönder","gonder","yolla","çalıştır","calistir","iş başlat","is baslat"],
+ ["ekle","kaydet","oluştur","olustur","tanımla","tanimla","yeni","aç","ac","kayıt aç","kayit ac"],
+ ["tahsilat","ödeme al","odeme al","para al","para geldi","ödemiş","odemis","ödedi","odedi","tahsil","para yatırdı","para yatirdi"],
+ ["borç","borc","alacak","bakiye","hesap","ne kadar borçlu","ne kadar borclu","ödemedi","odemedi"],
+ ["canlı","canli","şu an","su an","nerede","kim çalışıyor","kim calisiyor","çalışıyor","calisiyor","aktif","durum","takip","sahada"],
+ ["bitirilen","tamamlanan","biten","geçmiş","gecmis","eski","önceki","yapılan işler","yapilan isler"],
+ ["arşiv","arsiv","arşivle","arsivle","kapat","tamamla","işi kaldır","isi kaldir"],
+ ["finans","gelir","ciro","kazanç","kazanc","toplam","özet","ozet","ne kazandık","ne kazandik"],
+ ["yedek","yedekle","dışa aktar","disa aktar","indir","kaydet","backup"],
+ ["rapor","çıktı","cikti","pdf","belge","doküman","dokuman"],
+ ["excel","csv","tablo","liste"]
+ ].map(group=>group.map(norm));
+ const stop=new Set(["bir","bu","şu","su","ben","bana","biz","bizim","istiyorum","isterim","lütfen","lutfen","nasıl","nasil","nereden","nerde","nerede","göster","goster","bak","bakalım","bakalim","için","icin","ile","ve","de","da","ki","mı","mi","mu","mü","yap","yapmak","yapacağım","yapacagim","istediğim","istedigim","var","mıydı","miydi"]);
+ const intentTerms=[
+ "operatör ekle personel eleman adam usta çalışan yeni kayıt",
+ "makine ekle kepçe araç plaka ekskavatör yeni kayıt",
+ "müşteri ekle firma cari şirket yeni kayıt",
+ "görev ata operatör makine kepçe iş ver görevlendir gönder çalıştır",
+ "bitirilen işler tamamlanan geçmiş yapılan işler liste",
+ "yedek indir json dışa aktar kayıt",
+ "operatör hesapları şifre parola kullanıcı sil düzenle değiştir",
+ "canlı makine durumları kim nerede çalışıyor aktif arıza duraklat takip sahada",
+ "bitirilen işi arşivle makine hazırla arşiv kapat",
+ "müşteri ekstresi borç alacak bakiye cari hesap kim ne kadar borçlu",
+ "tahsilat kaydet ödeme al para geldi ödedi tahsil",
+ "müşteri ekstresi pdf rapor indir çıktı",
+ "müşteri ekstresi excel csv tablo indir",
+ "finans özeti gelir ciro kazanç toplam para"
+ ].map(norm);
+ function expand(word){const w=norm(word);const found=new Set([w]);for(const group of synonyms){if(group.some(t=>t.split(" ").some(p=>p===w||p.startsWith(w)&&w.length>=3||w.startsWith(p)&&p.length>=4))){for(const t of group)for(const part of t.split(" "))found.add(part)}}return [...found]}
+ function score(item,q){const index=items.indexOf(item),name=norm(item[0]),terms=norm(item.slice(2).join(" ")+" "+intentTerms[index]);const words=q.split(" ").filter(w=>w&&!stop.has(w));if(!words.length)return 0;
+ let total=0,matched=0;
+ for(const w of words){const candidates=expand(w);let best=0;for(const term of candidates){if(name.split(" ").some(p=>p===term))best=Math.max(best,12);else if(name.split(" ").some(p=>p.startsWith(term)&&term.length>=2))best=Math.max(best,9);else if(terms.split(" ").some(p=>p===term))best=Math.max(best,7);else if(terms.split(" ").some(p=>p.startsWith(term)&&term.length>=2))best=Math.max(best,5);else if(term.length>=4&&terms.includes(term))best=Math.max(best,3)}if(best){matched++;total+=best}else if(w.length>3){total-=2}}
+ if(!matched)return 0;
+ total+=Math.round(12*matched/words.length);
+ if(name.includes(q))total+=15;
+ // A clear action verb is stronger than a shared noun such as "kepçe".
+ const isAssign=/\b(ata|atama|ver|gonder|gorevlendir|yolla|calistir)\b/.test(q);
+ const isAdd=/\b(ekle|yeni|olustur|tanimla|kaydet)\b/.test(q);
+ const isPayment=/\b(tahsil|odedi|odemis|aldi|geldi|yatirdi)\b/.test(q);
+ const isLive=/\b(nerede|calisiyor|aktif|durum|sahada)\b/.test(q);
+ const isDebt=/\b(borc|borclu|alacak|bakiye)\b/.test(q);
+ if(isAssign)total+=index===3?28:-8;
+ if(isAdd&&index<=2)total+=18;
+ if(isPayment)total+=index===10?30:-5;
+ if(isLive)total+=index===7?25:-5;
+ if(isDebt)total+=index===9?25:index===13?6:-5;
+ return Math.max(0,total);
+ }
+ const taskReview=el("voiceTaskReview"),taskSummary=el("voiceTaskSummary");
+ let taskDraft=null;
+ const searchName=(text,names)=>{const matches=names.filter(x=>x.name&&norm(text).includes(norm(x.name)));matches.sort((a,b)=>b.name.length-a.name.length);return matches[0]||null};
+ function detectTask(text){const q=norm(text);if(!/(gorev|ata|gonder|gitsin|calis|is ver|yonlendir)/.test(q))return null;const data=window.__puantorSearchData||{};const machines=(data.machines||[]).map(x=>({name:x.machineName||x.plaka||x.plate||x.id,extra:[x.plaka,x.plate,x.id].filter(Boolean)}));const matchMachine=machines.find(x=>[x.name,...x.extra].some(n=>n&&norm(q).includes(norm(n))))||null;return {operator:searchName(text,(data.operators||[]).map(x=>({name:x.displayName,username:x.username}))),customer:searchName(text,data.customers||[]),machine:matchMachine};}
+ function showTaskDraft(text){const draft=detectTask(text);if(!draft){taskReview.hidden=true;taskDraft=null;return false}taskDraft=draft;taskReview.hidden=false;taskSummary.textContent="Operatör: "+(draft.operator?.name||"Seçilmedi")+" · Makine: "+(draft.machine?.name||"Seçilmedi")+" · Müşteri: "+(draft.customer?.name||"Seçilmedi")+". Eksikleri formdan tamamlayıp ücreti girin. Görev kaydedilmeyecek.";return true}
+ function setTaskOption(id,name){if(!name)return false;const field=el(id);if(!field||!field.options)return false;const n=norm(name);const option=[...field.options].find(o=>norm(o.textContent)===n||norm(o.value)===n)||[...field.options].find(o=>norm(o.textContent).includes(n));if(!option)return false;field.value=option.value;field.dispatchEvent(new Event("change",{bubbles:true}));return true}
+ el("voiceTaskDismiss").addEventListener("click",()=>{taskDraft=null;taskReview.hidden=true});
+ el("voiceTaskPrepare").addEventListener("click",()=>{if(!taskDraft)return;const draft=taskDraft;const shortcuts=[...document.querySelectorAll("#operatorToolbarButtons button")];const target=shortcuts.find(b=>draft.operator&&norm(b.textContent)===norm(draft.operator.name));const button=target||document.querySelector('#managerToolbar button[data-panel="1"]');if(button)button.click();setTimeout(()=>{const op=setTaskOption("taskOperator",draft.operator?.name);const machine=setTaskOption("taskMachine",draft.machine?.name);const customer=setTaskOption("taskCustomer",draft.customer?.name);taskReview.hidden=true;taskDraft=null;const missing=[!machine&&"makine",!op&&"operatör",!customer&&"müşteri"].filter(Boolean);hint.textContent=missing.length?"Görev formu hazır. Eksik alanlar: "+missing.join(", ")+". Saatlik ücreti girip kaydetmeden önce kontrol edin.":"Görev bilgileri hazır. Saatlik ücreti girin ve kaydetmeden önce kontrol edin.";el("taskRate")?.scrollIntoView({behavior:"smooth",block:"center"})},200)});
+ function update(){const q=norm(input.value);showTaskDraft(input.value);if(!q){results.hidden=true;return}const all=[...items,...dynamicItems()];const ranked=all.map((item,i)=>({item,i,score:score(item,q)>0?score(item,q)+bonus(item,q):0})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i-b.i).slice(0,10);results.replaceChildren();for(const {item} of ranked){const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.textContent=item[0];b.addEventListener("click",()=>select(item));results.appendChild(b)}if(!ranked.length){const p=document.createElement("p");p.style.padding="10px";p.textContent="Uygun işlem bulunamadı. Başka bir kelime deneyin.";results.appendChild(p)}results.hidden=false;}
+
+ const SpeechRecognitionClass=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const dictationHelp="iPhone'da arama kutusuna dokunup klavyedeki mikrofon simgesini kullanabilirsiniz.";
+ if(SpeechRecognitionClass){
+ const recognition=new SpeechRecognitionClass();recognition.lang="tr-TR";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;
+ let listening=false,received=false,hadError=false;
+ function resetMic(){listening=false;mic.classList.remove("listening");mic.setAttribute("aria-label","Sesle ara");mic.title="Sesle ara"}
+ mic.addEventListener("click",()=>{if(listening){recognition.stop();return}received=false;hadError=false;try{recognition.start()}catch(e){resetMic();hint.textContent="Ses tanıma başlatılamadı. "+dictationHelp;input.focus()}});
+ recognition.onstart=()=>{listening=true;mic.classList.add("listening");mic.setAttribute("aria-label","Dinlemeyi durdur");mic.title="Dinlemeyi durdur";hint.textContent="Dinliyorum… Konuşun."};
+ recognition.onresult=e=>{
+ let spoken="",final=false;
+ for(let i=0;i<e.results.length;i++){spoken+=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)final=true}
+ spoken=spoken.trim();
+ if(!spoken)return;
+ received=true;input.value=spoken;update();
+ if(!final){hint.textContent="Algılanan: "+spoken;return}
+ if(taskDraft){hint.textContent="Görev isteği algılandı. Bilgileri kontrol edip 'Görev formunu doldur' seçeneğine basın.";return}
+ const q=norm(spoken);
+ const ranked=[...items,...dynamicItems()].map(item=>({item,points:score(item,q)+bonus(item,q)})).filter(x=>score(x.item,q)>0).sort((a,b)=>b.points-a.points);
+ if(ranked.length>0&&(ranked.length===1||ranked[0].points>ranked[1].points*1.2)){
+  select(ranked[0].item);
+  hint.textContent="Sesli yönlendirme hazır. Vurgulanan menüden devam edin.";
+ }else hint.textContent="Birden fazla işlem eşleşti. Listeden istediğinizi seçin.";
+};
+ recognition.onerror=e=>{hadError=true;const errors={"not-allowed":"Mikrofon izni reddedildi. Safari site ayarlarından mikrofon izni verin.","service-not-allowed":"Bu tarayıcı konuşma tanıma servisine izin vermiyor.","audio-capture":"Mikrofona erişilemiyor. Mikrofon izinlerini kontrol edin.","network":"Konuşma tanıma servisine bağlanılamadı.","no-speech":"Konuşma algılanamadı. Tekrar deneyin.","language-not-supported":"Türkçe konuşma tanıma bu tarayıcıda desteklenmiyor."};hint.textContent=(errors[e.error]||"Ses tanıma hatası: "+e.error)+ " "+dictationHelp};
+ recognition.onend=()=>{resetMic();if(!received&&!hadError)hint.textContent="Konuşma algılanmadı. "+dictationHelp};
+ }else{mic.addEventListener("click",()=>{input.focus();hint.textContent="Bu tarayıcı doğrudan ses tanımayı desteklemiyor. "+dictationHelp});mic.title="Klavye diktesiyle ara"}
+ window.addEventListener("puantor-search-data",()=>{if(document.activeElement===input)update()});
+ input.addEventListener("input",update);input.addEventListener("focus",update);
+ document.addEventListener("click",e=>{if(steps.length){const target=document.getElementById(steps[idx]);if(target&&(e.target===target||target.contains(e.target))&&target.matches("button")){advance();return}}if(!e.target.closest(".search-assist"))results.hidden=true;});
+ document.addEventListener("change",e=>{if(!steps.length)return;const target=document.getElementById(steps[idx]);if(target===e.target&&target.value){advance();}});
+ document.addEventListener("input",e=>{if(!steps.length)return;const target=document.getElementById(steps[idx]);if(target===e.target&&target.matches("input")&&target.value.trim()){advance();}});
+ cancel.addEventListener("click",()=>{steps=[];clear();cancel.style.display="none";hint.textContent="Yönlendirme kapatıldı."});
+});
+</script>
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-functions.js";
+import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),functions=getFunctions(app,"europe-west1"),tenantOperatorAdmin=httpsCallable(functions,"tenantOperatorAdmin");window.__puantorReady=true;let tenantId=null;
+let learningUnsub=null,learningUid=null;
+function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=uid;const ref=doc(db,"businesses",tenantId,"searchPreferences",uid);
+ window.__puantorSaveLearning=async prefs=>{if(learningUid!==uid)throw Error("Oturum değişti");await setDoc(ref,{preferences:prefs,updatedAt:serverTimestamp()},{merge:true})};
+ learningUnsub=onSnapshot(ref,snap=>{if(snap.exists())window.dispatchEvent(new CustomEvent("puantor-learning-remote",{detail:snap.data().preferences||{}}));window.dispatchEvent(new Event("puantor-learning-ready"))},()=>window.dispatchEvent(new Event("puantor-learning-disabled")));
+}
+const $=id=>document.getElementById(id);let validatedArchiveBackup=null;let validatedPaymentBackup=null;let unsubscribe=null;let ticker=null;let cached=[];let archivedJobs=[];let unsubscribeJobs=null;let unsubscribeCustomers=null;let unsubscribeOperators=null;let unsubscribePayments=null;let payments=[];
+function publishSearchData(){window.__puantorSearchData={customers:customers.map(c=>({name:c.name})),operators:operators.map(o=>({displayName:o.displayName,username:o.username})),machines:cached.map(m=>({id:m.id,machineName:m.machineName,plaka:m.plaka,plate:m.plate}))};window.dispatchEvent(new Event("puantor-search-data"))}
+function message(t){$("status").textContent=t}
+function safe(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function duration(m){const elapsed=Number(m.elapsedMs)||0;const base=Number(m.startedAt?.toMillis?.()||0);const ms=Math.max(0,elapsed+(m.status==="running"&&base?Date.now()-base:0));const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+const labels={running:"Çalışıyor",paused:"Duraklatıldı",broken:"Arıza",done:"Tamamlandı",idle:"Hazır"};
+function formatMs(ms){const s=Math.floor(Math.max(0,ms)/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+function jobDate(j){const v=j.completedAt||j.archivedAt;if(typeof v?.toMillis==="function")return v.toMillis();if(typeof v?.seconds==="number")return v.seconds*1000;return 0}
+function filteredJobs(){const customer=$("historyCustomer").value;if(!customer)return [];const dir=$("historySort").value==="asc"?1:-1;return archivedJobs.filter(j=>(j.customerName||"")===customer).sort((a,b)=>dir*(jobDate(a)-jobDate(b)))}
+function updateJobOptions(){
+ const el=$("historyCustomer"),prev=el.value;
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName),...payments.map(p=>p.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ el.replaceChildren(new Option("Müşteri seçin",""),...names.map(n=>new Option(n,n)));
+ if(names.includes(prev))el.value=prev;
+}
+const billedAmount=(ms,rate)=>Math.round(Math.floor(Math.max(0,Number(ms)||0)/1000)*Number(rate)/3600*100)/100;
+const money=n=>new Intl.NumberFormat("tr-TR",{style:"currency",currency:"TRY"}).format(n);
+function timelineHtml(events){if(!Array.isArray(events)||!events.length)return '<p class="muted">Bu iş için ayrıntılı hareket kaydı bulunmuyor. Eski kayıtların saatleri geriye dönük oluşturulamaz.</p>';const names={start:"▶️ Başladı",pause:"⏸️ Duraklatıldı",fault:"⚠️ Arıza",finish:"🏁 Tamamlandı"};return '<ol class="work-timeline">'+events.map(e=>{const date=e.at?.toDate?.()||null;return '<li><strong>'+safe(names[e.action]||e.action)+'</strong> · '+safe(date?date.toLocaleString("tr-TR"):"Saat bilinmiyor")+(e.reason?' · '+safe(e.reason):'')+'<small> Toplam net çalışma: '+formatMs(e.elapsedMs||0)+'</small></li>'}).join("")+'</ol>'}
+function renderJobs(){
+ const jobs=filteredJobs();$("jobCount").textContent=jobs.length;$("jobTotal").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
+ const priced=jobs.filter(j=>Number.isFinite(Number(j.hourlyRate))&&j.hourlyRate!==null&&j.hourlyRate!==undefined);$("jobAmount").textContent=money(priced.reduce((sum,j)=>sum+(statementAmount(j)??0),0))+(priced.length<jobs.length?" · "+(jobs.length-priced.length)+" iş ücreti eksik":"");
+ const target=$("jobsHistory");
+ if(!$("historyCustomer").value){target.innerHTML='<p class="muted">Çalışma geçmişini görmek için yukarıdan bir müşteri seçin.</p>';return}
+ const jobCard=j=>{
+  const dt=j.completedAt?.toDate?.()||j.archivedAt?.toDate?.();
+  const when=dt?dt.toLocaleString("tr-TR"):"Tarih bilinmiyor";const priced=j.hourlyRate!==null&&j.hourlyRate!==undefined&&Number.isFinite(Number(j.hourlyRate));const amount=priced?statementAmount(j):null;
+  return '<details class="card"><summary style="cursor:pointer"><strong>🚜 '+safe(j.machineName||j.machineId||"Makine")+'</strong> · '+safe(when)+' · <strong>'+formatMs(Number(j.elapsedMs)||0)+'</strong></summary><div style="padding-top:10px"><p>Operatör: '+safe(j.operatorName||"—")+'</p><details class="timeline-details"><summary>🕒 Çalışma zaman çizelgesi</summary>'+timelineHtml(j.timeline)+'</details><p>Müşteri: '+safe(j.customerName||"—")+'</p><p>Makine: '+safe(j.machineName||j.machineId||"—")+'</p><p>Toplam çalışma: <strong>'+formatMs(Number(j.elapsedMs)||0)+'</strong></p><p>Saatlik ücret: '+(priced?money(Number(j.hourlyRate)):'Belirtilmemiş')+'</p><p>Çalışma bedeli: '+(priced?money(billedAmount(j.elapsedMs,j.hourlyRate)):'Belirtilmemiş')+'</p><p>Yol ücreti: '+money(Number(j.travelFee)||0)+'</p><p>Genel toplam: <strong>'+(amount===null?'Belirtilmemiş':money(amount))+'</strong></p><p>Tamamlanma: '+safe(when)+'</p><form class="archive-rate-form" data-id="'+safe(j.id)+'"><label>Saatlik ücret (TL)<input name="rate" type="number" min="0" max="100000000" step="0.01" required value="'+(priced?Number(j.hourlyRate):'')+'" placeholder="Saatlik ücret"></label><button type="submit" class="secondary">Ücreti kaydet ve tutarı hesapla</button></form></div></details>';
+ };
+ if(!jobs.length){target.innerHTML='<p class="muted">Bu müşteriye ait arşivlenmiş çalışma henüz yok.</p>';return}
+ const mode=$("historyGroup").value;
+ if(mode==="none"){target.innerHTML=jobs.map(jobCard).join("");return}
+ const groups=new Map();
+ for(const j of jobs){let key;
+ if(mode==="machine")key=j.machineName||j.machineId||"Plaka / makine bilinmiyor";
+ else if(mode==="operator")key=j.operatorName||"Operatör bilinmiyor";
+ else{const ts=jobDate(j);key=ts?new Date(ts).toLocaleDateString("tr-TR"):"Tarih bilinmiyor"}
+ if(!groups.has(key))groups.set(key,[]);groups.get(key).push(j)}
+ const entries=[...groups.entries()];
+ if(mode!=="date")entries.sort((a,b)=>a[0].localeCompare(b[0],"tr"));
+ target.innerHTML=entries.map(([key,list])=>{const ms=list.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0);const total=list.reduce((n,j)=>n+(statementAmount(j)??0),0);
+ return '<details class="history-group" open><summary><strong>'+safe(key)+'</strong><span>'+list.length+' iş · '+formatMs(ms)+' · '+money(total)+'</span></summary><div class="history-group-items">'+list.map(jobCard).join("")+'</div></details>'}).join("");
+}
+$("historyCustomer").addEventListener("change",renderJobs);
+$("historySort").addEventListener("change",renderJobs);$("historyGroup").addEventListener("change",renderJobs);
+function renderFinance(){
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName),...payments.map(p=>p.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ let gross=0,paid=0,missing=0;
+ const data=names.map(name=>{const jobs=archivedJobs.filter(j=>j.customerName===name),receipts=payments.filter(p=>p.customerName===name);const cost=jobs.reduce((n,j)=>{const amount=statementAmount(j);if(amount===null)missing++;return n+(amount??0)},0),received=receipts.reduce((n,p)=>n+(Number(p.amount)||0),0);gross+=cost;paid+=received;return {name,cost,received,balance:cost-received,jobs:jobs.length}});
+ $("financeGross").textContent=money(gross);$("financePaid").textContent=money(paid);$("financeBalance").textContent=money(gross-paid);
+ $("financeNote").textContent=missing?missing+" işin saatlik ücreti eksik; tutarlar yalnızca ücretlendirilmiş işleri kapsıyor.":"Kalan alacak, kayıtlı iş bedellerinden tahsilatlar düşülerek hesaplanır.";
+ $("financeRows").innerHTML=data.length?data.map(x=>'<div class="card"><strong>'+safe(x.name)+'</strong><p>'+x.jobs+' iş · İş bedeli: '+money(x.cost)+'</p><p>Tahsilat: '+money(x.received)+' · <strong>Kalan: '+money(x.balance)+'</strong></p><button type="button" class="secondary" data-finance-customer="'+safe(x.name)+'">Ekstreyi aç</button></div>').join(""):'<p class="muted">Henüz müşteri kaydı bulunmuyor.</p>';
+}
+$("financeRows").addEventListener("click",e=>{
+ const btn=e.target.closest("[data-finance-customer]");if(!btn)return;
+ const name=btn.dataset.financeCustomer;const selector=$("statementCustomer");selector.value=name;renderStatement();
+ const panels=[...document.querySelectorAll("#managerPanels>details.toolbox")],buttons=[...document.querySelectorAll("#managerToolbar button")];
+ panels.forEach((p,i)=>{p.classList.toggle("active-panel",i===5);p.open=i===5});
+ buttons.forEach((b,i)=>{b.classList.toggle("active",i===5);b.setAttribute("aria-pressed",String(i===5))});
+ selector.scrollIntoView({behavior:"smooth",block:"start"});
+});
+function updateStatementOptions(){
+ const el=$("statementCustomer"),previous=el.value;
+ const names=[...new Set([...customers.map(c=>c.name),...archivedJobs.map(j=>j.customerName)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+ el.replaceChildren(new Option("Müşteri seçin",""),...names.map(n=>new Option(n,n)));
+ if(names.includes(previous))el.value=previous;
+ renderStatement();renderFinance();
+}
+function statementJobs(){const name=$("statementCustomer").value;return name?archivedJobs.filter(j=>j.customerName===name).sort((a,b)=>jobDate(a)-jobDate(b)):[]}
+function statementAmount(j){return j.hourlyRate==null||!Number.isFinite(Number(j.hourlyRate))?null:Math.round((billedAmount(j.elapsedMs,j.hourlyRate)+(Number(j.travelFee)||0))*100)/100}
+function renderStatement(){
+ const jobs=statementJobs(),missing=jobs.filter(j=>statementAmount(j)===null).length;const selected=$("statementCustomer").value;const received=payments.filter(p=>p.customerName===selected);const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0);const paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ $("statementCount").textContent=jobs.length;
+ $("statementDuration").textContent=formatMs(jobs.reduce((n,j)=>n+Math.max(0,Number(j.elapsedMs)||0),0));
+ $("statementTotal").textContent=money(jobs.reduce((n,j)=>n+(statementAmount(j)??0),0));
+ $("statementPaid").textContent=money(paid);$("statementBalance").textContent=money(total-paid);$("statementWarning").textContent=missing?missing+" işin saatlik ücreti eksik; kalan alacak yalnızca fiyatı bilinen işleri kapsar.":total-paid<0?"Tahsilat, kayıtlı iş bedelini aşıyor. Fazla ödeme olabilir.":"Kalan alacak = çalışma bedeli + yol ücreti − tahsilatlar.";
+ $("paymentRows").innerHTML=selected?(received.length?received.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(p=>'<div class="card"><strong>'+money(Number(p.amount)||0)+'</strong> · '+safe(p.date||"")+'<p>'+safe(p.note||"Açıklama yok")+'</p><div class="grid"><button type="button" class="secondary" data-pay-edit="'+safe(p.id)+'">Düzenle</button><button type="button" class="secondary" data-pay-delete="'+safe(p.id)+'">Sil</button></div></div>').join(""):'<p>Henüz tahsilat yok.</p>'):'<p>Müşteri seçin.</p>';
+ $("statementRows").innerHTML=$("statementCustomer").value?(jobs.length?jobs.map(j=>'<div class="card"><strong>'+safe(j.machineName||j.machineId||"Makine")+'</strong><p>'+safe((j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"Tarih bilinmiyor")+' · '+formatMs(j.elapsedMs)+'</p><p>Operatör: '+safe(j.operatorName||"—")+'</p><p>Saatlik: '+(statementAmount(j)===null?"Belirtilmemiş":money(Number(j.hourlyRate)))+' · Çalışma: '+(statementAmount(j)===null?'Belirtilmemiş':money(billedAmount(j.elapsedMs,j.hourlyRate)))+' · Yol: '+money(Number(j.travelFee)||0)+' · Genel toplam: <strong>'+(statementAmount(j)===null?'Belirtilmemiş':money(statementAmount(j)))+'</strong></p></div>').join(""):'<p>Bu müşterinin arşivlenmiş işi yok.</p>'):'<p>Müşteri seçin.</p>';
+}
+$("paymentRows").addEventListener("click",async e=>{
+ const edit=e.target.closest("[data-pay-edit]"),del=e.target.closest("[data-pay-delete]");if(!edit&&!del)return;
+ const id=(edit||del).dataset[edit?"payEdit":"payDelete"],p=payments.find(x=>x.id===id);if(!p)return;
+ if(del){if(!confirm(p.customerName+" müşterisinin "+money(p.amount)+" tahsilatını kalıcı olarak silmek istiyor musunuz?"))return;
+  try{await deleteDoc(doc(db,"businesses",tenantId,"payments",id));$("paymentResult").textContent="Tahsilat silindi."}catch(err){$("paymentResult").textContent="Silinemedi: "+(err.message||err.code)}}else{
+ const date=prompt("Tahsilat tarihi (YYYY-AA-GG)",p.date);if(date===null)return;
+ const amountRaw=prompt("Tahsilat tutarı (TL)",String(p.amount));if(amountRaw===null)return;
+ const amount=Number(amountRaw.trim().replace(",","."));const note=prompt("Açıklama",p.note||"");if(note===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!amountRaw.trim()||!Number.isFinite(amount)||amount<=0||amount>100000000||note.length>150){$("paymentResult").textContent="Tarih, tutar veya açıklama geçersiz.";return}
+ if(!confirm("Tahsilat "+money(amount)+" olarak güncellensin mi?"))return;
+ try{await updateDoc(doc(db,"businesses",tenantId,"payments",id),{date,amount:Math.round(amount*100)/100,note});$("paymentResult").textContent="Tahsilat güncellendi."}catch(err){$("paymentResult").textContent="Düzenlenemedi: "+(err.message||err.code)}
+ }
+});
+$("statementCustomer").addEventListener("change",renderStatement);
+$("paymentDate").value=[new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,"0"),String(new Date().getDate()).padStart(2,"0")].join("-");
+$("paymentForm").addEventListener("submit",async e=>{
+ e.preventDefault();const customerName=$("statementCustomer").value,amount=Number($("paymentAmount").value),date=$("paymentDate").value,note=$("paymentNote").value.trim(),out=$("paymentResult"),btn=$("paymentSave");
+ if(!customerName){out.textContent="Önce müşteri seçin.";return}
+ if(!Number.isFinite(amount)||amount<=0||amount>100000000||!/^\d{4}-\d{2}-\d{2}$/.test(date)){out.textContent="Geçerli tarih ve tutar girin.";return}
+ if(!confirm(customerName+" için "+money(amount)+" tahsilat kaydedilsin mi?"))return;
+ btn.disabled=true;out.textContent="Kaydediliyor…";
+ try{await addDoc(collection(db,"businesses",tenantId,"payments"),{customerName,amount:Math.round(amount*100)/100,date,note,createdAt:serverTimestamp()});out.textContent="Tahsilat kaydedildi.";$("paymentAmount").value="";$("paymentNote").value=""}
+ catch(err){out.textContent="Tahsilat kaydedilemedi: "+(err.message||err.code)+". Firebase yetkisi kontrol edilmeli."}
+ finally{btn.disabled=false}
+});
+
+$("statementPdf").addEventListener("click",()=>{
+ const customer=$("statementCustomer").value;if(!customer){message("PDF ekstre için önce müşteri seçin.");return}
+ const jobs=statementJobs(),received=payments.filter(p=>p.customerName===customer),missing=jobs.filter(j=>statementAmount(j)===null).length;
+ const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ const records=[];
+ for(const j of jobs){const d=j.completedAt?.toDate?.()||j.archivedAt?.toDate?.();records.push({sort:d?.getTime()||0,date:d?.toLocaleDateString("tr-TR")||"—",kind:"Çalışma",detail:(j.machineName||j.machineId||"Makine")+" · "+(j.operatorName||"Operatör yok"),duration:formatMs(j.elapsedMs),rate:statementAmount(j)===null?"—":money(Number(j.hourlyRate)),work:statementAmount(j)===null?"—":money(billedAmount(j.elapsedMs,j.hourlyRate)),travel:money(Number(j.travelFee)||0),debit:statementAmount(j)===null?"Belirsiz":money(statementAmount(j)),credit:"—"})}
+ for(const p of received){const t=Date.parse(p.date+"T12:00:00");records.push({sort:Number.isFinite(t)?t:0,date:p.date?.split("-").reverse().join(".")||"—",kind:"Tahsilat",detail:p.note||"Ödeme",duration:"—",rate:"—",work:"—",travel:"—",debit:"—",credit:money(Number(p.amount)||0)})}
+ records.sort((a,b)=>a.sort-b.sort);
+ const lines=records.map(x=>"<tr><td>"+safe(x.date)+"</td><td>"+safe(x.kind)+"</td><td>"+safe(x.detail)+"</td><td>"+safe(x.duration)+"</td><td>"+safe(x.rate)+"</td><td>"+safe(x.work)+"</td><td>"+safe(x.travel)+"</td><td>"+safe(x.debit)+"</td><td>"+safe(x.credit)+"</td></tr>").join("");
+ const html='<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+safe(customer)+' - Puantör Ekstre</title><style>@page{size:A4 landscape;margin:13mm}body{font-family:Arial,sans-serif;color:#152238;margin:20px}h1{margin:0 0 5px}h2{font-size:17px;margin:18px 0 8px}.sub{color:#64748b;font-size:12px}.summary{display:flex;gap:12px;margin:20px 0}.summary div{flex:1;background:#f1f5f9;padding:12px;border-radius:8px}.summary strong{display:block;font-size:20px;margin-top:5px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:8px 5px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{background:#e2e8f0}tr{break-inside:avoid}.warning{margin-top:15px;font-size:12px;color:#8a4b0b}.print{margin:12px 0;padding:12px;background:#0f172a;color:white;border:0;border-radius:8px;font-weight:bold}@media print{.print{display:none}body{margin:0}.summary div{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><button class="print" onclick="window.print()">Yazdır / PDF olarak kaydet</button><h1>PUANTÖR | Müşteri Hesap Ekstresi</h1><div class="sub">Müşteri: '+safe(customer)+' · Rapor tarihi: '+new Date().toLocaleDateString("tr-TR")+'</div><div class="summary"><div>Toplam iş bedeli<strong>'+safe(money(total))+'</strong></div><div>Toplam tahsilat<strong>'+safe(money(paid))+'</strong></div><div>Kalan alacak<strong>'+safe(money(total-paid))+'</strong></div></div><h2>İşlemler</h2><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Makine / Açıklama</th><th>Süre</th><th>Saatlik ücret</th><th>Çalışma bedeli</th><th>Yol ücreti</th><th>Genel toplam</th><th>Tahsilat</th></tr></thead><tbody>'+(lines||'<tr><td colspan="9">Henüz işlem yok</td></tr>')+'</tbody></table>'+(missing?'<p class="warning">Uyarı: '+missing+' işin saatlik ücreti eksik. Kalan alacak kesin değildir.</p>':'')+'<p class="sub">Bu rapor uygulamada kayıtlı iş ve tahsilatlardan oluşturulmuştur.</p></body></html>';
+ const w=window.open("","_blank");if(!w){message("Rapor penceresi engellendi. Safari açılır pencere iznini kontrol edin.");return}w.document.open();w.document.write(html);w.document.close();
+});
+$("statementCsv").addEventListener("click",()=>{
+ const customer=$("statementCustomer").value;if(!customer){message("Ekstre için müşteri seçin.");return}
+ const jobs=statementJobs(),received=payments.filter(p=>p.customerName===customer);
+ const rows=[["Tarih","İşlem","Makine / Açıklama","Operatör","Süre","Saatlik ücret TL","Çalışma bedeli TL","Yol ücreti TL","Genel toplam TL","Tahsilat TL"]];
+ for(const j of jobs){const date=(j.completedAt?.toDate?.()||j.archivedAt?.toDate?.())?.toLocaleString("tr-TR")||"";rows.push([date,"Çalışma",j.machineName||j.machineId||"",j.operatorName||"",formatMs(j.elapsedMs),statementAmount(j)===null?"":Number(j.hourlyRate).toFixed(2),statementAmount(j)===null?"":billedAmount(j.elapsedMs,j.hourlyRate).toFixed(2),(Number(j.travelFee)||0).toFixed(2),statementAmount(j)===null?"":statementAmount(j).toFixed(2),""])}
+ for(const p of received)rows.push([p.date,"Tahsilat",p.note||"","", "","","","","",Number(p.amount).toFixed(2)]);
+ const total=jobs.reduce((n,j)=>n+(statementAmount(j)??0),0),paid=received.reduce((n,p)=>n+(Number(p.amount)||0),0);
+ rows.push(["","TOPLAM","","","","","","",total.toFixed(2),paid.toFixed(2)]);
+ rows.push(["","KALAN ALACAK","","","","","","",(total-paid).toFixed(2),""]);
+ const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="puantor-musteri-ekstresi.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+
+$("jobsHistory").addEventListener("submit",async e=>{
+ const form=e.target.closest("form.archive-rate-form");if(!form)return;e.preventDefault();
+ const id=form.dataset.id,job=archivedJobs.find(j=>j.id===id),button=form.querySelector('button[type="submit"]');
+ if(!job)return;
+ const raw=form.elements.rate.value,rate=Number(raw);
+ if(raw.trim()===""||!Number.isFinite(rate)||rate<0||rate>100000000){message("Geçerli saatlik ücret girin.");return}
+ const workAmount=Math.round(Math.floor(Math.max(0,Number(job.elapsedMs)||0)/1000)*rate/3600*100)/100;const amount=Math.round((workAmount+(Number(job.travelFee)||0))*100)/100;
+ if(!confirm("Bu arşiv kaydı için saatlik "+money(rate)+" ve toplam "+money(amount)+" kaydedilsin mi? Çalışma süresi değişmeyecek."))return;
+ button.disabled=true;
+ try{
+  await updateDoc(doc(db,"businesses",tenantId,"jobs",id),{hourlyRate:rate,workAmount,amount,rateUpdatedAt:serverTimestamp()});
+  message("Arşiv işinin tutarı güncellendi: "+money(amount));
+ }catch(err){message("Ücret kaydedilemedi: "+(err.message||err.code))}
+ finally{button.disabled=false}
+});
+
+$("exportJobs").addEventListener("click",()=>{const jobs=filteredJobs();if(!jobs.length){message("İndirilecek geçmiş kayıt yok.");return}const rows=[["Makine","Operatör","Müşteri","Süre (saat:dakika:saniye)","Tamamlanma"]];for(const j of jobs)rows.push([j.machineName||j.machineId||"",j.operatorName||"",j.customerName||"",duration({...j,status:"done"}),j.completedAt?.toDate?.().toLocaleString("tr-TR")||""]);const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="puantor-filtreli-calisma-gecmisi.csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+$("backupAll").addEventListener("click",()=>{
+ const btn=$("backupAll");btn.disabled=true;
+ try{
+  const payload={format:"puantor-manager-backup",version:1,exportedAt:new Date().toISOString(),collections:{
+   machines:cached,operators,customers,jobs:archivedJobs,payments
+  }};
+  const json=JSON.stringify(payload,(key,value)=>{
+   if(value&&typeof value==="object"&&typeof value.seconds==="number"&&typeof value.nanoseconds==="number"&&typeof value.toDate==="function")return {__timestamp:value.toDate().toISOString()};
+   return value;
+  },2);
+  const blob=new Blob([json],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="puantor-yedek-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  message("JSON yedek hazırlandı. İndirilenler bölümünü kontrol edin; bu dosya hesap bilgileri içerebilir, güvenli saklayın.");
+ }catch(err){message("Yedek oluşturulamadı: "+(err.message||err))}
+ finally{btn.disabled=false}
+});
+$("backupPreviewFile").addEventListener("change",async e=>{
+ const file=e.target.files?.[0],out=$("backupPreviewResult");validatedArchiveBackup=null;validatedPaymentBackup=null;$("restoreArchives").disabled=true;$("restorePayments").disabled=true;$("restoreAll").disabled=true;
+ if(!file)return;
+ out.textContent="Yedek inceleniyor…";
+ try{
+  if(file.size>15*1024*1024)throw Error("15 MB üzerindeki dosyalar bu ekranda incelenemez.");
+  const data=JSON.parse(await file.text());
+  if(data?.format!=="puantor-manager-backup"||data?.version!==1||!data.collections||typeof data.collections!=="object")throw Error("Bu dosya Puantör v1 JSON yedeği değil.");
+  const groups=[["machines","Makineler",cached],["operators","Operatörler",operators],["customers","Müşteriler",customers],["jobs","Arşiv işleri",archivedJobs]];
+  const lines=[],warnings=[];
+  for(const [key,label,current] of groups){
+   const records=data.collections[key];
+   if(!Array.isArray(records))throw Error(label+" listesi geçersiz.");
+   const ids=new Set(),existing=new Set(current.map(x=>x.id));let newCount=0,matched=0;
+   for(const record of records){
+    if(!record||typeof record!=="object"||typeof record.id!=="string"||!record.id.trim())throw Error(label+" içinde kimliği eksik kayıt var.");
+    if(ids.has(record.id))throw Error(label+" içinde tekrarlanan kayıt kimliği var: "+record.id);
+    ids.add(record.id);if(existing.has(record.id))matched++;else newCount++;
+   }
+   lines.push(label+": "+records.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+  }
+  if(data.collections.payments!==undefined){
+   if(!Array.isArray(data.collections.payments))throw Error("Tahsilat listesi geçersiz.");
+   const ids=new Set(),existing=new Set(payments.map(p=>p.id));let matched=0,newCount=0;
+   for(const p of data.collections.payments){
+    if(!p||typeof p.id!=="string"||!p.id.trim()||ids.has(p.id)||typeof p.customerName!=="string"||!Number.isFinite(Number(p.amount)))throw Error("Tahsilat yedeğinde geçersiz veya tekrarlanan kayıt var.");
+    ids.add(p.id);if(existing.has(p.id))matched++;else newCount++;
+   }
+   lines.push("Tahsilatlar: "+data.collections.payments.length+" yedek kaydı · "+matched+" mevcut · "+newCount+" yeni");
+   validatedPaymentBackup=data.collections.payments;$("restorePayments").disabled=newCount===0;
+  }else lines.push("Tahsilatlar: Bu eski yedek dosyasında bulunmuyor.");
+  if(data.collections.machines.some(m=>m.status==="running"))warnings.push("Yedekte çalışır durumda makine var; canlı sayaç durumları doğrudan geri yüklenmemeli.");
+  out.textContent="Yedek geçerli. Tarih: "+(data.exportedAt||"belirtilmemiş")+"\n"+lines.join("\n")+(warnings.length?"\nUyarı: "+warnings.join(" "):"")+(($("restoreArchives").disabled&&$("restorePayments").disabled)?"\nYedek kontrol edildi. Tüm kayıtlar sistemde mevcut. Geri yükleme gerekmiyor.":"\nYedek kontrol edildi. Geri getirilebilecek kayıtlar var. Mevcut kayıtlar korunacaktır.");
+  validatedArchiveBackup=data.collections.jobs;$("restoreArchives").disabled=!validatedArchiveBackup.some(j=>!archivedJobs.some(x=>x.id===j.id));
+  $("restoreAll").disabled=$("restoreArchives").disabled&&$("restorePayments").disabled;
+  out.style.whiteSpace="pre-line";
+ }catch(err){out.textContent="Yedek incelenemedi: "+(err.message||String(err));out.style.whiteSpace="pre-line"}
+});
+function restoreTimestamp(v){
+ if(v&&typeof v==="object"&&!Array.isArray(v)){
+  if(typeof v.__timestamp==="string"){const ms=Date.parse(v.__timestamp);if(!Number.isFinite(ms))throw Error("Geçersiz zaman damgası.");return Timestamp.fromMillis(ms)}
+  if(typeof v.seconds==="number"&&typeof v.nanoseconds==="number"&&Object.keys(v).every(k=>["seconds","nanoseconds"].includes(k)))return new Timestamp(v.seconds,v.nanoseconds);
+  return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,restoreTimestamp(x)]));
+ }
+ if(Array.isArray(v))return v.map(restoreTimestamp);
+ return v;
+}
+$("restoreArchives").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restoreArchives"),records=validatedArchiveBackup;
+ if(!records)return;
+ const missing=records.filter(j=>!archivedJobs.some(x=>x.id===j.id));
+ if(!missing.length){out.textContent="Eksik arşiv kaydı bulunmuyor.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 arşiv kaydı yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik arşiv kaydını eklemek istiyor musunuz? Mevcut kayıtların üzerine yazılmayacak. Makine, operatör ve müşteri kayıtları değişmeyecek."))return;
+ btn.disabled=true;out.textContent="Arşiv kayıtları kontrol edilip ekleniyor…";
+ try{
+  const refs=missing.map(j=>doc(db,"businesses",tenantId,"jobs",j.id));
+  let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(raw.status!=="done"||!Number.isFinite(Number(raw.elapsedMs))||Number(raw.elapsedMs)<0)throw Error("Tamamlanmamış veya geçersiz iş kaydı geri yüklenemez.");
+    tx.set(refs[i],restoreTimestamp(raw));added++;
+   }
+  });
+  out.textContent="Geri yükleme tamamlandı: "+added+" arşiv kaydı eklendi, "+existing+" kayıt zaten vardı. Canlı işler değiştirilmedi.";
+  validatedArchiveBackup=null;$("restoreAll").disabled=true;
+ }catch(err){out.textContent="Geri yükleme yapılamadı: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
+});
+$("restoreAll").addEventListener("click",()=>{
+ const jobsReady=!$("restoreArchives").disabled,paymentsReady=!$("restorePayments").disabled;
+ if(!jobsReady&&!paymentsReady){$("backupPreviewResult").textContent="Geri getirilecek yeni kayıt bulunmuyor.";return}
+ if(jobsReady&&paymentsReady){
+  const choice=prompt("Yedekten neyi geri getirmek istiyorsunuz?\\n1 - Çalışma geçmişi\\n2 - Tahsilatlar\\nÖnce birini seçin (1 veya 2).");
+  if(choice==="1")$("restoreArchives").click();
+  else if(choice==="2")$("restorePayments").click();
+ }else if(jobsReady)$("restoreArchives").click();
+ else $("restorePayments").click();
+});
+$("restorePayments").addEventListener("click",async()=>{
+ const out=$("backupPreviewResult"),btn=$("restorePayments"),records=validatedPaymentBackup;
+ if(!records)return;
+ const missing=records.filter(p=>!payments.some(x=>x.id===p.id));
+ if(!missing.length){out.textContent="Eksik tahsilat kaydı yok.";btn.disabled=true;return}
+ if(missing.length>50){out.textContent="Güvenlik sınırı: Tek seferde en fazla 50 tahsilat kaydı geri yüklenebilir.";return}
+ if(!confirm(missing.length+" eksik tahsilatı geri yüklemek istiyor musunuz? Mevcut tahsilatlar değiştirilmeyecek."))return;
+ btn.disabled=true;out.textContent="Tahsilatlar kontrol ediliyor…";
+ try{
+  const refs=missing.map(p=>doc(db,"businesses",tenantId,"payments",p.id));let added=0,existing=0;
+  await runTransaction(db,async tx=>{
+   const snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));
+   for(let i=0;i<refs.length;i++){
+    if(snaps[i].exists()){existing++;continue}
+    const {id,...raw}=missing[i];
+    if(typeof raw.customerName!=="string"||!raw.customerName.trim()||!Number.isFinite(Number(raw.amount))||Number(raw.amount)<=0||Number(raw.amount)>100000000||typeof raw.date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)||typeof raw.note!=="string"||raw.note.length>150)throw Error("Yedekte geçersiz tahsilat var.");
+    const createdAt=raw.createdAt?restoreTimestamp(raw.createdAt):serverTimestamp();
+    tx.set(refs[i],{customerName:raw.customerName,amount:Number(raw.amount),date:raw.date,note:raw.note,createdAt});added++;
+   }
+  });
+  out.textContent="Tahsilat geri yükleme tamamlandı: "+added+" eklendi, "+existing+" kayıt zaten vardı.";
+  validatedPaymentBackup=null;$("restoreAll").disabled=true;
+ }catch(err){out.textContent="Tahsilatlar geri yüklenemedi: "+(err.message||err.code)+". Mevcut kayıtlar korunuyor."}
+});
+const customers=[];const operators=[];const operatorLookup=new Map();
+function refreshManage(){const type=$("manageType").value,arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const selected=$("manageItem").value;$("manageItem").replaceChildren(...arr.map(x=>new Option(type==="operator"?x.displayName+" (@"+x.username+")":type==="customer"?x.name:type==="machine"?(x.machineName||x.id):((x.machineName||"İş")+" · "+(x.operatorName||"")),x.id)));if(arr.some(x=>x.id===selected))$("manageItem").value=selected;fillManageName();}
+function fillManageName(){const type=$("manageType").value,id=$("manageItem").value;const arr=type==="operator"?operators:type==="customer"?customers:type==="machine"?cached:archivedJobs;const item=arr.find(x=>x.id===id);$("manageName").value=item?(type==="operator"?item.displayName||"":type==="customer"?item.name||"":type==="machine"?item.machineName||item.plaka||item.id:""):"";}
+$("manageType").onchange=()=>{refreshManage();fillManageName()};
+$("manageItem").onchange=fillManageName;
+$("manageRename").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,name=$("manageName").value.trim(),out=$("manageResult");
+ if(!id||!name)return;out.textContent="";
+ const btn=$("manageRename");btn.disabled=true;
+ try{
+  if(type==="job")throw Error("Geçmiş iş kayıtlarının isimleri tarihsel doğruluk için değiştirilmez.");
+  const source=type==="operator"?operators:type==="customer"?customers:cached;
+  const item=source.find(x=>x.id===id);if(!item)throw Error("Kayıt bulunamadı.");
+  const oldName=type==="operator"?item.displayName:type==="customer"?item.name:item.machineName;
+  if(oldName===name){out.textContent="Ad zaten aynı.";return}
+  const ref=doc(db,type==="operator"?"operators":type==="customer"?"customers":"machines",id);
+  const linked=type==="operator"?cached.filter(m=>m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):type==="customer"?cached.filter(m=>m.customerName===oldName):[];
+  if(linked.length>100)throw Error("Bağlı makine sayısı çok yüksek. İşlem güvenli sınırı aşıyor.");
+  const refs=linked.map(m=>doc(db,"businesses",tenantId,"machines",m.id));
+  await runTransaction(db,async tx=>{
+   const main=await tx.get(ref);if(!main.exists())throw Error("Kayıt artık mevcut değil.");
+   const snaps=[];for(const linkedRef of refs)snaps.push(await tx.get(linkedRef));
+   const field=type==="operator"?"displayName":type==="customer"?"name":"machineName";
+   tx.update(ref,{[field]:name,updatedAt:serverTimestamp()});
+   for(let i=0;i<refs.length;i++){
+    if(!snaps[i].exists())continue;
+    const m=snaps[i].data();
+    const valid=type==="operator"?(m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):m.customerName===oldName;
+    if(valid)tx.update(refs[i],{[type==="operator"?"operatorName":"customerName"]:name,updatedAt:serverTimestamp()});
+   }
+  });
+  out.textContent="Ad güncellendi. "+linked.length+" bağlı makine kontrol edildi. Eski arşiv kayıtları korunuyor.";
+ }catch(err){out.textContent="Güncellenemedi: "+(err.message||err.code)}
+ finally{btn.disabled=false}
+};
+$("managePassword").onclick=async()=>{const button=$("managePassword"),out=$("manageResult");if($("manageType").value!=="operator"){out.textContent="Önce operatör seçin.";return}const op=operators.find(x=>x.id===$("manageItem").value),newPassword=$("manageOperatorPassword").value;if(!op||op.authStatus!=="active"||!op.authUid){out.textContent="Aktif operatör seçin.";return}if(newPassword.length<8||newPassword.length>128){out.textContent="Şifre 8-128 karakter olmalı.";return}if(!confirm(op.displayName+" operatörünün şifresini değiştirmek istiyor musunuz?"))return;button.disabled=true;try{await tenantOperatorAdmin({action:"password",username:op.username,password:newPassword});$("manageOperatorPassword").value="";out.textContent="Operatör şifresi değiştirildi. Yeni şifreyi operatöre güvenli şekilde iletin."}catch(err){out.textContent="Şifre değiştirilemedi: "+(err.message||err.code)}finally{button.disabled=false}};
+$("manageDelete").onclick=async()=>{
+ const type=$("manageType").value,id=$("manageItem").value,out=$("manageResult");
+ if(!id)return;
+ out.textContent="";
+ try{
+  const machineBusy=m=>["running","paused","broken"].includes(m.status)||m.jobReady===true;
+  if(type==="operator"){
+   const op=operators.find(x=>x.id===id);if(!op)throw Error("Operatör bulunamadı.");
+   const assigned=cached.filter(m=>m.operatorUid===op.authUid||m.operatorUsername===op.username);
+   if(assigned.length)throw Error("Operatöre bağlı "+assigned.length+" makine/görev var. Önce görevleri güvenli biçimde tamamlayıp bağlantılarını kaldırın. Operatör silinmedi.");
+   if(!confirm(op.displayName+" operatörünü kaldırmak istiyor musunuz? Geçmiş işler korunacak."))return;
+   await tenantOperatorAdmin({action:"delete",username:op.username});
+   out.textContent="Operatör hesabı devre dışı bırakıldı; giriş erişimi kapatıldı. Geçmiş işler korundu.";
+  }else if(type==="machine"){
+   const m=cached.find(x=>x.id===id);if(!m)throw Error("Makine bulunamadı.");
+   if(machineBusy(m)||m.operatorUid||m.operatorUsername)throw Error("Makineye atanmış operatör veya açık görev var. Önce bağlantıları kaldırın; kayıt silinmedi.");
+   if(!confirm((m.machineName||id)+" makinesini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"businesses",tenantId,"machines",id));out.textContent="Makine silindi; geçmiş işler korundu.";
+  }else if(type==="customer"){
+   const c=customers.find(x=>x.id===id);if(!c)throw Error("Müşteri bulunamadı.");
+   if(cached.some(m=>m.customerName===c.name&&(machineBusy(m)||m.operatorUid)))throw Error("Müşterinin açık görevi var. Önce görevi tamamlayın; müşteri silinmedi.");
+   if(!confirm(c.name+" müşterisini silmek istiyor musunuz? Geçmiş işler korunacak."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"businesses",tenantId,"customers",id));out.textContent="Müşteri silindi; geçmiş işler korundu.";
+  }else{
+   const job=archivedJobs.find(x=>x.id===id);if(!job)throw Error("İş kaydı bulunamadı.");
+   if(!confirm("Bu ARŞİV iş kaydını kalıcı olarak silmek istiyor musunuz? Bu işlem geri alınamaz."))return;
+   const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js");
+   await deleteDoc(doc(db,"businesses",tenantId,"jobs",id));out.textContent="Arşiv iş kaydı silindi.";
+  }
+ }catch(err){out.textContent="Silinemedi: "+(err.message||err.code)}
+};
+$("addType").addEventListener("change",()=>{for(const [type,id] of [["operator","addOperatorPanel"],["machine","addMachinePanel"],["customer","addCustomerPanel"]])$(id).classList.toggle("hidden",$("addType").value!==type)});
+function renderOperatorTaskButtons(){
+ const card=$("operatorTaskCard"),hint=$("operatorTaskHint"),select=$("taskOperator"),toolbar=$("operatorToolbarButtons"),label=$("selectedTaskOperator");
+ if(!card||!hint||!select||!toolbar)return;
+ const active=operators.filter(o=>o.authStatus==="active"),selected=select.value;
+ toolbar.replaceChildren();
+ for(const op of active){
+  const value=op.displayName+" (@"+op.username+")";
+  const button=document.createElement("button");button.type="button";
+  button.textContent=op.displayName||op.username;
+  button.classList.toggle("selected",value===selected&&!card.classList.contains("hidden"));
+  button.setAttribute("aria-label",(op.displayName||op.username)+" operatörüne görev ata");
+  button.addEventListener("click",()=>{
+   select.value=value;
+   card.classList.remove("hidden");
+   if(label)label.textContent=op.displayName||op.username;
+   hint.textContent=(op.displayName||op.username)+" için makine ve müşteri seçin.";
+   $("legacyTaskNav").click();
+   renderOperatorTaskButtons();
+   $("taskTool").scrollIntoView({behavior:"smooth",block:"start"});
+  });
+  toolbar.appendChild(button);
+ }
+ const selectedOperator=active.find(o=>o.displayName+" (@"+o.username+")"===selected);
+ if(!selectedOperator){
+  card.classList.add("hidden");
+  if(label)label.textContent="Seçilmedi";
+  hint.textContent=active.length?"Görevlendir grubundan operatör seçin.":"Aktif operatör bulunamadı. Önce operatör ekleyin.";
+ }else if(label)label.textContent=selectedOperator.displayName||selectedOperator.username;
+}
+
+function refreshOperatorApprovalBadge(){
+ const badge=$("operatorApprovalBadge"),nav=$("operatorAccountsNav");
+ if(!badge||!nav)return;
+ const pending=operators.filter(o=>Boolean(o.pendingUid)&&o.authStatus!=="active");
+ badge.hidden=pending.length===0;
+ badge.textContent=pending.length>9?"9+":String(pending.length);
+ nav.setAttribute("aria-label",pending.length?"Operatör Hesapları: "+pending.length+" onay bekliyor":"Operatör Hesapları");
+ nav.title=pending.length?pending.length+" operatör onay bekliyor":"Operatör Hesapları";
+}
+function refreshTaskLists(){
+ const lists=[
+ ["taskMachine","Makine seçiniz",cached.filter(m=>m.status==="idle"&&m.jobReady!==true).map(m=>m.machineName||m.id)],
+ ["taskOperator","Operatör seçiniz",operators.filter(o=>o.authStatus==="active").map(o=>o.displayName+" (@"+o.username+")")],
+ ["taskCustomer","Müşteri seçiniz",customers.map(c=>c.name)]
+ ];
+ for(const [id,label,values] of lists){const el=$(id),previous=el.value;el.replaceChildren(new Option(label,""),...values.map(v=>new Option(v,v)));if(values.includes(previous))el.value=previous;}
+ renderOperatorTaskButtons();
+}
+$("customerForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("customerSave");b.disabled=true;try{const name=$("customerName").value.trim();if(!name)throw Error("Müşteri adı gerekli");if(customers.some(c=>c.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr")))throw Error("Bu müşteri zaten kayıtlı");await addDoc(collection(db,"businesses",tenantId,"customers"),{name,createdAt:serverTimestamp()});$("customerForm").reset();$("customerResult").textContent="Müşteri kaydedildi."}catch(err){$("customerResult").textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
+$("repairAssignments").addEventListener("click",async()=>{const b=$("repairAssignments");if(!confirm("Operatörlerin mevcut makine atamalarını yeniden eşitlemek istiyor musunuz? Çalışmalar değişmez."))return;b.disabled=true;try{let count=0;for(const op of operators){if(!op.authUid)continue;const linked=cached.filter(m=>m.operatorUid===op.authUid||m.operatorUsername===op.username).map(m=>m.id);if(!linked.length)continue;await runTransaction(db,async tx=>{const ur=doc(db,"users",op.authUid),or=doc(db,"businesses",tenantId,"operators",op.id);const [us,os]=await Promise.all([tx.get(ur),tx.get(or)]);if(!us.exists()||!os.exists()||us.data().role!=="tenant_operator"||us.data().tenantId!==tenantId||os.data().authUid!==op.authUid)throw Error(op.username+" hesabı bu firmaya ait değil veya bulunamadı");const merged=[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),...linked])];tx.update(ur,{machineIds:merged,updatedAt:serverTimestamp()});tx.update(or,{machineIds:merged,updatedAt:serverTimestamp()})});count++}$("taskResult").textContent=count+" operatörün makine atamaları eşitlendi."}catch(e){$("taskResult").textContent="Atama onarımı başarısız: "+(e.message||e.code)}finally{b.disabled=false}});
+$("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("taskSave");b.disabled=true;const out=$("taskResult");out.textContent="";try{
+ const machineName=$("taskMachine").value.trim(),operatorText=$("taskOperator").value.trim(),customerName=$("taskCustomer").value.trim();
+ const machine=cached.find(m=>(m.machineName||m.id)===machineName);
+ const operator=operators.find(o=>o.displayName+" (@"+o.username+")"===operatorText);
+ const customer=customers.find(c=>c.name===customerName);
+ if(!machine||!operator||!customer)throw Error("Lütfen listeden kayıtlı makine, operatör ve müşteri seçin.");if(!operator.authUid||operator.authStatus!=="active")throw Error("Operatör henüz yönetici tarafından onaylanmadı.");
+ await runTransaction(db,async tx=>{const machineRef=doc(db,"businesses",tenantId,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"businesses",tenantId,"operators",operator.id);
+ const [ms,us,os]=await Promise.all([tx.get(machineRef),tx.get(userRef),tx.get(opRef)]);
+ if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="tenant_operator"||us.data().tenantId!==tenantId)throw Error("Makine veya firma operatörü yetkisi bulunamadı.");
+ const linkedIds=[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),...cached.filter(x=>x.operatorUid===operator.authUid).map(x=>x.id)])].filter(id=>id!==machine.id);
+ const linkedSnapshots=await Promise.all(linkedIds.map(id=>tx.get(doc(db,"businesses",tenantId,"machines",id))));
+ for(const other of linkedSnapshots){if(!other.exists())continue;const om=other.data();if(om.operatorUid===operator.authUid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Operatörün arşivlenmemiş başka bir işi var ("+(om.machineName||other.id)+"). Önce işi bitirip yönetici onayıyla arşivleyin.");}
+
+
+ const m=ms.data();const travelFee=Number($("taskRate").value);if($("taskRate").value.trim()===""||!Number.isFinite(travelFee)||travelFee<0||travelFee>100000000)throw Error("Geçerli yol ücreti girin.");if(m.defaultHourlyRate==null||!Number.isFinite(Number(m.defaultHourlyRate)))throw Error("Makinenin saatlik ücretini önce Makineyi Düzenle bölümünden kaydedin.");if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
+ tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username,operatorName:operator.displayName,customerName:customer.name,hourlyRate:Number(m.defaultHourlyRate),travelFee:Number($("taskRate").value),jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
+ tx.update(userRef,{machineIds:[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
+ tx.update(opRef,{machineIds:[...new Set([...(Array.isArray(os.data().machineIds)?os.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
+ });out.textContent="Görev oluşturuldu. Operatör artık bu görevi başlatabilir.";$("taskMachine").value="";$("taskCustomer").value="";$("taskRate").value="";
+ }catch(err){out.textContent="Görev oluşturulamadı: "+(err.message||err.code)}finally{b.disabled=false}});
+function refreshSuggestions(){
+ const select=$("opMachine");if(!select)return;const previous=select.value;
+ select.replaceChildren(new Option("Makine seçin",""));
+ for(const m of cached)select.add(new Option(m.machineName||m.plaka||m.id,m.id));
+ if(cached.some(m=>m.id===previous))select.value=previous;
+ const names=[...new Set([...cached.map(m=>m.operatorUsername),...operators.map(o=>o.username)].filter(Boolean))];
+ $("operatorSuggestions").replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
+}
+function render(){
+ const pendingArchive=cached.filter(m=>m.status==="done").length;
+ const archiveButton=document.querySelector('button[data-panel="4"]');
+ if(archiveButton){let badge=archiveButton.querySelector(".archive-notification");if(!badge){badge=document.createElement("span");badge.className="archive-notification";badge.setAttribute("aria-live","polite");archiveButton.appendChild(badge)}badge.hidden=pendingArchive===0;badge.textContent=pendingArchive>0?String(pendingArchive):"";archiveButton.setAttribute("aria-label","Bitirilen İşi Arşivle"+(pendingArchive?" - "+pendingArchive+" tamamlanan iş bekliyor":""))}
+ $("total").textContent=cached.length;$("running").textContent=cached.filter(m=>m.status==="running").length;$("paused").textContent=cached.filter(m=>m.status==="paused").length;$("broken").textContent=cached.filter(m=>m.status==="broken").length;
+ $("machines").innerHTML=cached.length?cached.map(m=>'<article class="card machine '+safe(["running","paused","broken","done"].includes(m.status)?m.status:"")+'"><div class="top"><strong>🚜 '+safe(m.machineName||m.plaka||m.id)+'</strong><span class="tag">'+safe((m.operatorName?m.operatorName.trim()+" ":"")+(m.status==="running"?"çalışıyor":m.status==="paused"?"bekliyor":m.status==="done"?"tamamladı":m.status==="broken"?"arızada":labels[m.status]||"Bilinmiyor"))+'</span></div><p>Operatör: '+safe(m.operatorName||"Atanmadı")+(m.operatorUsername?" (@"+safe(m.operatorUsername)+")":"")+'</p><p>Müşteri: '+safe(m.customerName||"Atanmadı")+'</p><p>Çalışma süresi: <strong>'+duration(m)+'</strong></p><details class="timeline-details"><summary>🕒 Çalışma zaman çizelgesi</summary>'+timelineHtml(m.timeline)+'</details>'+ (m.status==="broken"?'<p style="color:#b91c1c">Arıza: '+safe(m.faultReason||"Açıklama yok")+'</p>':"")+'<small>Son güncelleme: '+safe(m.updatedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small><button type="button" class="secondary edit-machine" data-id="'+safe(m.id)+'">Makineyi düzenle</button>'+(m.status==="done"?'<button type="button" class="reset-machine" data-id="'+safe(m.id)+'">Bitirilen İşi Arşivle</button>':"")+'</article>').join(""):'<p class="muted">Henüz makine kaydı yok. Operatör bağlantısı kurulduğunda burada görünecek.</p>';
+}
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("error").textContent="";try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value)}catch(err){$("error").textContent="Giriş başarısız: "+err.code}});
+$("machineForm").addEventListener("submit",async e=>{e.preventDefault();const button=$("addMachine");button.disabled=true;$("machineError").textContent="";try{const name=$("newMachine").value.trim(),rate=Number($("newMachineRate").value);if(!name)throw new Error("Makine adı gerekli");if($("newMachineRate").value.trim()===""||!Number.isFinite(rate)||rate<0||rate>100000000)throw Error("Geçerli saatlik ücret girin.");await addDoc(collection(db,"businesses",tenantId,"machines"),{machineName:name,defaultHourlyRate:rate,operatorName:"",operatorUsername:"",customerName:"",status:"idle",jobReady:false,elapsedMs:0,startedAt:null,updatedAt:serverTimestamp(),faultReason:""});$("machineForm").reset();message("Makine eklendi · Canlı veri izleniyor")}catch(err){$("machineError").textContent="Makine eklenemedi: "+(err.code||err.message)}finally{button.disabled=false}});
+$("operatorForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("opSave"),out=$("opResult");b.disabled=true;out.textContent="";try{
+ const username=$("opUsername").value.trim().toLowerCase(),displayName=$("opName").value.trim();
+ if(!/^[a-z0-9._-]{3,32}$/.test(username)||!displayName)throw Error("Geçerli kullanıcı adı ve ad girin.");
+ const result=await tenantOperatorAdmin({action:"create",username,displayName,password:$("opPassword").value});
+ out.textContent="Operatör hesabı oluşturuldu. Giriş e-postası: "+result.data.loginEmail+" — Şifreyi operatöre güvenli şekilde iletin.";$("operatorForm").reset();
+ }catch(err){out.textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
+$("machines").addEventListener("click",e=>{const b=e.target.closest("button.edit-machine");if(!b)return;const m=cached.find(x=>x.id===b.dataset.id);if(!m)return;$("editId").value=m.id;$("editMachine").value=m.machineName||m.plaka||"";$("editMachineRate").value=m.defaultHourlyRate??m.hourlyRate??"";$("editOperator").value=m.operatorName||"";$("editUsername").value=m.operatorUsername||"";$("editCustomer").value=m.customerName||"";$("editError").textContent="";$("editSection").classList.remove("hidden");$("editSection").scrollIntoView({behavior:"smooth",block:"start"})});
+$("machines").addEventListener("click",async e=>{const b=e.target.closest("button.reset-machine");if(!b)return;const id=b.dataset.id;const current=cached.find(m=>m.id===id);if(!current||current.status!=="done"){message("Arşivlenecek tamamlanmış iş bulunamadı.");return}const rawRate=prompt("BİTİRİLEN İŞİ KONTROL ET\\nMakine: "+(current.machineName||id)+"\\nÇalışma süresi: "+duration(current)+"\\n\\nSaatlik ücreti (TL) kontrol edin veya düzeltin:",current.hourlyRate==null?"":String(current.hourlyRate));if(rawRate===null)return;const rate=Number(rawRate.trim().replace(",","."));if(!rawRate.trim()||!Number.isFinite(rate)||rate<0){message("Geçerli bir saatlik ücret girin.");return}const workTotal=Math.round(Math.floor(Math.max(0,Number(current.elapsedMs)||0)/1000)*rate/3600*100)/100;const travelTotal=Number(current.travelFee)||0;const total=Math.round((workTotal+travelTotal)*100)/100;if(!confirm("ARŞİV ONAYI\\nMakine: "+(current.machineName||id)+"\\nSüre: "+duration(current)+"\\nSaatlik ücret: "+rate.toLocaleString("tr-TR")+" TL\\nÇalışma bedeli: "+workTotal.toLocaleString("tr-TR")+" TL\\nYol ücreti: "+travelTotal.toLocaleString("tr-TR")+" TL\\nGenel toplam: "+total.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" TL\\n\\nİşi arşivleyip yeni görev için makineyi hazırla?"))return;b.disabled=true;try{await runTransaction(db,async tx=>{const ref=doc(db,"businesses",tenantId,"machines",id),snap=await tx.get(ref);if(!snap.exists()||snap.data().status!=="done")throw Error("Makine tamamlandı durumunda değil.");const old=snap.data();if(Number(old.elapsedMs||0)!==Number(current.elapsedMs||0)||old.hourlyRate!==current.hourlyRate)throw Error("İş bilgileri değişti. Yeniden kontrol edin.");const historyRef=doc(db,"businesses",tenantId,"jobs",id+"_"+String(old.updatedAt?.toMillis?.()||Date.now()));tx.set(historyRef,{machineId:id,machineName:old.machineName||"",operatorName:old.operatorName||"",operatorUsername:old.operatorUsername||"",customerName:old.customerName||"",elapsedMs:old.elapsedMs||0,hourlyRate:rate,travelFee:Number(old.travelFee)||0,workAmount:Math.round(Math.floor(Math.max(0,Number(old.elapsedMs)||0)/1000)*rate/3600*100)/100,amount:Math.round((Math.floor(Math.max(0,Number(old.elapsedMs)||0)/1000)*rate/3600+(Number(old.travelFee)||0))*100)/100,status:"done",completedAt:old.updatedAt||null,archivedAt:serverTimestamp(),operatorUid:old.operatorUid||null,timeline:Array.isArray(old.timeline)?old.timeline:[]});tx.update(ref,{timeline:[],status:"idle",jobReady:false,elapsedMs:0,hourlyRate:null,travelFee:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()})});message("İş geçmişe kaydedildi. Yeni çalışma için Operatöre Görev Ata bölümünü kullanın.")}catch(err){message("Yeni çalışma hazırlanamadı: "+(err.message||err.code))}finally{b.disabled=false}});
+$("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editForm").reset()};
+$("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");if($("editMachineRate").value.trim()===""||!Number.isFinite(Number($("editMachineRate").value))||Number($("editMachineRate").value)<0||Number($("editMachineRate").value)>100000000)throw Error("Geçerli saatlik ücret girin.");await updateDoc(doc(db,"businesses",tenantId,"machines",id),{machineName:$("editMachine").value.trim(),defaultHourlyRate:Number($("editMachineRate").value),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
+$("logout").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async user=>{
+ if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=null;window.__puantorSaveLearning=null;window.dispatchEvent(new Event("puantor-learning-disabled"));
+ if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(unsubscribeCustomers){unsubscribeCustomers();unsubscribeCustomers=null}if(unsubscribeOperators){unsubscribeOperators();unsubscribeOperators=null}if(ticker){clearInterval(ticker);ticker=null}
+ $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
+ if(!user){location.replace("./giris.html");return}
+ $("login").classList.add("hidden");
+ try{
+  const profile=await getDoc(doc(db,"users",user.uid));
+  if(!profile.exists()||profile.data().role!=="tenant_admin"||profile.data().tenantId!==user.uid){location.replace("./giris.html");return}tenantId=user.uid;
+  $("logout").classList.remove("hidden");$("dashboard").classList.remove("hidden");message("Bağlandı · Canlı veri izleniyor");startLearningSync(user.uid);
+  unsubscribe=onSnapshot(collection(db,"businesses",tenantId,"machines"),snap=>{cached=snap.docs.map(d=>({id:d.id,...d.data()}));publishSearchData();refreshSuggestions();refreshTaskLists();refreshManage();$("updated").textContent="Son yenileme: "+new Date().toLocaleTimeString("tr-TR");render()},err=>message("Veri okunamadı: "+err.code));
+  unsubscribeJobs=onSnapshot(collection(db,"businesses",tenantId,"jobs"),snap=>{archivedJobs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.archivedAt?.toMillis?.()||0)-(a.archivedAt?.toMillis?.()||0));updateJobOptions();renderJobs();updateStatementOptions();refreshManage()},err=>{$("jobsHistory").textContent="Geçmiş okunamadı: "+(err.code||err.message)});
+  unsubscribeCustomers=onSnapshot(collection(db,"businesses",tenantId,"customers"),snap=>{customers.splice(0,customers.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();updateJobOptions();updateStatementOptions();refreshTaskLists();refreshManage()},err=>message("Müşteriler okunamadı: "+(err.code||err.message)));
+  unsubscribePayments=onSnapshot(collection(db,"businesses",tenantId,"payments"),snap=>{payments=snap.docs.map(d=>({id:d.id,...d.data()}));updateStatementOptions()},err=>{$("paymentResult").textContent="Tahsilat kayıtları okunamadı: "+(err.code||err.message)+". Firebase erişim kuralları kontrol edilmeli."});
+  unsubscribeOperators=onSnapshot(collection(db,"businesses",tenantId,"operators"),snap=>{operators.splice(0,operators.length,...snap.docs.map(d=>({id:d.id,...d.data()})));publishSearchData();refreshTaskLists();refreshManage();refreshOperatorApprovalBadge()},err=>message("Operatörler okunamadı: "+(err.code||err.message)));
+  ticker=setInterval(render,1000);
+ }catch(err){message("Yetki kontrolü başarısız: "+err.code)}
+});
+</script>
+
+</body></html>

@@ -10,16 +10,81 @@ service cloud.firestore {
      machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
   }
   function tenantAdmin(tenantId) { return signedIn() && request.auth.uid == tenantId && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId; }
+  function tenantOperator(tenantId) {
+   return signedIn() &&
+     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_operator' &&
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+  }
+  function tenantMachineAssigned(tenantId, machineId) {
+   return tenantOperator(tenantId) &&
+     machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds &&
+     resource.data.operatorUid == request.auth.uid;
+  }
   match /businesses/{tenantId} {
    allow create: if signedIn() && request.auth.uid == tenantId && request.resource.data.keys().hasOnly(['name','managerName','ownerUid','createdAt']) && request.resource.data.ownerUid == tenantId && request.resource.data.name is string && request.resource.data.managerName is string && request.resource.data.createdAt == request.time;
-   allow read, update: if tenantAdmin(tenantId);
+   allow read: if tenantAdmin(tenantId);
+   // The owner and original creation timestamp must remain immutable.
+   allow update: if tenantAdmin(tenantId) &&
+     request.resource.data.ownerUid == resource.data.ownerUid &&
+     resource.data.ownerUid == tenantId &&
+     request.resource.data.createdAt == resource.data.createdAt &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','managerName']) &&
+     request.resource.data.name is string &&
+     request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100 &&
+     request.resource.data.managerName is string &&
+     request.resource.data.managerName.size() >= 2 && request.resource.data.managerName.size() <= 80;
    allow delete: if false;
    match /{subcollection}/{recordId} {
-    allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','payments'];
+    allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','payments','searchPreferences'];
+    // Operators can only read machines assigned to them, never other tenant records.
+    allow get: if subcollection == 'machines' && tenantMachineAssigned(tenantId, recordId);
+    // A tenant operator may only advance their own assigned machine's runtime state.
+    allow update: if subcollection == 'machines' &&
+      tenantMachineAssigned(tenantId, recordId) &&
+      resource.data.get('jobReady', false) == true &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt','timeline'
+      ]) &&
+      request.resource.data.updatedAt == request.time &&
+      request.resource.data.elapsedMs is number &&
+      request.resource.data.elapsedMs >= resource.data.get('elapsedMs', 0) &&
+      request.resource.data.timeline is list &&
+      request.resource.data.timeline.size() == resource.data.get('timeline', []).size() + 1 &&
+      request.resource.data.timeline.size() <= 250 &&
+      request.resource.data.timeline[request.resource.data.timeline.size()-1].action in ['start','pause','fault','finish'] &&
+      (
+        (request.resource.data.status == 'running' &&
+         resource.data.status in ['idle','paused','broken'] &&
+         request.resource.data.timeline[request.resource.data.timeline.size()-1].action == 'start' &&
+         request.resource.data.startedAt == request.time &&
+         request.resource.data.jobReady == true &&
+         request.resource.data.faultReason == '' &&
+         getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeMachineId == recordId) ||
+        (request.resource.data.status in ['paused','broken','done'] &&
+         resource.data.status in ['idle','running','paused','broken'] &&
+         request.resource.data.timeline[request.resource.data.timeline.size()-1].action ==
+           (request.resource.data.status == 'paused' ? 'pause' : (request.resource.data.status == 'broken' ? 'fault' : 'finish')) &&
+         (request.resource.data.status != 'paused' || resource.data.status == 'running') &&
+         request.resource.data.startedAt == null &&
+         request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
+         (request.resource.data.status != 'broken' ||
+           (request.resource.data.faultReason is string &&
+            request.resource.data.faultReason.size() > 0 &&
+            request.resource.data.faultReason.size() <= 500)) &&
+         getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('activeMachineId', '') != recordId)
+      );
+
    }
   }
+  function tenantManagerForUser(data) {
+   return signedIn() && data.get('tenantId', '') is string &&
+     data.get('tenantId', '') == request.auth.uid &&
+     tenantAdmin(request.auth.uid) &&
+     data.get('role', '') in ['tenant_operator_pending', 'tenant_operator'];
+  }
   match /users/{uid} {
-   allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+   allow read: if isAdmin() || (signedIn() && request.auth.uid == uid) || tenantManagerForUser(resource.data);
    allow create: if isAdmin() || (
      signedIn() && request.auth.uid == uid &&
      request.auth.token.email == request.resource.data.email &&
@@ -41,6 +106,31 @@ service cloud.firestore {
      getAfter(/databases/$(database)/documents/operators/$(request.resource.data.username)).data.pendingUid == uid
    );
    allow update: if isAdmin() || (
+     signedIn() && request.auth.uid == uid &&
+     resource.data.get('role', '') == 'tenant_operator' &&
+     resource.data.get('tenantId', '') is string &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
+     request.resource.data.get('activeMachineId', '') is string &&
+     (
+       (request.resource.data.activeMachineId != '' &&
+        resource.data.get('activeMachineId', '') == '' &&
+        request.resource.data.activeMachineId in resource.data.get('machineIds', []) &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.operatorUid == uid &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.status == 'running') ||
+       (request.resource.data.activeMachineId == '' &&
+        resource.data.get('activeMachineId', '') != '' &&
+        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(resource.data.activeMachineId)).data.status != 'running')
+     )
+   ) || (
+     tenantManagerForUser(resource.data) &&
+     request.resource.data.get('tenantId', '') == resource.data.tenantId &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','displayName','machineIds','updatedAt']) &&
+     request.resource.data.get('role', '') in ['tenant_operator_pending','tenant_operator'] &&
+     (resource.data.role == 'tenant_operator' || request.resource.data.role == 'tenant_operator') &&
+     request.resource.data.get('machineIds', []) is list &&
+     request.resource.data.get('machineIds', []).size() <= 100 &&
+     request.resource.data.updatedAt == request.time
+   ) || (
      signedIn() && request.auth.uid == uid &&
      resource.data.role == 'operator' &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
