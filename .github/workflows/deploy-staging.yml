@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install Functions packages
-        run: npm --prefix functions ci
+        run: npm --prefix functions install --no-audit --no-fund
       - name: Google Cloud OIDC authentication (no static keys)
         uses: google-github-actions/auth@v2
         with:
