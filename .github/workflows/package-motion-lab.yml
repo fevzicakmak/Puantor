@@ -1,0 +1,42 @@
+name: Package Independent Motion Lab
+on:
+  push:
+    branches: [feature/otomatik-hareket-algilama]
+    paths:
+      - 'motion-lab.html'
+      - 'machine-motion.js'
+      - 'motion-classifier.js'
+      - 'motion-test-panel.js'
+      - 'motion-analysis.js'
+      - 'motion-record-store.js'
+      - '*.test.mjs'
+      - 'package.json'
+      - '.github/workflows/package-motion-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check motion code
+        run: npm run test:motion
+      - name: Prepare standalone site with allowlisted files
+        run: |
+          mkdir -p motion-lab-dist
+          cp motion-lab.html motion-lab-dist/index.html
+          cp machine-motion.js motion-classifier.js motion-test-panel.js motion-analysis.js motion-record-store.js motion-lab-dist/
+          touch motion-lab-dist/.nojekyll
+          test "$(find motion-lab-dist -maxdepth 1 -type f | wc -l)" -eq 7
+          ! grep -R -E 'firebase-config|gstatic.com/firebase|runTransaction\(' motion-lab-dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: puantor-motion-lab-https-site
+          path: motion-lab-dist/
+          include-hidden-files: true
+          retention-days: 30
