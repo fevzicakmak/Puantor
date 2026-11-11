@@ -21,8 +21,7 @@ button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:
 <label for="machineType">Makine tipi</label><select id="machineType"><option value="excavator">Ekskavatör / kepçe</option><option value="backhoe">JCB / kazıcı yükleyici</option><option value="loader">Lastikli yükleyici</option><option value="other">Diğer iş makinesi</option></select>
 <label for="mount">Telefonun konumu</label><select id="mount"><option value="machine">Kabinde sabit</option><option value="wrist">Kol / bilek (yalnızca ölçüm)</option></select>
 <label for="machineLabel">Makine etiketi (isteğe bağlı)</label><input id="machineLabel" maxlength="60" placeholder="Örnek: CAT 320">
-<label><input id="fixed" type="checkbox" style="width:auto;margin-right:7px">Telefon güvenli şekilde sabitlendi.</label>
-<div class="grid"><button id="start">Ölçümü başlat</button><button id="stop" disabled style="background:#a22b28">Durdur</button></div>
+<p class="alert" style="font-size:13px">Ölçüm otomatik başlar. iPhone ilk kullanımda hareket sensörü izni için ekrana bir kez dokunmanızı isteyebilir. Telefonu güvenli biçimde sabitleyin; sürüş sırasında ekrana dokunmayın.</p>
 <p class="status" id="status" aria-live="polite">Sensör bekleniyor.</p>
 </section>
 <section id="live"><div style="display:flex;justify-content:space-between"><b>Canlı ölçüm</b><span data-role="connection">Beklemede</span></div>
@@ -60,10 +59,9 @@ function checkDeviceSupport(){
   (secure?"✓ HTTPS/güvenli bağlantı":"✗ HTTPS gerekli: sensörler çalışmayabilir"),
   (motion?"✓ Hareket sensörü arayüzü mevcut":"✗ Bu tarayıcı hareket sensörünü sunmuyor"),
   (visible?"✓ Sayfa ön planda":"⚠ Sayfa arka planda: ölçüm askıda"),
-  (ios?"iPhone/iPad: Başlat düğmesine basınca hareket izni sorulabilir":"Cihaz hareket izni tarayıcıya bağlı")
+  (ios?"iPhone/iPad: izin için ekrana bir kez dokunmak gerekebilir":"Cihaz hareket izni tarayıcıya bağlı")
  ];
  $("deviceCheck").textContent=notes.join(" · ");
- $("start").disabled=!secure||!motion||active;
  return secure&&motion;
 }
 $("checkDevice").addEventListener("click",checkDeviceSupport);
@@ -98,22 +96,45 @@ const detector=new MachineMotionDetector(data=>{
  append({...data,message:"12 saniye hareket adayı",seconds:12},true);
  $("status").textContent="12 saniye hareket adayı algılandı. Otomatik çalışma başlatılmaz.";
 });
+let autoStarting=false;
 function stop(){
  active=false;detector.stop();panel.stop();
- $("start").disabled=false;$("stop").disabled=true;checkDeviceSupport();
- $("mount").disabled=false;latest=null;lastAt=0;save(true);
+ latest=null;lastAt=0;save(true);
 }
-$("start").addEventListener("click",async()=>{
- if(!checkDeviceSupport()){ $("status").textContent="HTTPS veya desteklenen hareket sensörü bulunamadı.";return;}
- if(!$("fixed").checked){$("status").textContent="Telefonun güvenli biçimde sabitlendiğini onaylayın.";return;}
- detector.setMode($("mount").value);
- const ok=await detector.start();
- if(!ok)return;
- active=true;panel.start();$("start").disabled=true;
- $("stop").disabled=false;$("mount").disabled=true;checkDeviceSupport();
- $("status").textContent="Sensör izni alındı; kalibrasyon bekleniyor.";
+async function startAutomatic(){
+ if(active||autoStarting||!checkDeviceSupport())return;
+ autoStarting=true;
+ try {
+  detector.setMode($("mount").value);
+  const ok=await detector.start();
+  if(ok){
+   active=true;panel.start();
+   $("status").textContent="Ölçüm otomatik başladı. Kalibrasyon yapılıyor.";
+   document.removeEventListener("click",firstGesture,true);
+  }else{
+   $("status").textContent="Hareket izni verilmedi veya sensör kullanılamıyor. Safari ayarlarını kontrol edin.";
+  }
+ }catch(error){$("status").textContent="Sensör hatası: "+(error.message||error);}
+ finally{autoStarting=false;}
+}
+function firstGesture(){
+ // iOS Safari DeviceMotionEvent.requestPermission() kullanıcı hareketi içinde çağrılmalıdır.
+ // Ölçüm başlatma düğmesi yok: sayfanın herhangi bir yerine ilk dokunuş yetiyor.
+ document.removeEventListener("click",firstGesture,true);
+ void startAutomatic();
+}
+$("mount").addEventListener("change",()=>{
+ if(active)stop();
+ // Mod değiştirme, kullanıcı hareketi olduğundan yeniden başlatmak güvenlidir.
+ void startAutomatic();
 });
-$("stop").addEventListener("click",stop);
+if(typeof DeviceMotionEvent!=="undefined" &&
+   typeof DeviceMotionEvent.requestPermission==="function"){
+ $("status").textContent="iPhone sensör izni için sayfaya bir kez dokunun; ardından ölçüm otomatik başlayacak.";
+ document.addEventListener("click",firstGesture,true);
+}else{
+ void startAutomatic();
+}
 $("label").addEventListener("click",()=>{
  if(!$("truth").value){$("status").textContent="Önce gerçek durumu seçin.";return;}
  if(!active||!latest||Date.now()-lastAt>5000){
