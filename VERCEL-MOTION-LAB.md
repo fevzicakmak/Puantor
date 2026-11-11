@@ -29,3 +29,13 @@ Bu yapılandırma yalnızca **Sensör Laboratuvarı** içindir; üretimde kullan
 - Sensör izni verilmezse durum açıklaması görüntülenir. Telefonda ölçüm yapılabilmesi için sayfanın ön planda olması gerekir.
 - Yeni Vercel üretim dağıtımı: `dpl_C8F5TCb9UBD8GUg9tYefvGmbN2xi` (`READY`). https://puantor-sensor-laboratuvari.vercel.app HTTP 200 ve otomatik başlatma kodu doğrulandı.
 - Bu otomatik **sensör ölçümüdür**; iş makinesinin çalışmasını, Firebase zaman çizelgesini veya ücretlendirmeyi otomatik olarak başlatmaz.
+
+## Otomatik saha kayıtları — 11 Kasım 2026
+- Sensör örnekleri yaklaşık saniyede 1 ölçüm; kayıt kuyruğu her 5 saniyede `IndexedDB` içine kalıcılaştırılır.
+- En çok 100.000 ölçüm saklanır; arşiv dolduğunda en eski örnekler silinir. Ayrıca son 1800 ölçümlük `localStorage` kısa yedeği tutulur.
+- Kullanıcının elle kayıt yapması gerekmez. Operatörün gerçeği işaretlemesi (`motor_off`, `working` vb.) ise ayrı isteğe bağlı saha etiketi olarak kalır.
+- Laboratuvar ekranında son arşiv sayısı ve kayıt zamanı gösterilir. Tüm arşiv CSV olarak dışa aktarılabilir.
+- iPhone Safari arka planda veya ekran kilitliyken sensör verisi üretmeyi durdurabilir; o aralıklar otomatik ölçülemez.
+- Kayıtlar yalnızca ilgili telefonun tarayıcısındadır, yöneticinin telefonuna veya Firebase'e aktarılmaz. Merkezi raporlama istenirse ayrı, yetkili sunucu aktarımı tasarlanmalıdır.
+- Dağıtım ID: `dpl_CVPYZCPAsfCqVCovXpyjoEySyNQL`, Vercel durum: `READY`. Canlı `index.html` ve `motion-field-archive.js` HTTP 200 doğrulandı.
+- GitHub Motion Pilot Tests #58: success; Package Independent Motion Lab #7: success.
