@@ -39,15 +39,16 @@ button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:
 <div id="summary" style="white-space:pre-wrap;font-size:13px;margin-top:12px"></div>
 </section>
 <section><h2 style="font-size:19px;margin-top:0">Veri kayıtları</h2>
-<p id="saved" style="font-size:13px">Kayıtlar bu cihazda saklanır.</p>
+<p id="saved" style="font-size:13px">Ölçümler otomatik saklanır.</p><p id="archiveState" style="font-size:13px;color:#166534;font-weight:700">Arşiv hazırlanıyor…</p>
 <button id="export">CSV dosyası indir</button><button id="clear" style="background:#9a3412">Test kayıtlarını sil</button>
-<p style="font-size:12px">Tarayıcı depolaması kesin yedek değildir. Ölçüm sonunda CSV'yi mutlaka indirin. Veriler Firebase'e gönderilmez.</p></section>
+<p style="font-size:12px">Her 5 saniyede otomatik yerel yedek alınır. Ekran kilitlenince veya tarayıcı arka plana geçince yeni sensör ölçümü durabilir. Veriler sunucuya gönderilmez. CSV yedeği yine alınmalıdır.</p></section>
 </main>
 <script type="module">
 import {MachineMotionDetector} from "./machine-motion.js";
 import {createMotionTestPanel} from "./motion-test-panel.js";
 import {analyzeMotionRecords} from "./motion-analysis.js";
 import {loadMotionRecords,saveMotionRecords,clearMotionRecords,MOTION_RECORD_LIMIT} from "./motion-record-store.js";
+import {openMotionArchive,insertMotionArchive,readMotionArchive,clearMotionArchive} from "./motion-field-archive.js";
 const $=id=>document.getElementById(id);
 const panel=createMotionTestPanel($("live"));
 function checkDeviceSupport(){
@@ -67,24 +68,57 @@ function checkDeviceSupport(){
 $("checkDevice").addEventListener("click",checkDeviceSupport);
 document.addEventListener("visibilitychange",checkDeviceSupport);
 
-let records=loadMotionRecords(localStorage),latest=null,lastAt=0,lastRecord=0,lastSaved=0;
-let active=false,sessionId="",seen=0;
+let storage=null;try{storage=localStorage;}catch{}
+let records=storage?loadMotionRecords(storage):[],latest=null,lastAt=0,lastRecord=0,lastSaved=0;
+let active=false;
+let archiveDb=null,archiveQueue=[],archiveCount=0,archiveBusy=false;
+function setArchive(text,warning=false){
+ $("archiveState").textContent=text;
+ $("archiveState").style.color=warning?"#b91c1c":"#166534";
+}
+async function flushArchive(){
+ if(!archiveDb||archiveBusy||!archiveQueue.length)return;
+ archiveBusy=true;
+ const batch=archiveQueue.splice(0);
+ try{
+  const result=await insertMotionArchive(archiveDb,batch);
+  archiveCount=result.count;
+  setArchive("✓ Arşiv: "+archiveCount.toLocaleString("tr-TR")+" ölçüm · "+new Date().toLocaleTimeString("tr-TR"));
+ }catch(e){
+  archiveQueue.unshift(...batch);
+  setArchive("⚠ Uzun kayıt başarısız. CSV yedeği alın: "+(e.message||e),true);
+ }finally{archiveBusy=false;}
+}
+async function prepareArchive(){
+ try{
+  archiveDb=await openMotionArchive();
+  archiveCount=(await readMotionArchive(archiveDb)).length;
+  setArchive("✓ Arşiv hazır: "+archiveCount+" ölçüm");
+  void flushArchive();
+ }catch{
+  setArchive("⚠ Uzun arşiv desteklenmiyor; kısa yedek ve CSV kullanın.",true);
+ }
+}
+void prepareArchive();
+setInterval(()=>{save(true);void flushArchive();},5000);
 function save(force=false){
  if(!force&&Date.now()-lastSaved<10000)return;
  lastSaved=Date.now();
- const v=saveMotionRecords(localStorage,records);
- $("saved").textContent=v.ok?"Bu cihazda kayıtlı "+v.count+" örnek.":"Tarayıcı kaydı başarısız: CSV indirin.";
+ const v=storage?saveMotionRecords(storage,records):{ok:false};
+ $("saved").textContent=v.ok?"✓ Otomatik yedek: "+v.count+" örnek · "+new Date().toLocaleTimeString("tr-TR"):"Tarayıcı kaydı başarısız: CSV indirin.";
 }
 function append(record,force=false){
  const now=Date.now();if(!force&&now-lastRecord<1000)return;
  lastRecord=now;
- records.push({time:new Date(now).toISOString(),mode:$("mount").value,
+ const entry={time:new Date(now).toISOString(),mode:$("mount").value,
    machine:$("machineLabel").value.trim()||$("machineType").value,status:"pilot",
    message:record.message||"",rms:record.rms??"",gyro:record.gyro??"",
    accelActive:record.accelActive??"",gyroActive:record.gyroActive??"",
    seconds:record.seconds??"",score:record.confidenceScore??"",
-   motionState:record.motionState??"",truth:record.truth||""});
+   motionState:record.motionState??"",truth:record.truth||""};
+ records.push(entry);archiveQueue.push(entry);
  if(records.length>MOTION_RECORD_LIMIT)records.shift();save(force);
+ if(force)void flushArchive();
 }
 const detector=new MachineMotionDetector(data=>{
  panel.render(data);
