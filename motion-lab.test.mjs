@@ -24,3 +24,16 @@ test("automatic sensor startup replaces explicit start button",()=>{
  assert.match(html,/typeof DeviceMotionEvent\.requestPermission==="function"/);
  assert.match(html,/void startAutomatic\(\)/);
 });
+
+test("field observations autosave every five seconds and export complete archive",()=>{
+ assert.match(html,/setInterval\(\(\)=>\{save\(true\);void flushArchive\(\);\},5000\)/);
+ assert.match(html,/archiveQueue\.push\(entry\)/);
+ assert.match(html,/await readMotionArchive\(archiveDb\)/);
+ assert.match(html,/exported\.map\(/);
+ assert.match(html,/id="archiveState"/);
+});
+test("archive module is syntax valid",()=>{
+ const filename=new URL("./motion-field-archive.js",import.meta.url);
+ const result=spawnSync(process.execPath,["--check",filename.pathname],{encoding:"utf8"});
+ assert.equal(result.status,0,result.stderr);
+});
