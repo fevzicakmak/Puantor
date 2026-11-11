@@ -189,21 +189,26 @@ function showReport(){
  "\nBunlar yalnızca operatörün işaretlediği anları gösterir; motorun açık olduğunu kanıtlamaz.";
 }
 $("report").addEventListener("click",showReport);
-$("export").addEventListener("click",()=>{
- save(true);if(!records.length){$("status").textContent="İndirilecek kayıt yok.";return;}
+$("export").addEventListener("click",async()=>{
+ save(true);await flushArchive();
+ let exported=records;
+ if(archiveDb){try{exported=[...await readMotionArchive(archiveDb),...archiveQueue];}catch{exported=records;}}
+ if(!exported.length){$("status").textContent="İndirilecek kayıt yok.";return;}
  const fields=["time","mode","machine","status","message","rms","gyro","accelActive","gyroActive","seconds","score","motionState","truth"];
  const quote=x=>'"'+String(x??"").replaceAll('"','""')+'"';
- const csv="\uFEFF"+fields.join(";")+"\r\n"+records.map(r=>fields.map(k=>quote(r[k])).join(";")).join("\r\n");
+ const csv="\uFEFF"+fields.join(";")+"\r\n"+exported.map(r=>fields.map(k=>quote(r[k])).join(";")).join("\r\n");
  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
  const a=document.createElement("a");a.href=url;a.download="puantor-saha-test-"+new Date().toISOString().slice(0,10)+".csv";a.click();
  setTimeout(()=>URL.revokeObjectURL(url),3000);
 });
-$("clear").addEventListener("click",()=>{
+$("clear").addEventListener("click",async()=>{
  if(!confirm("Bu cihazdaki test kayıtları silinsin mi? Önce CSV yedeği alın."))return;
- records=[];clearMotionRecords(localStorage);
- $("saved").textContent="Kayıtlar silindi.";showReport();
+ records=[];archiveQueue=[];
+ if(storage)clearMotionRecords(storage);
+ if(archiveDb){try{await clearMotionArchive(archiveDb);archiveCount=0;}catch{setArchive("Arşiv silinemedi; tekrar deneyin.",true);return;}}
+ setArchive("Arşiv silindi.");$("saved").textContent="Kayıtlar silindi.";showReport();
 });
-window.addEventListener("pagehide",()=>{save(true);stop();});
-$("saved").textContent="Bu cihazda kayıtlı örnek: "+records.length;
+window.addEventListener("pagehide",()=>{save(true);void flushArchive();stop();});
+$("saved").textContent="Otomatik yerel yedek etkin · Son "+records.length+" ölçüm";
 checkDeviceSupport();
 </script></body></html>
