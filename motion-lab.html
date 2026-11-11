@@ -16,6 +16,8 @@ button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:
 <section><h1>🚜 Puantör – Sensör Laboratuvarı</h1>
 <p>Bağımsız saha denemesi. Operatör hesabı, görev ve Firebase bağlantısı gerekmez. <strong>Makineyi otomatik başlatmaz, ücret oluşturmaz.</strong></p>
 <div class="alert">Önce motor kapalı ve telefon sabitken 8–12 saniye kalibrasyon yapın. Telefonun konumu güvenli olmalı; sürüş veya kumanda kullanımında ekrana dokunmayın.</div>
+<div id="deviceCheck" class="status" role="status" style="background:#edf4fc;border-radius:9px;padding:10px;margin-top:12px">Cihaz desteği denetleniyor…</div>
+<button id="checkDevice" type="button" style="background:#475569">Cihaz uygunluğunu yeniden denetle</button>
 <label for="machineType">Makine tipi</label><select id="machineType"><option value="excavator">Ekskavatör / kepçe</option><option value="backhoe">JCB / kazıcı yükleyici</option><option value="loader">Lastikli yükleyici</option><option value="other">Diğer iş makinesi</option></select>
 <label for="mount">Telefonun konumu</label><select id="mount"><option value="machine">Kabinde sabit</option><option value="wrist">Kol / bilek (yalnızca ölçüm)</option></select>
 <label for="machineLabel">Makine etiketi (isteğe bağlı)</label><input id="machineLabel" maxlength="60" placeholder="Örnek: CAT 320">
@@ -49,6 +51,24 @@ import {analyzeMotionRecords} from "./motion-analysis.js";
 import {loadMotionRecords,saveMotionRecords,clearMotionRecords,MOTION_RECORD_LIMIT} from "./motion-record-store.js";
 const $=id=>document.getElementById(id);
 const panel=createMotionTestPanel($("live"));
+function checkDeviceSupport(){
+ const secure=window.isSecureContext;
+ const motion=("DeviceMotionEvent" in window);
+ const visible=!document.hidden;
+ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);
+ const notes=[
+  (secure?"✓ HTTPS/güvenli bağlantı":"✗ HTTPS gerekli: sensörler çalışmayabilir"),
+  (motion?"✓ Hareket sensörü arayüzü mevcut":"✗ Bu tarayıcı hareket sensörünü sunmuyor"),
+  (visible?"✓ Sayfa ön planda":"⚠ Sayfa arka planda: ölçüm askıda"),
+  (ios?"iPhone/iPad: Başlat düğmesine basınca hareket izni sorulabilir":"Cihaz hareket izni tarayıcıya bağlı")
+ ];
+ $("deviceCheck").textContent=notes.join(" · ");
+ $("start").disabled=!secure||!motion||active;
+ return secure&&motion;
+}
+$("checkDevice").addEventListener("click",checkDeviceSupport);
+document.addEventListener("visibilitychange",checkDeviceSupport);
+
 let records=loadMotionRecords(localStorage),latest=null,lastAt=0,lastRecord=0,lastSaved=0;
 let active=false,sessionId="",seen=0;
 function save(force=false){
@@ -80,16 +100,17 @@ const detector=new MachineMotionDetector(data=>{
 });
 function stop(){
  active=false;detector.stop();panel.stop();
- $("start").disabled=false;$("stop").disabled=true;
+ $("start").disabled=false;$("stop").disabled=true;checkDeviceSupport();
  $("mount").disabled=false;latest=null;lastAt=0;save(true);
 }
 $("start").addEventListener("click",async()=>{
+ if(!checkDeviceSupport()){ $("status").textContent="HTTPS veya desteklenen hareket sensörü bulunamadı.";return;}
  if(!$("fixed").checked){$("status").textContent="Telefonun güvenli biçimde sabitlendiğini onaylayın.";return;}
  detector.setMode($("mount").value);
  const ok=await detector.start();
  if(!ok)return;
  active=true;panel.start();$("start").disabled=true;
- $("stop").disabled=false;$("mount").disabled=true;
+ $("stop").disabled=false;$("mount").disabled=true;checkDeviceSupport();
  $("status").textContent="Sensör izni alındı; kalibrasyon bekleniyor.";
 });
 $("stop").addEventListener("click",stop);
@@ -129,4 +150,5 @@ $("clear").addEventListener("click",()=>{
 });
 window.addEventListener("pagehide",()=>{save(true);stop();});
 $("saved").textContent="Bu cihazda kayıtlı örnek: "+records.length;
+checkDeviceSupport();
 </script></body></html>
