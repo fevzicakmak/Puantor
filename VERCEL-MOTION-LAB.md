@@ -39,3 +39,11 @@ Bu yapılandırma yalnızca **Sensör Laboratuvarı** içindir; üretimde kullan
 - Kayıtlar yalnızca ilgili telefonun tarayıcısındadır, yöneticinin telefonuna veya Firebase'e aktarılmaz. Merkezi raporlama istenirse ayrı, yetkili sunucu aktarımı tasarlanmalıdır.
 - Dağıtım ID: `dpl_CVPYZCPAsfCqVCovXpyjoEySyNQL`, Vercel durum: `READY`. Canlı `index.html` ve `motion-field-archive.js` HTTP 200 doğrulandı.
 - GitHub Motion Pilot Tests #58: success; Package Independent Motion Lab #7: success.
+
+## Sabit makine montajı ve ekran uyanıklığı (11 Kasım 2026)
+- Sahada telefonun makinenin güvenli bir noktasına sabitlenmesi kullanım kuralıdır. Cep/bilek/elde kullanım artık bağımsız laboratuvarın seçenekleri arasında değildir.
+- Laboratuvar ölçüm modunu yalnızca `machine` olarak kullanır ve sabit aparat uyarısını ekranda gösterir; yazılımın montajı **kesin şekilde doğruladığı iddia edilmez**.
+- Screen Wake Lock API destekleniyorsa açık ekran isteği otomatik yapılır; izin yoksa veya API yoksa operatör uyarılır. Bu API kilitli ekranda veya Safari arka plandayken güvenilir ölçümü garanti etmez.
+- Dönüşte ekran kilidi isteği yeniden denenir. Saha sorumlusu telefonu sürüşü ve kumandaları etkilemeyecek şekilde sabitlemelidir.
+- Vercel dağıtım: `dpl_BGY9Zh2rBkfr7861UyHEyrNjarJ2`, READY; https://puantor-sensor-laboratuvari.vercel.app HTTP 200. Otomatik arşiv (5 sn) korunmuştur.
+- GitHub Motion Pilot Tests #65 ve paketleme #10: success.
