@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "mkdir -p public && cp motion-lab.html public/index.html && cp machine-motion.js motion-classifier.js motion-test-panel.js motion-analysis.js motion-record-store.js public/ && test \"$(find public -maxdepth 1 -type f | wc -l)\" -eq 6",
+  "outputDirectory": "public",
+  "installCommand": "echo 'Static sensor lab; no dependencies' ",
+  "framework": null
+}
