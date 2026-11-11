@@ -19,9 +19,9 @@ button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:
 <div id="deviceCheck" class="status" role="status" style="background:#edf4fc;border-radius:9px;padding:10px;margin-top:12px">Cihaz desteği denetleniyor…</div>
 <button id="checkDevice" type="button" style="background:#475569">Cihaz uygunluğunu yeniden denetle</button>
 <label for="machineType">Makine tipi</label><select id="machineType"><option value="excavator">Ekskavatör / kepçe</option><option value="backhoe">JCB / kazıcı yükleyici</option><option value="loader">Lastikli yükleyici</option><option value="other">Diğer iş makinesi</option></select>
-<label for="mount">Telefonun konumu</label><select id="mount"><option value="machine">Kabinde sabit</option><option value="wrist">Kol / bilek (yalnızca ölçüm)</option></select>
+<div class="alert" id="mountRule" style="margin:12px 0"><strong>📍 Zorunlu saha kuralı: Telefon makine kabininde sağlam bir aparata sabitlenmelidir.</strong><div style="margin-top:5px">Cep, el ve bilekte ölçüm geçerli saha testi sayılmaz. Telefon kumanda kollarını, görüşü veya güvenli sürüşü engellememelidir.</div></div>
 <label for="machineLabel">Makine etiketi (isteğe bağlı)</label><input id="machineLabel" maxlength="60" placeholder="Örnek: CAT 320">
-<p class="alert" style="font-size:13px">Ölçüm otomatik başlar. iPhone ilk kullanımda hareket sensörü izni için ekrana bir kez dokunmanızı isteyebilir. Telefonu güvenli biçimde sabitleyin; sürüş sırasında ekrana dokunmayın.</p>
+<p class="alert" style="font-size:13px">Ölçüm otomatik başlar. iPhone ilk kullanımda hareket sensörü izni için ekrana bir kez dokunmanızı isteyebilir. Telefonu sabitlemeden ölçüm sonuçları saha verisi kabul edilmemelidir.</p><p class="status" id="screenState" role="status">Ekran durumu kontrol ediliyor…</p>
 <p class="status" id="status" aria-live="polite">Sensör bekleniyor.</p>
 </section>
 <section id="live"><div style="display:flex;justify-content:space-between"><b>Canlı ölçüm</b><span data-role="connection">Beklemede</span></div>
@@ -110,7 +110,7 @@ function save(force=false){
 function append(record,force=false){
  const now=Date.now();if(!force&&now-lastRecord<1000)return;
  lastRecord=now;
- const entry={time:new Date(now).toISOString(),mode:$("mount").value,
+ const entry={time:new Date(now).toISOString(),mode:"machine",
    machine:$("machineLabel").value.trim()||$("machineType").value,status:"pilot",
    message:record.message||"",rms:record.rms??"",gyro:record.gyro??"",
    accelActive:record.accelActive??"",gyroActive:record.gyroActive??"",
@@ -131,6 +131,33 @@ const detector=new MachineMotionDetector(data=>{
  $("status").textContent="12 saniye hareket adayı algılandı. Otomatik çalışma başlatılmaz.";
 });
 let autoStarting=false;
+let wakeLock=null;
+async function requestScreenAwake(){
+ if(document.hidden)return;
+ if(!("wakeLock" in navigator)){
+  $("screenState").textContent="⚠ Bu tarayıcı ekranı açık tutma izni sunmuyor. Ekran kilidini manuel olarak engelleyin.";
+  return;
+ }
+ try{
+  if(wakeLock)return;
+  wakeLock=await navigator.wakeLock.request("screen");
+  $("screenState").textContent="✓ Ekranı açık tutma isteği kabul edildi. Sayfayı ön planda tutun.";
+  wakeLock.addEventListener("release",()=>{
+   wakeLock=null;
+   $("screenState").textContent="⚠ Ekran kilidi koruması kapandı; ölçüm kesilebilir.";
+  },{once:true});
+ }catch{
+  $("screenState").textContent="⚠ Ekran açık tutma izni verilemedi. Telefonu ekran açık ve Safari önde kullanın.";
+ }
+}
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){
+  $("screenState").textContent="⚠ Sayfa arka planda. Yeni ölçüm alınmayabilir.";
+  save(true);void flushArchive();
+ }else{
+  void requestScreenAwake();
+ }
+});
 function stop(){
  active=false;detector.stop();panel.stop();
  latest=null;lastAt=0;save(true);
@@ -139,10 +166,10 @@ async function startAutomatic(){
  if(active||autoStarting||!checkDeviceSupport())return;
  autoStarting=true;
  try {
-  detector.setMode($("mount").value);
+  detector.setMode("machine");
   const ok=await detector.start();
   if(ok){
-   active=true;panel.start();
+   active=true;panel.start();void requestScreenAwake();
    $("status").textContent="Ölçüm otomatik başladı. Kalibrasyon yapılıyor.";
    document.removeEventListener("click",firstGesture,true);
   }else{
@@ -157,11 +184,7 @@ function firstGesture(){
  document.removeEventListener("click",firstGesture,true);
  void startAutomatic();
 }
-$("mount").addEventListener("change",()=>{
- if(active)stop();
- // Mod değiştirme, kullanıcı hareketi olduğundan yeniden başlatmak güvenlidir.
- void startAutomatic();
-});
+
 if(typeof DeviceMotionEvent!=="undefined" &&
    typeof DeviceMotionEvent.requestPermission==="function"){
  $("status").textContent="iPhone sensör izni için sayfaya bir kez dokunun; ardından ölçüm otomatik başlayacak.";
@@ -179,7 +202,7 @@ $("label").addEventListener("click",()=>{
  showReport();
 });
 function showReport(){
- const r=analyzeMotionRecords(records,$("mount").value);
+ const r=analyzeMotionRecords(records,"machine");
  const pct=x=>x===null?"Hesaplanamadı":x.toFixed(1)+"%";
  $("summary").textContent=
  "Etiketli örnekler: "+r.total+"\nDoğru aktif: "+r.matrix.tp+" · Doğru pasif: "+r.matrix.tn+
@@ -208,7 +231,8 @@ $("clear").addEventListener("click",async()=>{
  if(archiveDb){try{await clearMotionArchive(archiveDb);archiveCount=0;}catch{setArchive("Arşiv silinemedi; tekrar deneyin.",true);return;}}
  setArchive("Arşiv silindi.");$("saved").textContent="Kayıtlar silindi.";showReport();
 });
-window.addEventListener("pagehide",()=>{save(true);void flushArchive();stop();});
+window.addEventListener("pagehide",()=>{save(true);void flushArchive();stop();if(wakeLock){void wakeLock.release().catch(()=>{});wakeLock=null;}});
 $("saved").textContent="Otomatik yerel yedek etkin · Son "+records.length+" ölçüm";
 checkDeviceSupport();
+void requestScreenAwake();
 </script></body></html>
