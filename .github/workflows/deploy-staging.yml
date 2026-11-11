@@ -33,6 +33,7 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_STAGING_DEPLOY_SERVICE_ACCOUNT }}
           project_id: puantor-staging
+          token_format: access_token
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15
       - name: Deploy staging only
