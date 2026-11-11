@@ -49,5 +49,5 @@ test("screen wake lock is best-effort and visibility interruptions warn the oper
  assert.match(html,/navigator\.wakeLock\.request\("screen"\)/);
  assert.match(html,/document\.addEventListener\("visibilitychange"/);
  assert.match(html,/Ekran kilidi koruması kapandı/);
- assert.match(html,/Tarayıcı ekranı açık tutma izni/);
+ assert.match(html,/tarayıcı ekranı açık tutma izni/);
 });
