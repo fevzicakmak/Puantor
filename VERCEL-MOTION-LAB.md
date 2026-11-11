@@ -22,3 +22,10 @@ Bu yapılandırma yalnızca **Sensör Laboratuvarı** içindir; üretimde kullan
 - Projenin Vercel Authentication (SSO), parola ve IP erişim kısıtları kapalıdır. Site herkese açıktır; kullanıcı verilerini sunucuya göndermez.
 - Kaynak dosyalar GitHub geliştirme dalından doğrudan dağıtıldı; mevcut `main` dalına veya canlı Puantör projesine dokunulmadı.
 - Bu oturumda gerçek iPhone sensör erişimi ve cihaz üzerindeki çalışma davranışı **henüz** sınanmadı.
+
+## Otomatik sensör ölçümü güncellemesi (11 Kasım 2026)
+- Ölçüm başlat düğmesi kaldırıldı. Destekleyen tarayıcılarda sayfa açılır açılmaz ölçüm başlar.
+- iOS Safari `DeviceMotionEvent.requestPermission()` için kullanıcı etkileşimi şart koşabilir. Bu durumda sayfaya ilk dokunuş sensör izin isteğini başlatır; ayrı Başlat düğmesi yoktur.
+- Sensör izni verilmezse durum açıklaması görüntülenir. Telefonda ölçüm yapılabilmesi için sayfanın ön planda olması gerekir.
+- Yeni Vercel üretim dağıtımı: `dpl_C8F5TCb9UBD8GUg9tYefvGmbN2xi` (`READY`). https://puantor-sensor-laboratuvari.vercel.app HTTP 200 ve otomatik başlatma kodu doğrulandı.
+- Bu otomatik **sensör ölçümüdür**; iş makinesinin çalışmasını, Firebase zaman çizelgesini veya ücretlendirmeyi otomatik olarak başlatmaz.
