@@ -1,0 +1,39 @@
+name: Deploy Puantor staging to Firebase
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: puantor-staging-deploy
+  cancel-in-progress: false
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: puantor-staging
+    steps:
+      - name: Fetch staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/single-app-multicompany-from-last-single
+      - name: Assert isolated staging target
+        run: |
+          test "${{ github.ref_name }}" = "feature/single-app-multicompany-from-last-single"
+          grep -q 'projectId: "puantor-staging"' firebase-config.js
+          grep -q '^PROJECT="puantor-staging"' scripts/deploy-staging.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Functions packages
+        run: npm --prefix functions ci
+      - name: Google Cloud OIDC authentication (no static keys)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_STAGING_DEPLOY_SERVICE_ACCOUNT }}
+          project_id: puantor-staging
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@15
+      - name: Deploy staging only
+        run: bash scripts/deploy-staging.sh
