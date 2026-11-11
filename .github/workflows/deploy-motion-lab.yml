@@ -1,15 +1,5 @@
 name: Deploy Standalone Motion Lab
 on:
-  push:
-    branches: [feature/otomatik-hareket-algilama]
-    paths:
-      - 'motion-lab.html'
-      - 'machine-motion.js'
-      - 'motion-classifier.js'
-      - 'motion-test-panel.js'
-      - 'motion-analysis.js'
-      - 'motion-record-store.js'
-      - '.github/workflows/deploy-motion-lab.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   deploy:
+    # Manual only: Pages is a repository-wide site and a deployment can replace existing content.
     if: github.ref == 'refs/heads/feature/otomatik-hareket-algilama'
     environment:
       name: github-pages
