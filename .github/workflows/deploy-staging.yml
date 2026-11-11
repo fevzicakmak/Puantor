@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   staging:
+    if: github.ref == 'refs/heads/feature/single-app-multicompany-from-last-single'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: puantor-staging
@@ -33,7 +34,6 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_STAGING_DEPLOY_SERVICE_ACCOUNT }}
           project_id: puantor-staging
-          token_format: access_token
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15
       - name: Deploy staging only
