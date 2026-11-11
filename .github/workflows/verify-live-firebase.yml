@@ -1,0 +1,22 @@
+name: Verify Puantor live Firebase connection
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: puantor-live
+    permissions:
+      id-token: write
+    steps:
+      - name: Verify Google Cloud access token issuance
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: puantor-live
+          workload_identity_provider: ${{ vars.GCP_LIVE_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_LIVE_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          create_credentials_file: false
+          export_environment_variables: false
