@@ -88,3 +88,12 @@
 - Bağımsız laboratuvarda HTTPS/güvenli bağlantı, devicemotion desteği, sayfanın önde olup olmadığı ve iPhone izin uyarısı görüntülenir.
 - Desteklenmeyen cihazda ölçümü başlat düğmesi pasifleştirilir; sahada çekim yapılması için telefon ekranının açık/önde kalması gerekir.
 - **Canlı URL doğrulanamadı; laboratuvar yayınlandı denemez.** Gelecek aşamada Pages içeriğinin korunması şartıyla ayrı bir alt dizin ya da ayrı depo/hosting tercih edilmeli.
+
+## Pilot v11 — ayrı barındırma için doğrulanmış dağıtım paketi
+- GitHub Actions `.github/workflows/package-motion-lab.yml` geliştirme dalında çalışır ve laboratuvarı bağımsız statik site olarak paketler.
+- Yalnızca `index.html`, `machine-motion.js`, `motion-classifier.js`, `motion-test-panel.js`, `motion-analysis.js`, `motion-record-store.js` ve `.nojekyll` dosyalarını içerir.
+- İş akışı `npm run test:motion` çalıştırır ve çıktı içindeki Firebase referanslarını kontrol eder.
+- Başarılı ilk paketleme: GitHub Actions run #1, run ID 42963666300; `puantor-motion-lab-https-site` isimli artefakt.
+- Paket Actions çalıştırma sayfasının **Artifacts** bölümünden indirilip açılabilir. İçerikteki dosyalar, ana Puantör sitesinden bağımsız bir statik HTTPS barındırıcıya yüklenmelidir.
+- GitHub Pages aynı depo için ortak yayın alanıdır ve eski siteye müdahale riskinden dolayı var olan `deploy-motion-lab.yml` otomatik dağıtımı kapalı tutulur.
+- Paketin oluşturulması HTTPS yayınının tamamlandığı anlamına gelmez. Gerçek mobil sensör testi için ayrı bir HTTPS URL üzerinde yayınlandığını ve izin akışını doğrulayın.
