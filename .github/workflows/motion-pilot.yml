@@ -1,0 +1,39 @@
+name: Motion Pilot Tests
+on:
+  push:
+    branches:
+      - feature/otomatik-hareket-algilama
+    paths:
+      - 'machine-motion.js'
+      - 'motion-test-panel.js'
+      - 'motion-lab.html'
+      - 'motion-record-store.js'
+      - 'motion-classifier.js'
+      - 'motion-analysis.js'
+      - '*.test.mjs'
+      - 'package.json'
+      - '.github/workflows/motion-pilot.yml'
+  pull_request:
+    paths:
+      - 'machine-motion.js'
+      - 'motion-test-panel.js'
+      - 'motion-lab.html'
+      - 'motion-record-store.js'
+      - 'motion-classifier.js'
+      - 'motion-analysis.js'
+      - '*.test.mjs'
+      - 'package.json'
+      - '.github/workflows/motion-pilot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  motion-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run test:motion

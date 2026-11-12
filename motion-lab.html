@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puantör | Bağımsız Sensör Laboratuvarı</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17243a;background:#edf2f8}*{box-sizing:border-box}
+body{margin:0;padding:14px}main{max-width:540px;margin:auto}h1{font-size:24px;margin:0 0 5px}
+p{line-height:1.5;color:#526077}section{background:white;border:1px solid #d4dfec;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 20px #1420330a}
+label{display:block;font-weight:700;margin:12px 0 6px}select,input{font:inherit;font-size:16px;padding:12px;border:1px solid #c9d5e5;border-radius:9px;width:100%}
+button{font:inherit;font-weight:750;width:100%;padding:13px;border:0;border-radius:9px;background:#142d52;color:white;margin-top:9px}
+button:disabled{opacity:.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{background:#f0f5fa;padding:10px;border-radius:10px}
+.metric small{display:block;color:#60718b}.metric strong{font-size:21px}small{color:#60718b}
+.bar{height:9px;background:#e2e8f0;border-radius:8px;overflow:hidden;margin:5px 0 12px}.bar>div{height:100%;width:0;background:#0d9488}
+.alert{background:#fff4df;border:1px solid #f1c36a;padding:12px;border-radius:10px;color:#7b4200}
+#log{font-size:12px;white-space:pre-wrap} .status{font-size:13px}
+</style></head><body><main>
+<section><h1>🚜 Puantör – Sensör Laboratuvarı</h1>
+<p>Bağımsız saha denemesi. Operatör hesabı, görev ve Firebase bağlantısı gerekmez. <strong>Makineyi otomatik başlatmaz, ücret oluşturmaz.</strong></p>
+<div class="alert">Önce motor kapalı ve telefon sabitken 8–12 saniye kalibrasyon yapın. Telefonun konumu güvenli olmalı; sürüş veya kumanda kullanımında ekrana dokunmayın.</div>
+<div id="deviceCheck" class="status" role="status" style="background:#edf4fc;border-radius:9px;padding:10px;margin-top:12px">Cihaz desteği denetleniyor…</div>
+<button id="checkDevice" type="button" style="background:#475569">Cihaz uygunluğunu yeniden denetle</button>
+<label for="machineType">Makine tipi</label><select id="machineType"><option value="excavator">Ekskavatör / kepçe</option><option value="backhoe">JCB / kazıcı yükleyici</option><option value="loader">Lastikli yükleyici</option><option value="other">Diğer iş makinesi</option></select>
+<div class="alert" id="mountRule" style="margin:12px 0"><strong>📍 Zorunlu saha kuralı: Telefon makine kabininde sağlam bir aparata sabitlenmelidir.</strong><div style="margin-top:5px">Cep, el ve bilekte ölçüm geçerli saha testi sayılmaz. Telefon kumanda kollarını, görüşü veya güvenli sürüşü engellememelidir.</div></div>
+<label for="machineLabel">Makine etiketi (isteğe bağlı)</label><input id="machineLabel" maxlength="60" placeholder="Örnek: CAT 320">
+<p class="alert" style="font-size:13px">Ölçüm otomatik başlar. iPhone ilk kullanımda hareket sensörü izni için ekrana bir kez dokunmanızı isteyebilir. Telefonu sabitlemeden ölçüm sonuçları saha verisi kabul edilmemelidir.</p><p class="status" id="screenState" role="status">Ekran durumu kontrol ediliyor…</p>
+<p class="status" id="status" aria-live="polite">Sensör bekleniyor.</p>
+</section>
+<section id="live"><div style="display:flex;justify-content:space-between"><b>Canlı ölçüm</b><span data-role="connection">Beklemede</span></div>
+<div class="grid" style="margin:12px 0"><div class="metric"><small>Sinyal puanı</small><strong data-role="score">—</strong></div><div class="metric"><small>Test süresi</small><strong data-role="elapsed">00:00</strong></div></div>
+<b data-role="classification">Ölçüm bekleniyor</b><div class="bar"><div data-role="scorebar"></div></div>
+<div class="grid"><div><small>İvme titreşimi</small><div><b data-role="accel">—</b></div><div class="bar"><div data-role="accelbar" style="background:#2563eb"></div></div></div><div><small>Jiroskop</small><div><b data-role="gyro">—</b></div><div class="bar"><div data-role="gyrobar" style="background:#7c3aed"></div></div></div></div>
+<div class="grid"><small>İvme eşiği: <b data-role="threshold">—</b></small><small>Kesintisiz: <b data-role="sustained">0 sn</b></small></div>
+</section>
+<section><h2 style="font-size:19px;margin-top:0">Gerçek durumu işaretle</h2>
+<p style="font-size:13px">İdeal olarak makine dururken test sorumlusu işaretlesin. Etiket, son 5 saniyedeki ölçümle eşleşir.</p>
+<label for="truth">Gerçek makine durumu</label>
+<select id="truth"><option value="">Bir durum seçin</option><option value="motor_off">Motor kapalı</option><option value="idle_engine">Motor rölantide</option><option value="working">Kazı / aktif çalışma</option><option value="travel">Makine ilerliyor</option><option value="walking">Operatör yürüyüşü</option><option value="phone_handled">Telefon elde oynatılıyor</option></select>
+<button id="label">Gerçek durumu kaydet</button>
+<button id="report" style="background:#0f766e">Test raporunu hesapla</button>
+<div id="summary" style="white-space:pre-wrap;font-size:13px;margin-top:12px"></div>
+</section>
+<section><h2 style="font-size:19px;margin-top:0">Veri kayıtları</h2>
+<p id="saved" style="font-size:13px">Ölçümler otomatik saklanır.</p><p id="archiveState" style="font-size:13px;color:#166534;font-weight:700">Arşiv hazırlanıyor…</p>
+<button id="export">CSV dosyası indir</button><button id="clear" style="background:#9a3412">Test kayıtlarını sil</button>
+<p style="font-size:12px">Her 5 saniyede otomatik yerel yedek alınır. Ekran kilitlenince veya tarayıcı arka plana geçince yeni sensör ölçümü durabilir. Veriler sunucuya gönderilmez. CSV yedeği yine alınmalıdır.</p></section>
+</main>
+<script type="module">
+import {MachineMotionDetector} from "./machine-motion.js";
+import {createMotionTestPanel} from "./motion-test-panel.js";
+import {analyzeMotionRecords} from "./motion-analysis.js";
+import {loadMotionRecords,saveMotionRecords,clearMotionRecords,MOTION_RECORD_LIMIT} from "./motion-record-store.js";
+import {openMotionArchive,insertMotionArchive,readMotionArchive,clearMotionArchive} from "./motion-field-archive.js";
+const $=id=>document.getElementById(id);
+const panel=createMotionTestPanel($("live"));
+function checkDeviceSupport(){
+ const secure=window.isSecureContext;
+ const motion=("DeviceMotionEvent" in window);
+ const visible=!document.hidden;
+ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);
+ const notes=[
+  (secure?"✓ HTTPS/güvenli bağlantı":"✗ HTTPS gerekli: sensörler çalışmayabilir"),
+  (motion?"✓ Hareket sensörü arayüzü mevcut":"✗ Bu tarayıcı hareket sensörünü sunmuyor"),
+  (visible?"✓ Sayfa ön planda":"⚠ Sayfa arka planda: ölçüm askıda"),
+  (ios?"iPhone/iPad: izin için ekrana bir kez dokunmak gerekebilir":"Cihaz hareket izni tarayıcıya bağlı")
+ ];
+ $("deviceCheck").textContent=notes.join(" · ");
+ return secure&&motion;
+}
+$("checkDevice").addEventListener("click",checkDeviceSupport);
+document.addEventListener("visibilitychange",checkDeviceSupport);
+
+let storage=null;try{storage=localStorage;}catch{}
+let records=storage?loadMotionRecords(storage):[],latest=null,lastAt=0,lastRecord=0,lastSaved=0;
+let active=false;
+let archiveDb=null,archiveQueue=[],archiveCount=0,archiveBusy=false;
+function setArchive(text,warning=false){
+ $("archiveState").textContent=text;
+ $("archiveState").style.color=warning?"#b91c1c":"#166534";
+}
+async function flushArchive(){
+ if(!archiveDb||archiveBusy||!archiveQueue.length)return;
+ archiveBusy=true;
+ const batch=archiveQueue.splice(0);
+ try{
+  const result=await insertMotionArchive(archiveDb,batch);
+  archiveCount=result.count;
+  setArchive("✓ Arşiv: "+archiveCount.toLocaleString("tr-TR")+" ölçüm · "+new Date().toLocaleTimeString("tr-TR"));
+ }catch(e){
+  archiveQueue.unshift(...batch);
+  setArchive("⚠ Uzun kayıt başarısız. CSV yedeği alın: "+(e.message||e),true);
+ }finally{archiveBusy=false;}
+}
+async function prepareArchive(){
+ try{
+  archiveDb=await openMotionArchive();
+  archiveCount=(await readMotionArchive(archiveDb)).length;
+  setArchive("✓ Arşiv hazır: "+archiveCount+" ölçüm");
+  void flushArchive();
+ }catch{
+  setArchive("⚠ Uzun arşiv desteklenmiyor; kısa yedek ve CSV kullanın.",true);
+ }
+}
+void prepareArchive();
+setInterval(()=>{save(true);void flushArchive();},5000);
+function save(force=false){
+ if(!force&&Date.now()-lastSaved<10000)return;
+ lastSaved=Date.now();
+ const v=storage?saveMotionRecords(storage,records):{ok:false};
+ $("saved").textContent=v.ok?"✓ Otomatik yedek: "+v.count+" örnek · "+new Date().toLocaleTimeString("tr-TR"):"Tarayıcı kaydı başarısız: CSV indirin.";
+}
+function append(record,force=false){
+ const now=Date.now();if(!force&&now-lastRecord<1000)return;
+ lastRecord=now;
+ const entry={time:new Date(now).toISOString(),mode:"machine",
+   machine:$("machineLabel").value.trim()||$("machineType").value,status:"pilot",
+   message:record.message||"",rms:record.rms??"",gyro:record.gyro??"",
+   accelActive:record.accelActive??"",gyroActive:record.gyroActive??"",
+   seconds:record.seconds??"",score:record.confidenceScore??"",
+   motionState:record.motionState??"",truth:record.truth||""};
+ records.push(entry);archiveQueue.push(entry);
+ if(records.length>MOTION_RECORD_LIMIT)records.shift();save(force);
+ if(force)void flushArchive();
+}
+const detector=new MachineMotionDetector(data=>{
+ panel.render(data);
+ if(data.stale||data.calibrating){latest=null;lastAt=0;}
+ else if(data.motionState){latest=data;lastAt=Date.now();}
+ if(active)append(data);
+ $("status").textContent=data.message||"Ölçüm bekleniyor";
+},data=>{
+ append({...data,message:"12 saniye hareket adayı",seconds:12},true);
+ $("status").textContent="12 saniye hareket adayı algılandı. Otomatik çalışma başlatılmaz.";
+});
+let autoStarting=false;
+let wakeLock=null;
+async function requestScreenAwake(){
+ if(document.hidden)return;
+ if(!("wakeLock" in navigator)){
+  $("screenState").textContent="⚠ Bu tarayıcı ekranı açık tutma izni sunmuyor. Ekran kilidini manuel olarak engelleyin.";
+  return;
+ }
+ try{
+  if(wakeLock)return;
+  wakeLock=await navigator.wakeLock.request("screen");
+  $("screenState").textContent="✓ Ekranı açık tutma isteği kabul edildi. Sayfayı ön planda tutun.";
+  wakeLock.addEventListener("release",()=>{
+   wakeLock=null;
+   $("screenState").textContent="⚠ Ekran kilidi koruması kapandı; ölçüm kesilebilir.";
+  },{once:true});
+ }catch{
+  $("screenState").textContent="⚠ Ekran açık tutma izni verilemedi. Telefonu ekran açık ve Safari önde kullanın.";
+ }
+}
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){
+  $("screenState").textContent="⚠ Sayfa arka planda. Yeni ölçüm alınmayabilir.";
+  save(true);void flushArchive();
+ }else{
+  void requestScreenAwake();
+ }
+});
+function stop(){
+ active=false;detector.stop();panel.stop();
+ latest=null;lastAt=0;save(true);
+}
+async function startAutomatic(){
+ if(active||autoStarting||!checkDeviceSupport())return;
+ autoStarting=true;
+ try {
+  detector.setMode("machine");
+  const ok=await detector.start();
+  if(ok){
+   active=true;panel.start();void requestScreenAwake();
+   $("status").textContent="Ölçüm otomatik başladı. Kalibrasyon yapılıyor.";
+   document.removeEventListener("click",firstGesture,true);
+  }else{
+   $("status").textContent="Hareket izni verilmedi veya sensör kullanılamıyor. Safari ayarlarını kontrol edin.";
+  }
+ }catch(error){$("status").textContent="Sensör hatası: "+(error.message||error);}
+ finally{autoStarting=false;}
+}
+function firstGesture(){
+ // iOS Safari DeviceMotionEvent.requestPermission() kullanıcı hareketi içinde çağrılmalıdır.
+ // Ölçüm başlatma düğmesi yok: sayfanın herhangi bir yerine ilk dokunuş yetiyor.
+ document.removeEventListener("click",firstGesture,true);
+ void startAutomatic();
+}
+
+if(typeof DeviceMotionEvent!=="undefined" &&
+   typeof DeviceMotionEvent.requestPermission==="function"){
+ $("status").textContent="iPhone sensör izni için sayfaya bir kez dokunun; ardından ölçüm otomatik başlayacak.";
+ document.addEventListener("click",firstGesture,true);
+}else{
+ void startAutomatic();
+}
+$("label").addEventListener("click",()=>{
+ if(!$("truth").value){$("status").textContent="Önce gerçek durumu seçin.";return;}
+ if(!active||!latest||Date.now()-lastAt>5000){
+  $("status").textContent="Güncel ölçüm yok. Kalibrasyonu tamamlayıp yeniden deneyin.";return;
+ }
+ append({...latest,message:"Saha etiketi",truth:$("truth").value},true);
+ $("status").textContent="Gerçek durum etiketlendi; CSV kaydına eklendi.";
+ showReport();
+});
+function showReport(){
+ const r=analyzeMotionRecords(records,"machine");
+ const pct=x=>x===null?"Hesaplanamadı":x.toFixed(1)+"%";
+ $("summary").textContent=
+ "Etiketli örnekler: "+r.total+"\nDoğru aktif: "+r.matrix.tp+" · Doğru pasif: "+r.matrix.tn+
+ "\nYanlış aktif: "+r.matrix.fp+" · Kaçırılan aktif: "+r.matrix.fn+
+ "\nDoğruluk: "+pct(r.accuracy)+" · Yanlış alarm: "+pct(r.falsePositiveRate)+
+ (r.insufficient?"\n⚠ 30'dan az etiket: ön değerlendirme için yetersiz.":"")+
+ "\nBunlar yalnızca operatörün işaretlediği anları gösterir; motorun açık olduğunu kanıtlamaz.";
+}
+$("report").addEventListener("click",showReport);
+$("export").addEventListener("click",async()=>{
+ save(true);await flushArchive();
+ let exported=records;
+ if(archiveDb){try{exported=[...await readMotionArchive(archiveDb),...archiveQueue];}catch{exported=records;}}
+ if(!exported.length){$("status").textContent="İndirilecek kayıt yok.";return;}
+ const fields=["time","mode","machine","status","message","rms","gyro","accelActive","gyroActive","seconds","score","motionState","truth"];
+ const quote=x=>'"'+String(x??"").replaceAll('"','""')+'"';
+ const csv="\uFEFF"+fields.join(";")+"\r\n"+exported.map(r=>fields.map(k=>quote(r[k])).join(";")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="puantor-saha-test-"+new Date().toISOString().slice(0,10)+".csv";a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),3000);
+});
+$("clear").addEventListener("click",async()=>{
+ if(!confirm("Bu cihazdaki test kayıtları silinsin mi? Önce CSV yedeği alın."))return;
+ records=[];archiveQueue=[];
+ if(storage)clearMotionRecords(storage);
+ if(archiveDb){try{await clearMotionArchive(archiveDb);archiveCount=0;}catch{setArchive("Arşiv silinemedi; tekrar deneyin.",true);return;}}
+ setArchive("Arşiv silindi.");$("saved").textContent="Kayıtlar silindi.";showReport();
+});
+window.addEventListener("pagehide",()=>{save(true);void flushArchive();stop();if(wakeLock){void wakeLock.release().catch(()=>{});wakeLock=null;}});
+$("saved").textContent="Otomatik yerel yedek etkin · Son "+records.length+" ölçüm";
+checkDeviceSupport();
+void requestScreenAwake();
+</script></body></html>

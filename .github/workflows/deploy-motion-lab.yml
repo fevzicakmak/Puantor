@@ -1,0 +1,32 @@
+name: Deploy Standalone Motion Lab
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: motion-lab-pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    # Manual only: Pages is a repository-wide site and a deployment can replace existing content.
+    if: github.ref == 'refs/heads/feature/otomatik-hareket-algilama'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated static test site
+        run: |
+          mkdir -p _site
+          cp motion-lab.html machine-motion.js motion-classifier.js motion-test-panel.js motion-analysis.js motion-record-store.js _site/
+          cp motion-lab.html _site/index.html
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

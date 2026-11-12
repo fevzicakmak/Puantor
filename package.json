@@ -1,0 +1,8 @@
+{
+  "name": "puantor-motion-pilot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:motion": "node --test motion-classifier.test.mjs motion-analysis.test.mjs motion-detector.test.mjs motion-record-store.test.mjs motion-test-panel.test.mjs motion-lab.test.mjs"
+  }
+}

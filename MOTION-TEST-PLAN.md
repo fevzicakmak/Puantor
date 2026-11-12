@@ -1,0 +1,99 @@
+# Puantör hareket algılama pilotu — saha test planı
+
+## Koruma kuralları
+- Ana dal ve canlı uygulama değiştirilmeyecek. Pilot ayrı geliştirme dalında.
+- Bilek modu sadece gözlem; asla otomatik çalışma başlatma.
+- Makine modu da bilek modu da yalnızca gözlem üretir; otomatik başlatma bu pilotta tamamen kapalıdır.
+- Otomatik duraklatma, bitirme veya arıza oluşturma yok.
+- Sensörler tek başına motorun açık olduğunu veya gerçek çalışma yapıldığını kanıtlamaz.
+- Gerçek faturalama verisi oluşturmayacak ayrı test görevi ve test makinesiyle dene.
+
+## Test matrisi (her biri birkaç kez)
+| Koşul | Makineye sabit | Kola/bileğe sabit |
+| --- | --- | --- |
+| Motor kapalı / operatör hareketsiz | yanlış başlangıç 0 hedefi | hareket kaydı düşük |
+| Motor rölanti | titreşim profili kaydı | yürümeye kıyas |
+| Kepçe kazı/dönüş | 12 sn eşik davranışı | kol hareket örüntüsü |
+| Operatör yürüyüşü | telefon sabit kalmalı | yanlış pozitif analizi |
+| Telefon elle oynatıldı | yanlış başlatma riski | gözlem |
+| Ekran kilidi / Safari arka plan | ölçüm duraklamalı | ölçüm duraklamalı |
+| Yetkili iş yok | otomatik başlatma reddedilmeli | yalnızca gözlem |
+| İş bitirildi / makine değişti | ölçüm durmalı | ölçüm durmalı |
+
+## Güvenlik
+- Telefon düşmeyecek, görüşü kapatmayacak, pedallara/kumandalara müdahale etmeyecek şekilde sabitlenmeli.
+- Hareket halindeki ekipmana telefon takma/çıkarma yapılmamalı. Kol/bilek aparatı kumandalara takılmamalı.
+- İşletme ve saha güvenliği sorumlusu aparat yerleşimini onaylamalı.
+
+## Bilinen sınırlamalar / sonraki aşama
+- Web devicemotion tarayıcı iznine, HTTPS'e, cihaz sensör desteğine bağlı.
+- iPhone Safari arka plan ölçümü güvenilir değil. Kesintisiz takip için native uygulama gerekebilir.
+- İvme büyüklüğü pencere varyansını kullanır; GPS veya gerçek CAN/OBD motor telemetrisi henüz yok.
+- Sabit titreşim, düşük genlik ve başka kaynaklar yanlış/eksik tespit üretebilir.
+- Gerçek saha verileri ile sınıflandırıcı; güven puanı, otomatik başlatma öncesi doğrulama ve merkezi veri şeması sonraki aşamadır.
+
+## Pilot v3 — saha etiketleri ve skor
+- Algoritma ivmeölçer/jroskop oranlarını 0–100 **sezgisel sinyal puanına** dönüştürür; bu yüzde olasılığı değildir.
+- Operatör, motor kapalı / rölanti / kazı / ilerleme / yürüyüş / telefon oynatma seçeneklerinden gerçeği işaretler.
+- CSV artık tahmini sınıfı, sinyal puanını ve operatör etiketini içerir. CSV yalnızca kullanıcı indirirse kalıcı olur.
+- Gerçek çalışma zamanı, Firebase kayıtları ve ücretlendirme etkilenmez.
+- Skorun güvenirliği gerçek saha verileri olmadan ileri sürülemez. Sınıf ayrımı makine tipine göre doğrulanmalıdır.
+- Örnek otomatik testler: `node --test motion-classifier.test.mjs` (Node sürümüne göre .js ES modül algısı gerekebilir).
+
+## Pilot v5 — otomatik kod kontrolü (10.11.2026)
+- GitHub Actions `.github/workflows/motion-pilot.yml` Node 22 ile sensör, sınıflandırma ve analiz testlerini çalıştırır.
+- `package.json` ESM modül ayarı ve `npm run test:motion` komutunu tanımlar.
+- Sensör veri kesintisi ve sayfanın arka plandan dönmesi, daha önceki titreşim referansını sıfırlar; yeni kalibrasyon gerektirir.
+- Makineye sabit ve bilek modlarının saha test raporları birbirinden ayrılır.
+- Github Actions run #9 / 42898713835 başarılı; bu yalnızca yazılım testi sonucudur, gerçek saha testi değildir.
+- Pilot otomatik çalışma başlatma, duraklatma, bitirme ve ücret değişikliği yapmaz.
+
+## Pilot v6 — saha kayıtlarının korunması
+- Son 1800 adet sensör özeti cihazın localStorage alanında, yaklaşık 10 saniyede bir veya sayfa kapatılırken yazılır.
+- Operatör etiketli doğrulama örnekleri hemen yazılır.
+- Tarayıcının depolama engeli veya kota doluluğu durumunda uyarı verilir; CSV dışa aktarımı desteklenir.
+- Yerel kayıtlar yalnızca o tarayıcı/profilde tutulur; özel gezinti, temizleme veya cihaz arızasında kaybolabilir.
+- Pilot kayıtları Firebase'e veya yöneticinin hesabına otomatik gönderilmez.
+- 'Test kayıtlarını sil' işlevi yalnızca bu cihazın pilot hareket verilerini temizler.
+- CSV çıktısı yetkisiz kişilere gönderilmemelidir; operatör/makine bilgileri içerir.
+
+## Pilot v7 — canlı saha test paneli
+- Operatör paneline canlı ivme RMS (m/s²), jiroskop hızı (°/sn), eşik, kesintisiz hareket süresi ve 0–100 sezgisel puan göstergeleri eklendi.
+- Test başlangıcından itibaren süre sayacı bulunur; bu sayaç faturalandırılan iş süresi değildir.
+- Panel yalnızca sensör verisini okur. İş başlatma, görev süresi veya Firebase durumunu değiştirmez.
+- Gerçek durum etiketleri, mod bazlı analiz, CSV dışa aktarma ve yerel kayıt sistemi mevcut işlevlerini korur.
+- GitHub Actions run #25 (42900081122) başarıyla tamamlandı. Gerçek cihazda ölçüm testi yine gereklidir.
+
+## Pilot v8 — bağımsız sensör laboratuvarı
+- `motion-lab.html` operatör hesabı, Firebase ve atanmış iş olmadan kullanılır.
+- HTTPS ortamında telefon hareket sensörü izni istenir. Dosyayı iPhone'da yalnızca yerel `file://` ile açmak sensör erişimini sağlamayabilir; güvenli web sunucusunda yayınlamak gerekir.
+- Makine tipi ve sabitleme konumu seçilebilir; motor kapalı, rölanti, kazı, ilerleme, yürüyüş ve telefon hareketi testleri etiketlenebilir.
+- Canlı sinyal puanı, RMS titreşim, jiroskop, hareket eşiği ve kesintisiz süre görülebilir.
+- En çok 1800 kayıt cihazın yerel tarayıcı depolamasında tutulur; CSV indirme ve silme vardır.
+- Saha testinden sonra CSV dosyası mühendislik incelemesi için alınabilir; bu çalışma Firebase canlı iş kayıtlarını veya faturaları etkilemez.
+- `motion-lab.test.mjs` bağımsız sayfada ihtiyaç duyulan kontrollerin bulunmasını, istemci modülünün JavaScript sözdizimini ve Firebase bağlantısının olmadığını denetler.
+- **Laboratuvar henüz canlı HTTPS üzerinde yayımlanmadı; gerçek iPhone/Android saha testi yapılmadı.** Sadece GitHub kodunun bulunması çalışan bir web bağlantısı değildir.
+
+## Pilot v9 — HTTPS yayınlama hazırlığı
+- `.github/workflows/deploy-motion-lab.yml` ayrı statik GitHub Pages dağıtımı tanımlar. Dağıtılan pakette **yalnızca** motion-lab.html ve gerekli beş JS modülü vardır; Firebase yapılandırması, yönetici paneli veya uygulama verileri bulunmaz.
+- GitHub Pages'in repo ayarlarında **Build and deployment → Source: GitHub Actions** seçili olması gerekir. GitHub Pages yetkilendirmesi/devreye alma bağlantı izinlerine bağlıdır; otomatik çalıştığı varsayılmamalıdır.
+- **Gerçek URL doğrulanmadan kullanıcıya açılmış test adresi olarak sunulamaz.** Beklenen URL biçimi GitHub Pages etkinse `https://fevzicakmak.github.io/Puantor/` olur.
+- Yayınlama için ayrı workflow tetiklendiğinde GitHub → Actions → Deploy Standalone Motion Lab üzerinden sonucu denetleyin.
+- Saha testinde sayfayı iPhone Safari'de HTTPS üzerinde açın, telefon sabitlenince izin isteğini düğmeyle başlatın, ilk ölçümü motor kapalıyken kalibre edin.
+- Sayfanın herkese açık olması mümkündür. Sensör ölçümleri cihaz tarayıcısında tutulur; CSV'yi güvenli kanalla paylaşın.
+
+## Pilot v10 — GitHub Pages güvenliği ve cihaz kontrolü
+- GitHub depo metaverisi `has_pages=true` gösteriyor. Pages depo genelinde tek yayın alanı olduğundan izinsiz otomatik dağıtım var olan siteyi değiştirebilir.
+- Bu nedenle `.github/workflows/deploy-motion-lab.yml` otomatik push tetikleyicisinden çıkarıldı; yalnızca `workflow_dispatch` ile bilinçli şekilde çalışır. Mevcut Pages içeriği incelenmeden tetiklenmemeli.
+- Bağımsız laboratuvarda HTTPS/güvenli bağlantı, devicemotion desteği, sayfanın önde olup olmadığı ve iPhone izin uyarısı görüntülenir.
+- Desteklenmeyen cihazda ölçümü başlat düğmesi pasifleştirilir; sahada çekim yapılması için telefon ekranının açık/önde kalması gerekir.
+- **Canlı URL doğrulanamadı; laboratuvar yayınlandı denemez.** Gelecek aşamada Pages içeriğinin korunması şartıyla ayrı bir alt dizin ya da ayrı depo/hosting tercih edilmeli.
+
+## Pilot v11 — ayrı barındırma için doğrulanmış dağıtım paketi
+- GitHub Actions `.github/workflows/package-motion-lab.yml` geliştirme dalında çalışır ve laboratuvarı bağımsız statik site olarak paketler.
+- Yalnızca `index.html`, `machine-motion.js`, `motion-classifier.js`, `motion-test-panel.js`, `motion-analysis.js`, `motion-record-store.js` ve `.nojekyll` dosyalarını içerir.
+- İş akışı `npm run test:motion` çalıştırır ve çıktı içindeki Firebase referanslarını kontrol eder.
+- Başarılı ilk paketleme: GitHub Actions run #1, run ID 42963666300; `puantor-motion-lab-https-site` isimli artefakt.
+- Paket Actions çalıştırma sayfasının **Artifacts** bölümünden indirilip açılabilir. İçerikteki dosyalar, ana Puantör sitesinden bağımsız bir statik HTTPS barındırıcıya yüklenmelidir.
+- GitHub Pages aynı depo için ortak yayın alanıdır ve eski siteye müdahale riskinden dolayı var olan `deploy-motion-lab.yml` otomatik dağıtımı kapalı tutulur.
+- Paketin oluşturulması HTTPS yayınının tamamlandığı anlamına gelmez. Gerçek mobil sensör testi için ayrı bir HTTPS URL üzerinde yayınlandığını ve izin akışını doğrulayın.
