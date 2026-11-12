@@ -67,9 +67,56 @@ async function requireTenantManager(request) {
   throw new HttpsError("permission-denied","Firma yöneticisi doğrulanamadı.");
  return uid;
 }
+function firmCode(value) {
+ const code=String(value||"").trim().toLowerCase();
+ if(!/^[a-z0-9-]{3,20}$/.test(code))throw new HttpsError("invalid-argument","Firma kodu 3-20 harf, rakam veya tire içermeli.");
+ return code;
+}
+exports.operatorLoginAddress=onCall({region:"europe-west1"},async ({data})=>{
+ const code=firmCode(data?.code), name=tenantOperatorName(data?.username);
+ const mapping=await db.collection("operatorFirmCodes").doc(code).get();
+ if(!mapping.exists)throw new HttpsError("not-found","Firma kodu veya kullanıcı adı geçersiz.");
+ const tenantId=mapping.data().tenantId, business=db.collection("businesses").doc(tenantId);
+ const alias=await business.collection("operatorLoginNames").doc(name).get();
+ const operatorId=alias.exists?alias.data().operatorId:name;
+ const op=await business.collection("operators").doc(operatorId).get();
+ if(!op.exists||op.data().authStatus!=="active"||(op.data().loginUsername||operatorId)!==name)
+  throw new HttpsError("not-found","Firma kodu veya kullanıcı adı geçersiz.");
+ return {email:tenantId+"."+operatorId+"@operators.puantor.invalid"};
+});
 exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async request=>{
  const tenantId=await requireTenantManager(request),data=request.data||{},action=data.action;
- const name=tenantOperatorName(data.username),ref=db.collection("businesses").doc(tenantId).collection("operators").doc(name);
+ const business=db.collection("businesses").doc(tenantId);
+ if(action==="setFirmCode"){
+  const code=firmCode(data.code),ref=db.collection("operatorFirmCodes").doc(code);
+  await db.runTransaction(async tx=>{
+   const [owner,existing]=await Promise.all([tx.get(business),tx.get(ref)]);
+   if(owner.data().operatorFirmCode&&owner.data().operatorFirmCode!==code)
+    throw new HttpsError("failed-precondition","Firma kodu zaten belirlenmiş.");
+   if(existing.exists&&existing.data().tenantId!==tenantId)
+    throw new HttpsError("already-exists","Bu firma kodu kullanılıyor.");
+   tx.set(ref,{tenantId});
+   tx.update(business,{operatorFirmCode:code});
+  });
+  return {code};
+ }
+ const name=tenantOperatorName(data.username),ref=business.collection("operators").doc(name);
+ const aliases=business.collection("operatorLoginNames");
+ if(action==="renameLogin"){
+  const next=tenantOperatorName(data.newUsername);
+  await db.runTransaction(async tx=>{
+   const [current,alias,original]=await Promise.all([tx.get(ref),tx.get(aliases.doc(next)),tx.get(business.collection("operators").doc(next))]);
+   if(!current.exists||current.data().authStatus!=="active")throw new HttpsError("not-found","Aktif operatör bulunamadı.");
+   if((alias.exists&&alias.data().operatorId!==name)||(original.exists&&next!==name))
+    throw new HttpsError("already-exists","Bu kullanıcı adı kullanılıyor.");
+   const previous=current.data().loginUsername||name;
+   if(previous===next)return;
+   if(previous!==name)tx.delete(aliases.doc(previous));
+   if(next!==name)tx.set(aliases.doc(next),{operatorId:name});
+   tx.update(ref,{loginUsername:next});
+  });
+  return {username:next};
+ }
  if(action==="create"){
   const displayName=String(data.displayName||"").trim();
   if(!displayName||displayName.length>80)throw new HttpsError("invalid-argument","Operatör adı gerekli.");
@@ -81,8 +128,8 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
   try{
    created=await auth.createUser({email,password:password(data.password),displayName,emailVerified:true});
    await db.runTransaction(async tx=>{
-    const current=await tx.get(ref);
-    if(current.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
+    const [current,alias]=await Promise.all([tx.get(ref),tx.get(aliases.doc(name))]);
+    if(current.exists||alias.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
     tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:admin.firestore.FieldValue.serverTimestamp()});
     tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:admin.firestore.FieldValue.serverTimestamp()});
    });
@@ -104,7 +151,14 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
    throw new HttpsError("failed-precondition","Operatörün atanmış makinesi veya aktif işi var. Önce atamaları kaldırın.");
   await auth.updateUser(uid,{disabled:true});
   await auth.revokeRefreshTokens(uid);
-  const batch=db.batch();batch.delete(ref);batch.delete(db.collection("users").doc(uid));await batch.commit();
+  await db.runTransaction(async tx=>{
+   const current=await tx.get(ref);
+   if(!current.exists||current.data().authUid!==uid)return;
+   const alias=current.data().loginUsername;
+   if(alias&&alias!==name)tx.delete(aliases.doc(alias));
+   tx.delete(ref);
+   tx.delete(db.collection("users").doc(uid));
+  });
   return {ok:true};
  }
  if(action==="password"){
