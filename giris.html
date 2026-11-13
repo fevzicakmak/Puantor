@@ -4,7 +4,7 @@
 /* iOS Safari: prevent automatic focus zoom while retaining user pinch zoom */
 input,select,textarea{font-size:16px!important}
 </style></head>
-<body><main><div style="font-size:54px">🚜</div><h1>PUANTÖR</h1><p>Makine ve çalışma takip sistemi</p><form id="login"><label for="operatorFirmCode">Firma kodu (operatör)</label><input id="operatorFirmCode" type="text" maxlength="20" autocapitalize="none" spellcheck="false" placeholder="Ör. cakmak"><label for="email">E-posta (yönetici) / Kullanıcı adı (operatör)</label><input id="email" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" aria-controls="emailSuggestions" aria-autocomplete="list" required><div id="emailSuggestions" class="suggestions" hidden></div><label for="password">Şifre</label><input id="password" type="password" autocomplete="current-password" required><label class="remember"><input id="remember" type="checkbox" checked> Beni Hatırla</label><button id="submit" type="submit">Giriş Yap</button></form><button id="resetManagerPassword" type="button" style="background:#f1f5f9;color:#334155">Yönetici Şifremi Unuttum</button><button id="showBusinessRegister" type="button" style="background:#dbeafe;color:#1e40af">Yeni İşletme / Yönetici Kaydı</button><form id="businessRegister" hidden><p>İşletmenizi ve ilk yönetici hesabınızı oluşturun.</p><label>İşletme adı<input id="businessName" required minlength="2" maxlength="100" autocomplete="organization"></label><label>Yönetici adı<input id="businessManager" required minlength="2" maxlength="80" autocomplete="name"></label><label>E-posta<input id="businessEmail" type="email" required autocomplete="email"></label><label>Şifre (en az 8 karakter)<input id="businessPassword" type="password" minlength="8" required autocomplete="new-password"></label><button id="businessSubmit" type="submit">İşletme Hesabı Oluştur</button><p id="businessStatus" role="status" aria-live="polite" style="font-weight:650;color:#1d4ed8;min-height:24px"></p><button id="businessBack" type="button" style="background:#e2e8f0;color:#142033">Girişe Dön</button></form><p id="status" role="status" aria-live="polite">Oturum kontrol ediliyor…</p><small>Operatörler firma kodu, kullanıcı adı ve şifreyle giriş yapar. Tam giriş adresiniz varsa firma kodu alanını boş bırakabilirsiniz.</small></main>
+<body><main><div style="font-size:54px">🚜</div><h1>PUANTÖR</h1><p>Makine ve çalışma takip sistemi</p><form id="login"><label for="operatorFirmCode">Firma kodu (operatör)</label><input id="operatorFirmCode" type="text" maxlength="20" autocapitalize="none" spellcheck="false" placeholder="Ör. cakmak" autocomplete="off" aria-controls="firmSuggestions"><div id="firmSuggestions" class="suggestions" hidden></div><label for="email">E-posta (yönetici) / Kullanıcı adı (operatör)</label><input id="email" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" aria-controls="emailSuggestions" required><div id="emailSuggestions" class="suggestions" hidden></div><label for="password">Şifre</label><input id="password" type="password" autocomplete="current-password" required><label class="remember"><input id="remember" type="checkbox" checked> Beni Hatırla</label><button id="submit" type="submit">Giriş Yap</button></form><button id="resetManagerPassword" type="button" style="background:#f1f5f9;color:#334155">Yönetici Şifremi Unuttum</button><button id="showBusinessRegister" type="button" style="background:#dbeafe;color:#1e40af">Yeni İşletme / Yönetici Kaydı</button><form id="businessRegister" hidden><p>İşletmenizi ve ilk yönetici hesabınızı oluşturun.</p><label>İşletme adı<input id="businessName" required minlength="2" maxlength="100" autocomplete="organization"></label><label>Yönetici adı<input id="businessManager" required minlength="2" maxlength="80" autocomplete="name"></label><label>E-posta<input id="businessEmail" type="email" required autocomplete="email"></label><label>Şifre (en az 8 karakter)<input id="businessPassword" type="password" minlength="8" required autocomplete="new-password"></label><button id="businessSubmit" type="submit">İşletme Hesabı Oluştur</button><p id="businessStatus" role="status" aria-live="polite" style="font-weight:650;color:#1d4ed8;min-height:24px"></p><button id="businessBack" type="button" style="background:#e2e8f0;color:#142033">Girişe Dön</button></form><p id="status" role="status" aria-live="polite">Oturum kontrol ediliyor…</p><small>Operatörler firma kodu, kullanıcı adı ve şifreyle giriş yapar. Tam giriş adresiniz varsa firma kodu alanını boş bırakabilirsiniz.</small></main>
 <script type="module">
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
@@ -13,9 +13,66 @@ import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstati
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-functions.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const resolveOperatorLogin=httpsCallable(getFunctions(app,"europe-west1"),"operatorLoginAddress");
-$("operatorFirmCode").value=localStorage.getItem("puantor_last_firm_code")||"";
+const loginHistoryKey="puantor_login_history";
+function readLoginHistory(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(loginHistoryKey)||"[]");
+  const history=Array.isArray(saved)?saved.filter(entry=>typeof entry?.login==="string"&&typeof entry?.code==="string"):[];
+  const login=localStorage.getItem("puantor_last_login");
+  const code=localStorage.getItem("puantor_last_firm_code")||"";
+  if(login&&!history.some(entry=>entry.login===login.toLowerCase()&&entry.code===code))history.push({login:login.toLowerCase(),code});
+  return history;
+ }catch{return []}
+}
+function saveLoginHistory(login,code){
+ try{
+  const history=readLoginHistory().filter(entry=>entry.login!==login||entry.code!==code);
+  localStorage.setItem(loginHistoryKey,JSON.stringify([{login,code},...history].slice(0,12)));
+  localStorage.setItem("puantor_last_firm_code",code);
+  localStorage.setItem("puantor_last_login",login);
+ }catch{}
+}
+const previousLogin=readLoginHistory()[0];
+if(previousLogin){
+ $("operatorFirmCode").value=previousLogin.code;
+ $("email").value=previousLogin.login;
+}
+function attachSuggestions(fieldId,listId,getOptions){
+ const field=$(fieldId),list=$(listId);
+ function close(){list.hidden=true;list.replaceChildren()}
+ function show(query=""){
+  list.replaceChildren();
+  for(const [label,choose] of getOptions(readLoginHistory())){
+   if(!label.toLowerCase().includes(query))continue;
+   const button=document.createElement("button");
+   button.type="button";
+   button.textContent=label;
+   button.onclick=()=>{choose();close()};
+   list.append(button);
+  }
+  list.hidden=!list.childElementCount;
+ }
+ field.addEventListener("focus",()=>show());
+ field.addEventListener("input",()=>show(field.value.trim().toLowerCase()));
+ document.addEventListener("focusin",event=>{if(event.target!==field&&!list.contains(event.target))close()});
+ document.addEventListener("click",event=>{if(event.target!==field&&!list.contains(event.target))close()});
+ field.addEventListener("click",()=>{if(list.hidden)show()});
+ $("login").addEventListener("keydown",event=>{if(event.key==="Escape")close()});
+}
+attachSuggestions("operatorFirmCode","firmSuggestions",history=>
+ [...new Set(history.map(entry=>entry.code).filter(Boolean))].map(code=>[code,()=>{
+  $("operatorFirmCode").value=code;
+  $("email").value=history.find(entry=>entry.code===code).login;
+  $("password").value="";
+ }]));
+attachSuggestions("email","emailSuggestions",history=>history.map(({login,code})=>
+ [code?login+" · "+code:login,()=>{
+  $("email").value=login;
+  $("operatorFirmCode").value=code;
+  $("password").value="";
+ }]));
 function refreshBusinessRegistration(){$("showBusinessRegister").hidden=false;}
-let checking=false,registering=false;const lastLogin=localStorage.getItem("puantor_last_login");if(lastLogin)$("email").value=lastLogin;refreshBusinessRegistration();
+let checking=false,registering=false;refreshBusinessRegistration();
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
 try{const snap=await getDoc(doc(db,"users",user.uid));const profile=snap.exists()?snap.data():{};const role=profile.role||null;
 if(role==="admin"){location.replace("./yonetici.html");return}
@@ -48,5 +105,5 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  await signOut(auth);
  }catch(err){$("businessStatus").textContent="Kayıt hatası: "+(err.code||err.message)+(err.code==="permission-denied"?" — Firebase güvenlik kuralları henüz yayımlanmamış olabilir.":"");$("status").textContent=$("businessStatus").textContent;if(cred)await signOut(auth).catch(()=>{});}finally{registering=false;b.disabled=false;b.textContent="İşletme Hesabı Oluştur";$("businessPassword").value="";}
 });
-$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const code=$("operatorFirmCode").value.trim().toLowerCase();const email=login.includes("@")?login:code?(await resolveOperatorLogin({code,username:login})).data.email:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);localStorage.setItem("puantor_last_firm_code",login.includes("@")?"":code);localStorage.setItem("puantor_last_login",$("email").value)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
+$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const code=$("operatorFirmCode").value.trim().toLowerCase();const email=login.includes("@")?login:code?(await resolveOperatorLogin({code,username:login})).data.email:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);saveLoginHistory(login,login.includes("@")?"":code)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
 </script></body></html>
