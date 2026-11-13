@@ -15,7 +15,7 @@ a{color:#1d4ed8}
 /* iOS Safari: prevent automatic focus zoom while retaining user pinch zoom */
 input,select,textarea{font-size:16px!important}
 </style></head><body><main>
-<h1>🚜 Puantör | Operatör</h1><div id="clockWarning" role="alert" hidden style="background:#fff4d6;border:1px solid #e8a93c;padding:12px;border-radius:10px;margin:14px 0;color:#713f12"><strong>Telefonun saatini kontrol edin</strong><p id="clockWarningText" style="color:#713f12;margin:8px 0">Telefon saati sunucu saatiyle uyuşmuyor. Ayarlar → Tarih ve saat → Otomatik tarih ve saat seçeneğini açın.</p><button type="button" id="retryClock" style="margin-top:6px">Saat kontrolünü tekrar yap</button></div>
+<h1>🚜 Puantör | Operatör</h1><p id="activeAccount" style="overflow-wrap:anywhere" hidden>Aktif hesap: <strong id="who"></strong></p><div id="clockWarning" role="alert" hidden style="background:#fff4d6;border:1px solid #e8a93c;padding:12px;border-radius:10px;margin:14px 0;color:#713f12"><strong>Telefonun saatini kontrol edin</strong><p id="clockWarningText" style="color:#713f12;margin:8px 0">Telefon saati sunucu saatiyle uyuşmuyor. Ayarlar → Tarih ve saat → Otomatik tarih ve saat seçeneğini açın.</p><button type="button" id="retryClock" style="margin-top:6px">Saat kontrolünü tekrar yap</button></div>
 
 <form id="operatorLogin" autocomplete="off">
 <label for="username">Operatör kullanıcı adı</label>
@@ -24,7 +24,7 @@ input,select,textarea{font-size:16px!important}
 <input id="pin" name="pin" required type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="En az 8 karakter">
 <button type="submit">Giriş yap</button>
 </form>
-<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><p>Giriş yapan: <strong id="who"></strong></p><label for="machineSelect">Atanan makineyi seç</label><select id="machineSelect" style="width:100%;padding:13px;font-size:17px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"></select><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Müşteri: <strong id="customerName">—</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p>Anlık iş tutarı: <strong id="liveAmount">—</strong></p><p id="rateInfo" style="font-size:13px;margin-top:-8px">Saatlik ücret: —</p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Çalışma durumunuz burada görünür.</p><button type="button" id="signout">Çıkış yap</button></section>
+<p id="error" role="status" aria-live="polite"></p><section id="session" hidden><label for="machineSelect">Atanan makineyi seç</label><select id="machineSelect" style="width:100%;padding:13px;font-size:17px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"></select><p>Makine: <strong id="machine">Yetki bekleniyor</strong></p><p>Müşteri: <strong id="customerName">—</strong></p><p>Durum: <strong id="machineStatus">—</strong></p><p>Çalışma süresi: <strong id="machineTime">—</strong></p><p>Anlık iş tutarı: <strong id="liveAmount">—</strong></p><p id="rateInfo" style="font-size:13px;margin-top:-8px">Saatlik ücret: —</p><div class="actions"><button type="button" id="start" disabled>▶ Başlat</button><button type="button" id="pause" disabled>Ⅱ Duraklat</button><button type="button" id="fault" class="danger" disabled>⚠ Arıza</button><button type="button" id="finish" disabled>✓ Bitir</button></div><p class="notice" id="controlInfo">Çalışma durumunuz burada görünür.</p><button type="button" id="signout">Çıkış yap</button></section>
 
 
 </main>
@@ -84,12 +84,19 @@ async function changeState(action){
 for(const id of controls)$(id).addEventListener("click",()=>{ changeState(id) });
 onAuthStateChanged(auth,async user=>{
  if(unsubscribe){unsubscribe();unsubscribe=null}machineId=null;machineData=null;updateControls();
+ $("activeAccount").hidden=true;
+ $("who").textContent="";
  $("operatorLogin").hidden=!!user;$("session").hidden=!user;
  if(!user){location.replace("./giris.html");return;}
- $("who").textContent=user.email||"Operatör";
  try{
  const profile=await getDoc(doc(db,"users",user.uid));
  if(!profile.exists()||profile.data().role!=="operator"){location.replace("./giris.html");return}
+ if(auth.currentUser?.uid!==user.uid)return;
+ const account=profile.data().loginUsername||profile.data().username||user.email;
+ if(account){
+  $("who").textContent=account;
+  $("activeAccount").hidden=false;
+ }
  const ids=profile.data().machineIds;
  if(!Array.isArray(ids)||!ids.length){showError("Makine ataması henüz tamamlanmadı.");return}
  const selector=$("machineSelect");selector.innerHTML="";
