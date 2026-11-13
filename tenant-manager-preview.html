@@ -99,7 +99,19 @@ button:not(:disabled):active{filter:brightness(.96)}
 <details class="toolbox" id="addTool"><summary><span class="tool-icon">➕</span>Ekle<span class="tool-arrow">⌄</span></summary><div class="tool-content">
 <label>Ne eklemek istiyorsunuz?<select id="addType"><option value="">Seçiniz</option><option value="operator">Operatör</option><option value="machine">Makine</option><option value="customer">Müşteri</option></select></label>
 <div id="addMachinePanel" class="hidden"><form id="machineForm"><label>Makine adı / plaka<input id="newMachine" maxlength="80" required placeholder="35 CJV 827"></label><label>Makine saatlik ücreti (TL)<input id="newMachineRate" type="number" min="0" max="100000000" step="0.01" required></label><button type="submit" id="addMachine">Makineyi kaydet</button></form><p id="machineError" role="alert"></p></div>
-<div id="addOperatorPanel" class="hidden"><form id="operatorForm"><datalist id="operatorSuggestions"></datalist><label>Kullanıcı adı<input list="operatorSuggestions" id="opUsername" required minlength="3" maxlength="32" placeholder="bekir.36"></label><label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label><label>İlk giriş şifresi<input id="opPassword" type="password" required minlength="8" maxlength="128" autocomplete="new-password"></label><p class="muted">Operatörün giriş şifresini yönetici belirler. Makine seçimi Görev Ekle bölümünde yapılır.</p><button type="submit" id="opSave">Operatörü kaydet</button></form><p id="opResult" role="status"></p></div>
+<div id="addOperatorPanel" class="hidden"><form id="operatorForm">
+<label>Operatör adı<input id="opName" required maxlength="80" placeholder="Bekir"></label>
+<label>Operatörün cep telefonu<input id="opPhone" type="tel" autocomplete="off" required maxlength="30" placeholder="05XX XXX XX XX"></label>
+<p class="muted">Kullanıcı adı ve ilk giriş şifresi otomatik oluşturulur.</p>
+<button type="submit" id="opSave">Operatörü kaydet</button></form>
+<p id="opResult" role="status"></p>
+<div id="opMessage" hidden>
+<label for="opMessageText">Operatöre gönderilecek giriş bilgileri</label>
+<textarea id="opMessageText" rows="5" readonly style="width:100%;box-sizing:border-box"></textarea>
+<button type="button" class="secondary" id="opCopyMessage">Mesajı kopyala</button>
+<a id="opOpenSms">SMS taslağını aç</a>
+<p class="muted">Mesaj gövdesi boş açılırsa giriş bilgilerini kopyalayıp SMS’e yapıştırın.</p>
+</div></div>
 <div id="addCustomerPanel" class="hidden"><form id="customerForm"><label>Müşteri adı<input id="customerName" required maxlength="100" placeholder="Çakmak Yapı"></label><button type="submit" id="customerSave">Müşteriyi kaydet</button></form><p id="customerResult" role="status"></p></div>
 </div></details>
 <details class="toolbox" id="taskTool"><summary><span class="tool-icon">📌</span>Operatöre Görev Ata<span class="tool-arrow">⌄</span></summary><div class="tool-content"><p id="operatorTaskHint" class="muted">Görevlendir grubundan operatör seçin.</p><div id="operatorTaskCard" class="hidden"><form id="taskForm">
@@ -139,7 +151,7 @@ setTimeout(()=>{if(!window.__puantorReady){const el=document.getElementById("sta
 window.addEventListener("DOMContentLoaded",()=>{
  const el=id=>document.getElementById(id),input=el("actionSearch"),results=el("actionResults"),hint=el("actionHint"),cancel=el("actionCancel"),mic=el("actionMic");
  const items=[
- ["Yeni operatör ekle",0,"addType","operator","opUsername","opName","opSave","personel çalışan kayıt oluştur"],
+ ["Yeni operatör ekle",0,"addType","operator","opName","opPhone","opSave","personel çalışan kayıt oluştur"],
  ["Yeni makine / kepçe ekle",0,"addType","machine","newMachine","addMachine","araç iş makinesi plaka ekskavatör"],
  ["Yeni müşteri ekle",0,"addType","customer","customerName","customerSave","firma cari şirket"],
  ["Operatöre yeni görev ata",1,"taskMachine","taskOperator","taskCustomer","taskRate","taskSave","iş ver iş emri kepçe görevlendir"],
@@ -728,8 +740,7 @@ function refreshSuggestions(){
  select.replaceChildren(new Option("Makine seçin",""));
  for(const m of cached)select.add(new Option(m.machineName||m.plaka||m.id,m.id));
  if(cached.some(m=>m.id===previous))select.value=previous;
- const names=[...new Set([...cached.map(m=>m.operatorUsername),...operators.map(o=>o.username)].filter(Boolean))];
- $("operatorSuggestions").replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
+
 }
 function render(){
  const pendingArchive=cached.filter(m=>m.status==="done").length;
@@ -740,21 +751,52 @@ function render(){
 }
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("error").textContent="";try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value)}catch(err){$("error").textContent="Giriş başarısız: "+err.code}});
 $("machineForm").addEventListener("submit",async e=>{e.preventDefault();const button=$("addMachine");button.disabled=true;$("machineError").textContent="";try{const name=$("newMachine").value.trim(),rate=Number($("newMachineRate").value);if(!name)throw new Error("Makine adı gerekli");if($("newMachineRate").value.trim()===""||!Number.isFinite(rate)||rate<0||rate>100000000)throw Error("Geçerli saatlik ücret girin.");await addDoc(collection(db,"businesses",tenantId,"machines"),{machineName:name,defaultHourlyRate:rate,operatorName:"",operatorUsername:"",customerName:"",status:"idle",jobReady:false,elapsedMs:0,startedAt:null,updatedAt:serverTimestamp(),faultReason:""});$("machineForm").reset();message("Makine eklendi · Canlı veri izleniyor")}catch(err){$("machineError").textContent="Makine eklenemedi: "+(err.code||err.message)}finally{button.disabled=false}});
-$("operatorForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("opSave"),out=$("opResult");b.disabled=true;out.textContent="";try{
- const username=$("opUsername").value.trim().toLowerCase(),displayName=$("opName").value.trim();
- if(!/^[a-z0-9._-]{3,32}$/.test(username)||!displayName)throw Error("Geçerli kullanıcı adı ve ad girin.");
- const result=await tenantOperatorAdmin({action:"create",username,displayName,password:$("opPassword").value});
- const code=$("firmCode").readOnly?$("firmCode").value:"";
- out.textContent=code
-  ?"Operatör hesabı oluşturuldu. Firma kodu: "+code+" · Kullanıcı adı: "+result.data.username
-  :"Operatör hesabı oluşturuldu. Giriş e-postası: "+result.data.loginEmail;$("operatorForm").reset();
- }catch(err){out.textContent="Kaydedilemedi: "+(err.message||err.code)}finally{b.disabled=false}});
+function clearOperatorMessage(){
+ $("opMessage").hidden=true;
+ $("opMessageText").value="";
+ $("opOpenSms").removeAttribute("href");
+}
+$("opCopyMessage").onclick=async ()=>{
+ const field=$("opMessageText");
+ try{await navigator.clipboard.writeText(field.value);$("opResult").textContent="Mesaj kopyalandı."}
+ catch{field.focus();field.select();$("opResult").textContent="Seçili mesajı kopyalayın."}
+};
+$("operatorForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const button=$("opSave"),out=$("opResult");
+ button.disabled=true;
+ out.textContent="";
+ try{
+  const displayName=$("opName").value.trim();
+  const rawPhone=$("opPhone").value.trim().replace(/[\s().-]/g,"");
+  const mobile=rawPhone.match(/^(?:\+90|0090|90|0)?(5\d{9})$/);
+  const phone=mobile?"+90"+mobile[1]:rawPhone;
+  if(!displayName)throw Error("Operatör adını girin.");
+  if(!mobile&&!/^\+(?!90)[1-9]\d{7,14}$/.test(phone))throw Error("Geçerli bir cep telefonu girin. Türkiye dışı numaralarda ülke kodunu + ile yazın.");
+  const randomHex=size=>Array.from(crypto.getRandomValues(new Uint8Array(size)),byte=>byte.toString(16).padStart(2,"0")).join("");
+  const namePrefix=displayName.toLowerCase().replaceAll("ı","i").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,12)||"operator";
+  const username=namePrefix+"-"+randomHex(3),password=randomHex(12);
+  const {data}=await tenantOperatorAdmin({action:"create",username,displayName,password});
+  const code=$("firmCode").readOnly?$("firmCode").value:"";
+  const login=new URL("./giris.html",location.href).href;
+  const loginDetails=code?"Firma kodu: "+code+"\nKullanıcı adı: "+data.username:"Giriş adresi: "+data.loginEmail;
+  const body="Puantör giriş bilgileriniz\n"+login+"\n"+loginDetails+"\nİlk giriş şifresi: "+password;
+  const appleMobile=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  $("opMessageText").value=body;
+  $("opOpenSms").href="sms:"+phone+(appleMobile?"&":"?")+"body="+encodeURIComponent(body);
+  $("opMessage").hidden=false;
+  out.textContent="Operatör hesabı oluşturuldu. SMS taslağını açıp alıcıyı kontrol edin ve gönderin.";
+  $("operatorForm").reset();
+ }catch(err){out.textContent="Kaydedilemedi: "+(err.message||err.code)}
+ finally{button.disabled=false}
+});
 $("machines").addEventListener("click",e=>{const b=e.target.closest("button.edit-machine");if(!b)return;const m=cached.find(x=>x.id===b.dataset.id);if(!m)return;$("editId").value=m.id;$("editMachine").value=m.machineName||m.plaka||"";$("editMachineRate").value=m.defaultHourlyRate??m.hourlyRate??"";$("editOperator").value=m.operatorName||"";$("editUsername").value=m.operatorUsername||"";$("editCustomer").value=m.customerName||"";$("editError").textContent="";$("editSection").classList.remove("hidden");$("editSection").scrollIntoView({behavior:"smooth",block:"start"})});
 $("machines").addEventListener("click",async e=>{const b=e.target.closest("button.reset-machine");if(!b)return;const id=b.dataset.id;const current=cached.find(m=>m.id===id);if(!current||current.status!=="done"){message("Arşivlenecek tamamlanmış iş bulunamadı.");return}const rawRate=prompt("BİTİRİLEN İŞİ KONTROL ET\\nMakine: "+(current.machineName||id)+"\\nÇalışma süresi: "+duration(current)+"\\n\\nSaatlik ücreti (TL) kontrol edin veya düzeltin:",current.hourlyRate==null?"":String(current.hourlyRate));if(rawRate===null)return;const rate=Number(rawRate.trim().replace(",","."));if(!rawRate.trim()||!Number.isFinite(rate)||rate<0){message("Geçerli bir saatlik ücret girin.");return}const workTotal=Math.round(Math.floor(Math.max(0,Number(current.elapsedMs)||0)/1000)*rate/3600*100)/100;const travelTotal=Number(current.travelFee)||0;const total=Math.round((workTotal+travelTotal)*100)/100;if(!confirm("ARŞİV ONAYI\\nMakine: "+(current.machineName||id)+"\\nSüre: "+duration(current)+"\\nSaatlik ücret: "+rate.toLocaleString("tr-TR")+" TL\\nÇalışma bedeli: "+workTotal.toLocaleString("tr-TR")+" TL\\nYol ücreti: "+travelTotal.toLocaleString("tr-TR")+" TL\\nGenel toplam: "+total.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" TL\\n\\nİşi arşivleyip yeni görev için makineyi hazırla?"))return;b.disabled=true;try{await runTransaction(db,async tx=>{const ref=doc(db,"businesses",tenantId,"machines",id),snap=await tx.get(ref);if(!snap.exists()||snap.data().status!=="done")throw Error("Makine tamamlandı durumunda değil.");const old=snap.data();if(Number(old.elapsedMs||0)!==Number(current.elapsedMs||0)||old.hourlyRate!==current.hourlyRate)throw Error("İş bilgileri değişti. Yeniden kontrol edin.");const historyRef=doc(db,"businesses",tenantId,"jobs",id+"_"+String(old.updatedAt?.toMillis?.()||Date.now()));tx.set(historyRef,{machineId:id,machineName:old.machineName||"",operatorName:old.operatorName||"",operatorUsername:old.operatorUsername||"",customerName:old.customerName||"",elapsedMs:old.elapsedMs||0,hourlyRate:rate,travelFee:Number(old.travelFee)||0,workAmount:Math.round(Math.floor(Math.max(0,Number(old.elapsedMs)||0)/1000)*rate/3600*100)/100,amount:Math.round((Math.floor(Math.max(0,Number(old.elapsedMs)||0)/1000)*rate/3600+(Number(old.travelFee)||0))*100)/100,status:"done",completedAt:old.updatedAt||null,archivedAt:serverTimestamp(),operatorUid:old.operatorUid||null,timeline:Array.isArray(old.timeline)?old.timeline:[]});tx.update(ref,{timeline:[],status:"idle",jobReady:false,elapsedMs:0,hourlyRate:null,travelFee:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()})});message("İş geçmişe kaydedildi. Yeni çalışma için Operatöre Görev Ata bölümünü kullanın.")}catch(err){message("Yeni çalışma hazırlanamadı: "+(err.message||err.code))}finally{b.disabled=false}});
 $("cancelEdit").onclick=()=>{$("editSection").classList.add("hidden");$("editForm").reset()};
 $("editForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("saveEdit");b.disabled=true;$("editError").textContent="";try{const id=$("editId").value;if(!cached.some(m=>m.id===id))throw new Error("Makine bulunamadı");if($("editMachineRate").value.trim()===""||!Number.isFinite(Number($("editMachineRate").value))||Number($("editMachineRate").value)<0||Number($("editMachineRate").value)>100000000)throw Error("Geçerli saatlik ücret girin.");await updateDoc(doc(db,"businesses",tenantId,"machines",id),{machineName:$("editMachine").value.trim(),defaultHourlyRate:Number($("editMachineRate").value),operatorName:$("editOperator").value.trim(),operatorUsername:$("editUsername").value.trim().toLowerCase(),customerName:$("editCustomer").value.trim(),updatedAt:serverTimestamp()});$("editSection").classList.add("hidden");message("Makine bilgileri güncellendi · Canlı veri izleniyor")}catch(err){$("editError").textContent="Kaydedilemedi: "+(err.code||err.message)}finally{b.disabled=false}});
 $("logout").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{
+ clearOperatorMessage();
  if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=null;window.__puantorSaveLearning=null;window.dispatchEvent(new Event("puantor-learning-disabled"));
  if(unsubscribe){unsubscribe();unsubscribe=null}if(unsubscribeJobs){unsubscribeJobs();unsubscribeJobs=null}if(unsubscribeCustomers){unsubscribeCustomers();unsubscribeCustomers=null}if(unsubscribeOperators){unsubscribeOperators();unsubscribeOperators=null}if(ticker){clearInterval(ticker);ticker=null}
  $("dashboard").classList.add("hidden");$("logout").classList.add("hidden");
