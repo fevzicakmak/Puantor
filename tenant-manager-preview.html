@@ -330,6 +330,7 @@ import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.
 import {getFirestore,doc,getDoc,collection,onSnapshot,addDoc,setDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),functions=getFunctions(app,"europe-west1"),tenantOperatorAdmin=httpsCallable(functions,"tenantOperatorAdmin");window.__puantorReady=true;let tenantId=null;
 let learningUnsub=null,learningUid=null;
+const assignOperatorWork=httpsCallable(getFunctions(app,"europe-west1"),"assignOperatorWork");
 function startLearningSync(uid){if(learningUnsub){learningUnsub();learningUnsub=null}learningUid=uid;const ref=doc(db,"businesses",tenantId,"searchPreferences",uid);
  window.__puantorSaveLearning=async prefs=>{if(learningUid!==uid)throw Error("Oturum değişti");await setDoc(ref,{preferences:prefs,updatedAt:serverTimestamp()},{merge:true})};
  learningUnsub=onSnapshot(ref,snap=>{if(snap.exists())window.dispatchEvent(new CustomEvent("puantor-learning-remote",{detail:snap.data().preferences||{}}));window.dispatchEvent(new Event("puantor-learning-ready"))},()=>window.dispatchEvent(new Event("puantor-learning-disabled")));
@@ -618,7 +619,7 @@ $("manageRename").onclick=async()=>{
   const item=source.find(x=>x.id===id);if(!item)throw Error("Kayıt bulunamadı.");
   const oldName=type==="operator"?item.displayName:type==="customer"?item.name:item.machineName;
   if(oldName===name){out.textContent="Ad zaten aynı.";return}
-  const ref=doc(db,type==="operator"?"operators":type==="customer"?"customers":"machines",id);
+  const ref=doc(db,"businesses",tenantId,type==="operator"?"operators":type==="customer"?"customers":"machines",id);
   const linked=type==="operator"?cached.filter(m=>m.operatorUsername===item.username||m.operatorUid&&m.operatorUid===item.authUid):type==="customer"?cached.filter(m=>m.customerName===oldName):[];
   if(linked.length>100)throw Error("Bağlı makine sayısı çok yüksek. İşlem güvenli sınırı aşıyor.");
   const refs=linked.map(m=>doc(db,"businesses",tenantId,"machines",m.id));
@@ -751,19 +752,10 @@ $("taskForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
  const operator=operators.find(o=>o.displayName+" (@"+o.username+")"===operatorText);
  const customer=customers.find(c=>c.name===customerName);
  if(!machine||!operator||!customer)throw Error("Lütfen listeden kayıtlı makine, operatör ve müşteri seçin.");if(!operator.authUid||operator.authStatus!=="active")throw Error("Operatör henüz yönetici tarafından onaylanmadı.");
- await runTransaction(db,async tx=>{const machineRef=doc(db,"businesses",tenantId,"machines",machine.id),userRef=doc(db,"users",operator.authUid),opRef=doc(db,"businesses",tenantId,"operators",operator.id);
- const [ms,us,os]=await Promise.all([tx.get(machineRef),tx.get(userRef),tx.get(opRef)]);
- if(!ms.exists()||!us.exists()||!os.exists()||us.data().role!=="tenant_operator"||us.data().tenantId!==tenantId)throw Error("Makine veya firma operatörü yetkisi bulunamadı.");
- const linkedIds=[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),...cached.filter(x=>x.operatorUid===operator.authUid).map(x=>x.id)])].filter(id=>id!==machine.id);
- const linkedSnapshots=await Promise.all(linkedIds.map(id=>tx.get(doc(db,"businesses",tenantId,"machines",id))));
- for(const other of linkedSnapshots){if(!other.exists())continue;const om=other.data();if(om.operatorUid===operator.authUid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Operatörün arşivlenmemiş başka bir işi var ("+(om.machineName||other.id)+"). Önce işi bitirip yönetici onayıyla arşivleyin.");}
-
-
- const m=ms.data();const travelFee=Number($("taskRate").value);if($("taskRate").value.trim()===""||!Number.isFinite(travelFee)||travelFee<0||travelFee>100000000)throw Error("Geçerli yol ücreti girin.");if(m.defaultHourlyRate==null||!Number.isFinite(Number(m.defaultHourlyRate)))throw Error("Makinenin saatlik ücretini önce Makineyi Düzenle bölümünden kaydedin.");if(m.status==="running"||m.status==="paused"||m.status==="broken")throw Error("Bu makinede devam eden çalışma var.");if(m.status==="done")throw Error("Önce tamamlanan işi arşivleyin.");if(m.jobReady===true)throw Error("Bu makinede zaten açık bir görev var.");
- tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username,operatorName:operator.displayName,customerName:customer.name,hourlyRate:Number(m.defaultHourlyRate),travelFee:Number($("taskRate").value),jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",updatedAt:serverTimestamp()});
- tx.update(userRef,{machineIds:[...new Set([...(Array.isArray(us.data().machineIds)?us.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
- tx.update(opRef,{machineIds:[...new Set([...(Array.isArray(os.data().machineIds)?os.data().machineIds:[]),machine.id])],updatedAt:serverTimestamp()});
- });out.textContent="Görev oluşturuldu. Operatör artık bu görevi başlatabilir.";$("taskMachine").value="";$("taskCustomer").value="";$("taskRate").value="";
+ const rawTravelFee=$("taskRate").value.trim();
+ if(!rawTravelFee)throw Error("Geçerli yol ücreti girin.");
+ await assignOperatorWork({machineId:machine.id,operatorId:operator.id,customerId:customer.id,travelFee:Number(rawTravelFee)});
+ out.textContent="Görev oluşturuldu. Operatör artık bu görevi başlatabilir.";$("taskMachine").value="";$("taskCustomer").value="";$("taskRate").value="";
  }catch(err){out.textContent="Görev oluşturulamadı: "+(err.message||err.code)}finally{b.disabled=false}});
 function refreshSuggestions(){
  const select=$("opMachine");if(!select)return;const previous=select.value;

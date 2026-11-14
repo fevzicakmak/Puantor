@@ -4,6 +4,10 @@ admin.initializeApp();
 const db=admin.firestore();
 const ADMIN_UID="3m5MqDVbbFTVWl0VNWz1ipKZ8eO2";
 const auth=admin.auth();
+const {createWorkStateHandler}=require("./work-state");
+exports.operatorWorkState=onCall({region:"europe-west1"},createWorkStateHandler({db,Timestamp:admin.firestore.Timestamp,HttpsError}));
+const {createAssignWorkHandler}=require("./assign-work");
+exports.assignOperatorWork=onCall({region:"europe-west1"},createAssignWorkHandler({db,Timestamp:admin.firestore.Timestamp,HttpsError,adminUid:ADMIN_UID}));
 function adminOnly(request){if(!request.auth||request.auth.uid!==ADMIN_UID)throw new HttpsError("permission-denied","Yalnızca yönetici.");}
 function username(v){const x=String(v||"").trim().toLowerCase();if(!/^[a-z0-9._-]{3,32}$/.test(x))throw new HttpsError("invalid-argument","Kullanıcı adı 3-32 karakter olmalı.");return x;}
 function password(v){if(typeof v!=="string"||v.length<8||v.length>128)throw new HttpsError("invalid-argument","Şifre 8-128 karakter olmalı.");return v;}

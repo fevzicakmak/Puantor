@@ -1,3 +1,6 @@
+// Runtime state and operator activeMachineId are written only by operatorWorkState.
+// Payment fields: customerName string, amount positive number (TRY), date YYYY-MM-DD,
+// note string <=150, createdAt timestamp (immutable; historical backup restores allowed).
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -36,46 +39,28 @@ service cloud.firestore {
      request.resource.data.managerName.size() >= 2 && request.resource.data.managerName.size() <= 80;
    allow delete: if false;
    match /{subcollection}/{recordId} {
-    allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','payments','searchPreferences'];
+    allow read, write: if tenantAdmin(tenantId) && subcollection in ['machines','customers','operators','jobs','searchPreferences'];
     // Operators can only read machines assigned to them, never other tenant records.
     allow get: if subcollection == 'machines' && tenantMachineAssigned(tenantId, recordId);
-    // A tenant operator may only advance their own assigned machine's runtime state.
-    allow update: if subcollection == 'machines' &&
-      tenantMachineAssigned(tenantId, recordId) &&
-      resource.data.get('jobReady', false) == true &&
-      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt','timeline'
-      ]) &&
-      request.resource.data.updatedAt == request.time &&
-      request.resource.data.elapsedMs is number &&
-      request.resource.data.elapsedMs >= resource.data.get('elapsedMs', 0) &&
-      request.resource.data.timeline is list &&
-      request.resource.data.timeline.size() == resource.data.get('timeline', []).size() + 1 &&
-      request.resource.data.timeline.size() <= 250 &&
-      request.resource.data.timeline[request.resource.data.timeline.size()-1].action in ['start','pause','fault','finish'] &&
-      (
-        (request.resource.data.status == 'running' &&
-         resource.data.status in ['idle','paused','broken'] &&
-         request.resource.data.timeline[request.resource.data.timeline.size()-1].action == 'start' &&
-         request.resource.data.startedAt == request.time &&
-         request.resource.data.jobReady == true &&
-         request.resource.data.faultReason == '' &&
-         getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeMachineId == recordId) ||
-        (request.resource.data.status in ['paused','broken','done'] &&
-         resource.data.status in ['idle','running','paused','broken'] &&
-         request.resource.data.timeline[request.resource.data.timeline.size()-1].action ==
-           (request.resource.data.status == 'paused' ? 'pause' : (request.resource.data.status == 'broken' ? 'fault' : 'finish')) &&
-         (request.resource.data.status != 'paused' || resource.data.status == 'running') &&
-         request.resource.data.startedAt == null &&
-         request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
-         (request.resource.data.status != 'broken' ||
-           (request.resource.data.faultReason is string &&
-            request.resource.data.faultReason.size() > 0 &&
-            request.resource.data.faultReason.size() <= 500)) &&
-         getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('activeMachineId', '') != recordId)
-      );
+    // Operator state changes go through the authenticated callable function.
 
    }
+  }
+  function validPayment(data) {
+   return data.keys().hasAll(['customerName','amount','date','note','createdAt']) &&
+     data.keys().hasOnly(['customerName','amount','date','note','createdAt']) &&
+     data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 500 &&
+     data.amount is number && data.amount > 0 && data.amount <= 100000000 &&
+     data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
+     data.note is string && data.note.size() <= 150 &&
+     data.createdAt is timestamp && data.createdAt <= request.time;
+  }
+  match /businesses/{tenantId}/payments/{paymentId} {
+   allow read, delete: if tenantAdmin(tenantId);
+   allow create: if tenantAdmin(tenantId) && validPayment(request.resource.data);
+   allow update: if tenantAdmin(tenantId) && validPayment(request.resource.data) &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date','amount','note']) &&
+     request.resource.data.createdAt == resource.data.createdAt;
   }
   function tenantManagerForUser(data) {
    return signedIn() && data.get('tenantId', '') is string &&
@@ -106,22 +91,6 @@ service cloud.firestore {
      getAfter(/databases/$(database)/documents/operators/$(request.resource.data.username)).data.pendingUid == uid
    );
    allow update: if isAdmin() || (
-     signedIn() && request.auth.uid == uid &&
-     resource.data.get('role', '') == 'tenant_operator' &&
-     resource.data.get('tenantId', '') is string &&
-     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
-     request.resource.data.get('activeMachineId', '') is string &&
-     (
-       (request.resource.data.activeMachineId != '' &&
-        resource.data.get('activeMachineId', '') == '' &&
-        request.resource.data.activeMachineId in resource.data.get('machineIds', []) &&
-        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.operatorUid == uid &&
-        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(request.resource.data.activeMachineId)).data.status == 'running') ||
-       (request.resource.data.activeMachineId == '' &&
-        resource.data.get('activeMachineId', '') != '' &&
-        getAfter(/databases/$(database)/documents/businesses/$(resource.data.tenantId)/machines/$(resource.data.activeMachineId)).data.status != 'running')
-     )
-   ) || (
      tenantManagerForUser(resource.data) &&
      request.resource.data.get('tenantId', '') == resource.data.tenantId &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','displayName','machineIds','updatedAt']) &&
@@ -130,25 +99,6 @@ service cloud.firestore {
      request.resource.data.get('machineIds', []) is list &&
      request.resource.data.get('machineIds', []).size() <= 100 &&
      request.resource.data.updatedAt == request.time
-   ) || (
-     signedIn() && request.auth.uid == uid &&
-     resource.data.role == 'operator' &&
-     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMachineId']) &&
-     request.resource.data.activeMachineId is string &&
-     (
-       (
-         request.resource.data.activeMachineId != '' &&
-         resource.data.get('activeMachineId', '') == '' &&
-         request.resource.data.activeMachineId in resource.data.machineIds &&
-         getAfter(/databases/$(database)/documents/machines/$(request.resource.data.activeMachineId)).data.operatorUid == uid &&
-         getAfter(/databases/$(database)/documents/machines/$(request.resource.data.activeMachineId)).data.status == 'running'
-       ) ||
-       (
-         request.resource.data.activeMachineId == '' &&
-         resource.data.get('activeMachineId', '') != '' &&
-         getAfter(/databases/$(database)/documents/machines/$(resource.data.activeMachineId)).data.status != 'running'
-       )
-     )
    );
    allow delete: if isAdmin();
   }
@@ -182,63 +132,20 @@ service cloud.firestore {
   match /machines/{machineId} {
    allow read: if isAdmin() || isAssigned(machineId);
    allow create, delete: if isAdmin();
-   // Assigned operators can change runtime state only, never machine ownership.
-   allow update: if isAdmin() || (
-     isAssigned(machineId) &&
-     request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-       'status','startedAt','elapsedMs','faultReason','jobReady','updatedAt','timeline'
-     ]) &&
-     request.resource.data.updatedAt == request.time &&
-     request.resource.data.timeline is list &&
-     request.resource.data.timeline.size() <= 250 &&
-     request.resource.data.timeline.size() == resource.data.get('timeline', []).size() + 1 &&
-     request.resource.data.timeline[request.resource.data.timeline.size() - 1].action in ['start','pause','fault','finish'] &&
-     request.resource.data.elapsedMs is number &&
-     request.resource.data.elapsedMs >= resource.data.elapsedMs &&
-     request.resource.data.elapsedMs >= 0 &&
-     // Only the manager may authorize a new job; operators may only revoke authorization on finish.
-     resource.data.get('jobReady', false) == true &&
-     request.resource.data.jobReady == (request.resource.data.status == 'done' ? false : true) &&
-     (
-       (request.resource.data.status == 'running' &&
-        resource.data.status in ['idle','paused','broken'] &&
-        request.resource.data.startedAt == request.time &&
-        request.resource.data.elapsedMs == resource.data.elapsedMs &&
-        request.resource.data.faultReason == '' &&
-        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeMachineId == machineId) ||
-       (request.resource.data.status in ['paused','broken','done'] &&
-        resource.data.status in ['idle','running','paused','broken'] &&
-        request.resource.data.startedAt == null &&
-        (resource.data.status != 'running' ||
-         (resource.data.startedAt is timestamp &&
-          request.resource.data.elapsedMs >= resource.data.elapsedMs)) &&
-        (request.resource.data.status != 'broken' ||
-         (request.resource.data.faultReason is string &&
-          request.resource.data.faultReason.size() > 0 &&
-          request.resource.data.faultReason.size() <= 500)))
-     )
-   );
+   // Operators cannot replace elapsedMs or timeline directly.
+   allow update: if isAdmin();
   }
   match /jobs/{jobId} {
    allow read: if isAdmin() || (signedIn() && resource.data.operatorUid == request.auth.uid);
-   allow create: if isAdmin() || (signedIn() && request.resource.data.operatorUid == request.auth.uid);
+   allow create: if isAdmin();
    allow update, delete: if isAdmin();
   }
   match /payments/{paymentId} {
    allow read: if isAdmin();
-   allow create: if isAdmin() &&
-     request.resource.data.keys().hasAll(['customerName','amount','date','note','createdAt']) &&
-     request.resource.data.keys().hasOnly(['customerName','amount','date','note','createdAt']) &&
-     request.resource.data.customerName is string && request.resource.data.customerName.size() > 0 &&
-     request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 100000000 &&
-     request.resource.data.date is string && request.resource.data.date.size() == 10 &&
-     request.resource.data.note is string && request.resource.data.note.size() <= 150 &&
-     request.resource.data.createdAt == request.time;
-   allow update: if isAdmin() &&
+   allow create: if isAdmin() && validPayment(request.resource.data);
+   allow update: if isAdmin() && validPayment(request.resource.data) &&
      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date','amount','note']) &&
-     request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 100000000 &&
-     request.resource.data.date is string && request.resource.data.date.size() == 10 &&
-     request.resource.data.note is string && request.resource.data.note.size() <= 150;
+     request.resource.data.createdAt == resource.data.createdAt;
    allow delete: if isAdmin();
   }
   match /{document=**} { allow read, write: if false; }

@@ -10,7 +10,7 @@ test -f firebase-config.js && test -f tenant-manager-preview.html && test -f fir
 grep -q 'projectId: "puantor-staging"' firebase-config.js || { echo "HATA: Firebase client staging projesine bagli degil"; exit 1; }
 test "$(git branch --show-current)" = "$BRANCH" || { echo "HATA: yanlis GitHub dali"; exit 1; }
 mkdir -p .puantor-staging-public
-cp firebase-config.js giris.html tenant-manager-preview.html tenant-operator-preview.html .puantor-staging-public/
+cp firebase-config.js operator-actions.js giris.html tenant-manager-preview.html tenant-operator-preview.html .puantor-staging-public/
 cp giris.html .puantor-staging-public/index.html
 echo "Hedef Firebase projesi: $PROJECT (puantor-live'e dagitim yasak)"
 firebase deploy --config firebase.staging.json --project "$PROJECT" --only firestore,functions,hosting --non-interactive
