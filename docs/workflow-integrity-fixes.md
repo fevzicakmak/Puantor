@@ -85,7 +85,8 @@ henüz yapılmadı.
 
 ## Yayın sırası
 
-Bu dal henüz canlıya yayınlanmadı. Veriler taşınmadı veya silinmedi.
+14 Kasım 2026 tarihinde kullanıcı onayıyla canlı yayın tamamlandı. Uygulama
+kayıtları taşınmadı veya silinmedi. Yayın kanıtları: `docs/live-release-2026-11-14.md`.
 Mevcut `firebase-config.js` canlı projeyi gösterdiği için bu dalı olduğu gibi
 denemek amacıyla canlı hesaplarla kullanmayın. Ayrı staging yapılandırmasıyla
 test edin. Güncel staging betiği bu yapılandırmayı yetkili Firebase API'sinden

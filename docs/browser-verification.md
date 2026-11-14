@@ -85,8 +85,9 @@ mevcut formlardan ayrı bir deneme işletmesi oluşturularak şu zincir doğrula
 Beklenmeyen tarayıcı hatası ve üretim hedefine istek sayısı 0. Staging
 istemci yapılandırmasında projectId ve authDomain ayrıca doğrulandı.
 Deneme verileri yalnızca `puantor-staging` içinde, `Codex Staging Test`
-ön ekiyle oluşturuldu; canlı veriler değiştirilmedi. Fiziksel cihaz/Safari
-ve üretim dağıtımı henüz yapılmadı. İki firma arasındaki negatif erişim
+ön ekiyle oluşturuldu; canlı veriler değiştirilmedi. Fiziksel cihaz/Safari doğrulaması model tarafından yapılmadı. Kullanıcı
+onayından sonra üretim dağıtımı da tamamlandı; canlı kanıtları
+`docs/live-release-2026-11-14.md` içinde. İki firma arasındaki negatif erişim
 senaryosu yerel demo/emülatör testinde doğrulandı.
 
 Staging ekran görüntüleri ve sonuç, çalışma alanında
