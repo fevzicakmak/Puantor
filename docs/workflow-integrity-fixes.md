@@ -80,8 +80,8 @@ bitirme, iki iş modelinde tam görev/arşiv döngüsü ve tutar hesabı kontrol
 Giriş ve dört ana ekranın scriptler çıkarıldıktan sonra kalan HTML/CSS
 içeriği temel commit ile birebir karşılaştırıldı. Gerçek Chromium üzerinde
 oturumlu uçtan uca emülatör testi de tamamlandı; ayrıntılar
-`docs/browser-verification.md` içinde. Fiziksel iPhone/Android ve gerçek
-staging doğrulaması henüz yapılmadı.
+`docs/browser-verification.md` içinde. Gerçek staging doğrulaması da tamamlandı. Fiziksel iPhone/Android kontrolü
+henüz yapılmadı.
 
 ## Yayın sırası
 

@@ -64,47 +64,53 @@ Ekran görüntüleri ve sonuç: `test-results/browser/operator-mobile.png`,
 `manager-mobile.png`, `statement.csv`, `result.json`. CI bunları
 `browser-e2e-evidence` adıyla saklar.
 
-## Gerçek staging ve kalan sınırlar
+## Gerçek staging doğrulaması
 
-Gerçek `puantor-staging` dağıtımı henüz yapılmadı. Yerel Firebase CLI hesabı
-yok; GitHub üzerinden mevcut OIDC iş akışı çalıştırıldı:
-https://github.com/fevzicakmak/Puantor/actions/runs/43625773094.
-Paket kurulumu başarılı oldu ancak Google Cloud federasyon adımı
-`unauthorized_client: The given credential is rejected by the attribute condition`
-hatasıyla durdu. Provider'ın mevcut kısıtlamaları korunarak yalnızca ref ve
-workflow_ref alanlarındaki eski dal, kullanıcı tarafından
-`fix/preserve-ui-workflow-integrity` olarak güncellendi.
+Test yayını: https://puantor-staging.web.app
 
-https://github.com/fevzicakmak/Puantor/actions/runs/43630415270
-denemesinde federasyon ve staging Web App yapılandırmasının alınması geçti.
-Yayın, Firebase CLI 14'ün kullanılmayan Extensions listesini okuma
-kontrolünde HTTP 403 ile durdu. Firebase CLI 15.36.0 sabitlendi; bu sürüm
-Extensions kullanmayan Functions kaynaklarında ilgili isteği uyarıyla
-tamamlayabiliyor. Extensions erişim yetkileri genişletilmedi.
+Başarılı dağıtım ve uç nokta kontrolü:
+https://github.com/fevzicakmak/Puantor/actions/runs/43632122583
 
-Provider: `puantor-staging-github/github-actions`, proje numarası
-`587333598841`; dağıtım hesabı
-`puantor-staging-deploy@puantor-staging.iam.gserviceaccount.com`.
-Mevcut koşulu okumak için Cloud Shell komutu:
+14 Kasım 2026 tarihinde gerçek staging üzerinde Chromium mobil görünümünde
+mevcut formlardan ayrı bir deneme işletmesi oluşturularak şu zincir doğrulandı:
 
-```sh
-gcloud iam workload-identity-pools providers describe github-actions \
-  --workload-identity-pool=puantor-staging-github --location=global \
-  --project=puantor-staging --format='value(attributeCondition)'
-```
+- Gerçek Firebase Auth kaydı, firma oluşturma ve yönetici/operatör girişi.
+- Makine, müşteri ve operatör oluşturma; SMS taslağı gönderilmedi.
+- Açık operatör ekranına sayfa yenilenmeden yeni görev gelmesi.
+- Başlat → duraklat → devam → bitir; veritabanındaki süre, durum ve hareket sırası.
+- Yönetici arşivi, müşteri kimliğinin korunması, tahsilat ve isim değişimi
+  sonrasında aynı hesap bakiyesi.
+- Gerçek PDF penceresi ve CSV indirme.
 
-Eski özellik dalındaki 43077026768 numaralı denemede federasyon başarılı
-olmuş, yayın Cloud Run hizmetinde IAM politikası ayarlanırken durmuştu.
-Mevcut dalın federasyon sorunu çözüldükten sonra bu ikinci sınır ayrıca
-doğrulanmalıdır; geçmiş hata yeni çalışmada yeniden oluşmuş sayılmaz.
+Beklenmeyen tarayıcı hatası ve üretim hedefine istek sayısı 0. Staging
+istemci yapılandırmasında projectId ve authDomain ayrıca doğrulandı.
+Deneme verileri yalnızca `puantor-staging` içinde, `Codex Staging Test`
+ön ekiyle oluşturuldu; canlı veriler değiştirilmedi. Fiziksel cihaz/Safari
+ve üretim dağıtımı henüz yapılmadı. İki firma arasındaki negatif erişim
+senaryosu yerel demo/emülatör testinde doğrulandı.
+
+Staging ekran görüntüleri ve sonuç, çalışma alanında
+`/workspace/puantor-inceleme/staging/` altında tutulur.
+
+### Yayın bağlantısı
+
+- OIDC güven koşulu aynı repository_id, owner_id, staging environment ve
+  workflow_dispatch kısıtlarını korur; ref ve workflow_ref mevcut düzeltme
+  dalını hedefler.
+- Kullanıcı, staging dağıtım hesabına Cloud Functions Admin rolünü ekledi.
+  Önceden yarım kalmış fonksiyonların çağrı politikaları yalnızca staging
+  projesindeki altı Firebase callable hizmetinde onarıldı.
+- Firebase istemci token'larının handler'a ulaşması için Cloud Run invoker
+  politikası Firebase callable modeline uygun ayarlanır. Veri değiştiren
+  handler'ların uygulama Auth/rol denetimleri korunur. Yayın sonunda
+  `scripts/verify-staging-endpoints.cjs` JSON Auth/validasyon cevaplarını
+  kontrol eder; altyapıdan gelen HTML 403 başarılı sayılmaz.
+- Firebase CLI 15.36.0 sabitlendi. Kullanılmayan Extensions kontrolü nedeniyle
+  ek Extensions yönetici izni verilmedi.
 
 `scripts/deploy-staging.sh` yalnızca main veya mevcut düzeltme dalından
-`puantor-staging` projesine yayın yapar. Web uygulaması yapılandırmasını
-kimliği doğrulanmış Firebase API'sinden indirir, projectId/authDomain
-kontrollerini uygular ve yalnızca açıkça listelenmiş uygulama dosyalarını
-paketler. Kaynaktaki `firebase-config.js` değişmez; eski sıfırlama aracı
-yayın paketine alınmaz. Birden fazla staging Web App varsa
-`PUANTOR_STAGING_APP_ID` / GitHub `FIREBASE_STAGING_WEB_APP_ID` seçilmelidir.
-
-Fiziksel cihaz, gerçek Safari, dış ağda staging erişimi ve üretim dağıtımı
-henüz doğrulanmadı. Yerel emülatör başarısı bunların yerine geçmez.
+`puantor-staging` projesine yayın yapar. Yapılandırmayı yetkili Firebase
+API'sinden indirir ve yalnızca açıkça listelenmiş dosyaları paketler.
+Kaynaktaki `firebase-config.js` değişmez; sıfırlama aracı pakete alınmaz.
+Birden fazla staging Web App varsa `PUANTOR_STAGING_APP_ID` / GitHub
+`FIREBASE_STAGING_WEB_APP_ID` seçilmelidir.
