@@ -1,22 +1,83 @@
 name: Verify Puantor live Firebase connection
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        description: Controlled release phase
+        type: choice
+        required: true
+        default: preflight
+        options:
+          - preflight
+          - functions
+          - rules
 permissions: {}
+concurrency:
+  group: puantor-live-release
+  cancel-in-progress: false
 jobs:
   verify:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     environment: puantor-live
     permissions:
       id-token: write
+      contents: read
     steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the exact staging-approved source
+        uses: actions/checkout@v4
+        with:
+          ref: 94c7252eebc7937be0763889cc7285c381a685b7
+          path: release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked release tools
+        run: |
+          npm ci --prefix release --no-audit --no-fund
+          npm ci --prefix release/functions --no-audit --no-fund
       - name: Verify Google Cloud access token issuance
+        id: live-auth
         uses: google-github-actions/auth@v2
         with:
           project_id: puantor-live
           workload_identity_provider: ${{ vars.GCP_LIVE_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_LIVE_DEPLOY_SERVICE_ACCOUNT }}
           token_format: access_token
-          create_credentials_file: false
-          export_environment_variables: false
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Check live permissions and snapshot existing rules
+        env:
+          PUANTOR_LIVE_ACCESS_TOKEN: ${{ steps.live-auth.outputs.access_token }}
+        run: python3 scripts/live-release-preflight.py
+      - name: Deploy approved Functions without changing Firestore rules
+        if: inputs.phase == 'functions'
+        working-directory: release
+        run: ./node_modules/.bin/firebase deploy --config firebase.json --project puantor-live --only functions:operatorWorkState,functions:assignOperatorWork,functions:completeBusinessRegistration,functions:operatorAdmin,functions:operatorLoginAddress,functions:tenantOperatorAdmin --non-interactive
+      - uses: google-github-actions/setup-gcloud@v2
+        if: inputs.phase == 'functions'
+        with:
+          project_id: puantor-live
+      - name: Reconcile invocation policies for the six Firebase callables
+        if: inputs.phase == 'functions'
+        run: |
+          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin; do
+            gcloud run services add-iam-policy-binding "$service" \
+              --project=puantor-live --region=europe-west1 \
+              --member=allUsers --role=roles/run.invoker --quiet
+          done
+          node scripts/verify-live-endpoints.cjs
+      - name: Activate approved Firestore rules after frontend rollout
+        if: inputs.phase == 'rules'
+        working-directory: release
+        run: ./node_modules/.bin/firebase deploy --config firebase.json --project puantor-live --only firestore:rules --non-interactive
+      - name: Save the pre-release rules snapshot even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-pre-release-rules-${{ github.run_id }}
+          path: live-release-evidence
+          if-no-files-found: warn
+          retention-days: 30
