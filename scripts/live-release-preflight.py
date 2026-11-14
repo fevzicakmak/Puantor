@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import urllib.request
+import urllib.error
 
 PROJECT = "puantor-live"
 OUTPUT = Path("live-release-evidence")
@@ -15,8 +16,13 @@ def api(url, payload=None):
     request = urllib.request.Request(url, data=data, headers={
         "Authorization": "Bearer " + token, "Content-Type": "application/json"
     })
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        body = error.read().decode()
+        (OUTPUT / "api-error.json").write_text(json.dumps({"url": url, "status": error.code, "response": body}, indent=2))
+        raise SystemExit("Live preflight API error " + str(error.code) + " at " + url + ": " + body)
 
 
 required = [
