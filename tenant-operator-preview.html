@@ -56,10 +56,15 @@ async function changeState(action){
  if(action==="finish"&&!confirm("Bu makinenin çalışmasını bitirmek istiyor musunuz?"))return;
  busy=true;updateControls();showError("");$("controlInfo").textContent="İşlem gönderiliyor: "+action+"…";
  try{
-  await performWorkAction(machineId,machineData,action,reason.trim());
+  const selectedMachine=machineData;
+  const result=await performWorkAction(machineId,selectedMachine,action,reason.trim());
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
   $("controlInfo").textContent="Firebase işlemi kaydetti: "+expected+". Canlı veri bekleniyor.";
-  if(action==="finish")showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");
+  if(action==="finish"){
+   $("machineStatus").textContent="Tamamlandı";$("machineTime").textContent=fmt(result.elapsedMs);
+   const rate=Number(selectedMachine.hourlyRate);if(selectedMachine.hourlyRate!=null&&Number.isFinite(rate))$("liveAmount").textContent=(result.elapsedMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});
+   showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");
+  }
  }catch(e){showError("İşlem başarısız ["+(e.code||"hata")+"]: "+(e.message||"Bilinmeyen hata"))}
  finally{busy=false;updateControls()}
 }

@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROJECT="puantor-staging"
-BRANCH="feature/single-app-multicompany-from-last-single"
-if ! command -v firebase >/dev/null 2>&1; then
-  echo "Firebase CLI bulunamadi. Cloud Shell'de: npm install -g firebase-tools"
+PUANTOR_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PUANTOR_ROOT"
+if ! test -x node_modules/.bin/firebase; then
+  echo "Firebase CLI bulunamadi. Once npm ci ve npm ci --prefix functions calistirin."
   exit 1
 fi
-test -f firebase-config.js && test -f tenant-manager-preview.html && test -f firestore.rules
-grep -q 'projectId: "puantor-staging"' firebase-config.js || { echo "HATA: Firebase client staging projesine bagli degil"; exit 1; }
-test "$(git branch --show-current)" = "$BRANCH" || { echo "HATA: yanlis GitHub dali"; exit 1; }
-mkdir -p .puantor-staging-public
-cp firebase-config.js operator-actions.js customer-ledger.mjs giris.html tenant-manager-preview.html tenant-operator-preview.html .puantor-staging-public/
-cp giris.html .puantor-staging-public/index.html
+case "$(git branch --show-current)" in
+  main|fix/preserve-ui-workflow-integrity) ;;
+  *) echo "HATA: staging icin onayli dal secilmedi"; exit 1 ;;
+esac
+test -f tenant-manager-preview.html && test -f firestore.rules
+node scripts/build-staging-public.cjs
 echo "Hedef Firebase projesi: $PROJECT (puantor-live'e dagitim yasak)"
-firebase deploy --config firebase.staging.json --project "$PROJECT" --only firestore,functions,hosting --non-interactive
+./node_modules/.bin/firebase deploy --config firebase.staging.json --project "$PROJECT" --only firestore,functions,hosting --non-interactive
 echo "Staging deployment complete."

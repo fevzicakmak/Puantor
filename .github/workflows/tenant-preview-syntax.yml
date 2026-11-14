@@ -44,3 +44,31 @@ jobs:
           path: tenant-firestore-test.log
           if-no-files-found: warn
           retention-days: 14
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install locked dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --prefix functions --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify browser → Auth/Functions/Firestore → screen on demo emulators
+        run: npm run test:e2e
+      - name: Upload browser evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-evidence
+          path: test-results/browser
+          if-no-files-found: warn
+          retention-days: 14

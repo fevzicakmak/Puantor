@@ -3,4 +3,6 @@ node_modules/
 *-debug.*.log
 .firebase/
 .puantor-staging-public/
+.puantor-e2e-public/
+test-results/
 *.log

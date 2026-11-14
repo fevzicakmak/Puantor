@@ -1,15 +1,16 @@
 const {onCall,HttpsError}=require("firebase-functions/v2/https");
 const admin=require("firebase-admin");
+const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 admin.initializeApp();
-const db=admin.firestore();
+const db=getFirestore();
 const ADMIN_UID="3m5MqDVbbFTVWl0VNWz1ipKZ8eO2";
 const auth=admin.auth();
 const {createWorkStateHandler}=require("./work-state");
-exports.operatorWorkState=onCall({region:"europe-west1"},createWorkStateHandler({db,Timestamp:admin.firestore.Timestamp,HttpsError}));
+exports.operatorWorkState=onCall({region:"europe-west1"},createWorkStateHandler({db,Timestamp,HttpsError}));
 const {createAssignWorkHandler}=require("./assign-work");
-exports.assignOperatorWork=onCall({region:"europe-west1"},createAssignWorkHandler({db,Timestamp:admin.firestore.Timestamp,HttpsError,adminUid:ADMIN_UID}));
+exports.assignOperatorWork=onCall({region:"europe-west1"},createAssignWorkHandler({db,Timestamp,HttpsError,adminUid:ADMIN_UID}));
 const {createBusinessRegistrationHandler}=require("./business-registration");
-exports.completeBusinessRegistration=onCall({region:"europe-west1"},createBusinessRegistrationHandler({db,Timestamp:admin.firestore.Timestamp,HttpsError}));
+exports.completeBusinessRegistration=onCall({region:"europe-west1"},createBusinessRegistrationHandler({db,Timestamp,HttpsError}));
 function adminOnly(request){if(!request.auth||request.auth.uid!==ADMIN_UID)throw new HttpsError("permission-denied","Yalnızca yönetici.");}
 function username(v){const x=String(v||"").trim().toLowerCase();if(!/^[a-z0-9._-]{3,32}$/.test(x))throw new HttpsError("invalid-argument","Kullanıcı adı 3-32 karakter olmalı.");return x;}
 function password(v){if(typeof v!=="string"||v.length<8||v.length>128)throw new HttpsError("invalid-argument","Şifre 8-128 karakter olmalı.");return v;}
@@ -27,8 +28,8 @@ exports.operatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false},async
    user=await auth.createUser({email,password:password(d.password),displayName,emailVerified:true,disabled:false});
    await db.runTransaction(async tx=>{
     const current=await tx.get(ref);if(current.exists)throw new HttpsError("already-exists","Kullanıcı adı mevcut.");
-    tx.create(ref,{username:name,displayName,authUid:user.uid,authStatus:"active",machineIds:[],createdAt:admin.firestore.FieldValue.serverTimestamp()});
-    tx.create(db.collection("users").doc(user.uid),{role:"operator",username:name,displayName,email,machineIds:[],createdAt:admin.firestore.FieldValue.serverTimestamp()});
+    tx.create(ref,{username:name,displayName,authUid:user.uid,authStatus:"active",machineIds:[],createdAt:FieldValue.serverTimestamp()});
+    tx.create(db.collection("users").doc(user.uid),{role:"operator",username:name,displayName,email,machineIds:[],createdAt:FieldValue.serverTimestamp()});
    });
   }catch(err){if(user)await auth.deleteUser(user.uid).catch(()=>{});throw err;}
   return {username:name};
@@ -136,8 +137,8 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
    await db.runTransaction(async tx=>{
     const [current,alias]=await Promise.all([tx.get(ref),tx.get(aliases.doc(name))]);
     if(current.exists||alias.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
-    tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:admin.firestore.FieldValue.serverTimestamp()});
-    tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:admin.firestore.FieldValue.serverTimestamp()});
+    tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:FieldValue.serverTimestamp()});
+    tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:FieldValue.serverTimestamp()});
    });
   }catch(err){if(created)await auth.deleteUser(created.uid).catch(()=>{});throw err;}
   return {username:name,loginEmail:email};

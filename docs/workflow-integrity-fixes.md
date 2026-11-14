@@ -77,16 +77,19 @@ Testlerde firma ayrımı, yetkisiz yazmalar, negatif tahsilat, tekrar gönderim,
 eşzamanlı başlatma, eski ekran isteği, eski atamalar, 250 hareket sonrası
 bitirme, iki iş modelinde tam görev/arşiv döngüsü ve tutar hesabı kontrol edilir.
 
-Değiştirilen dört ekranın scriptler çıkarıldıktan sonra kalan HTML/CSS
-içeriği temel commit ile birebir karşılaştırıldı. Fiziksel iPhone/Android ve
-oturumlu tarayıcı uçtan uca testleri henüz yapılmadı.
+Giriş ve dört ana ekranın scriptler çıkarıldıktan sonra kalan HTML/CSS
+içeriği temel commit ile birebir karşılaştırıldı. Gerçek Chromium üzerinde
+oturumlu uçtan uca emülatör testi de tamamlandı; ayrıntılar
+`docs/browser-verification.md` içinde. Fiziksel iPhone/Android ve gerçek
+staging doğrulaması henüz yapılmadı.
 
 ## Yayın sırası
 
 Bu dal henüz canlıya yayınlanmadı. Veriler taşınmadı veya silinmedi.
 Mevcut `firebase-config.js` canlı projeyi gösterdiği için bu dalı olduğu gibi
 denemek amacıyla canlı hesaplarla kullanmayın. Ayrı staging yapılandırmasıyla
-test edin.
+test edin. Güncel staging betiği bu yapılandırmayı yetkili Firebase API'sinden
+indirip yalnızca staging yayın paketine yazar; kaynak dosyayı değiştirmez.
 
 1. Staging'de Functions, güncel HTML/ortak modül ve kuralları birlikte test edin.
 2. Üretim yayını ayrıca kararlaştırıldığında önce `operatorWorkState` ve
