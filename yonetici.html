@@ -88,6 +88,18 @@ button:not(:disabled):active{filter:brightness(.96)}
 .manager-toolbar>button[data-panel]:not(#legacyTaskNav).active{outline:2px solid var(--tile-accent);outline-offset:-2px}
 .manager-toolbar>button[data-panel="0"]{--tile-accent:#15803d;--tile-bg:#dcfce7;--tile-ink:#166534;--tile-edge:#bbf7d0}
 .manager-toolbar>button[data-panel="2"]{--tile-accent:#be185d;--tile-bg:#fce7f3;--tile-ink:#9d174d;--tile-edge:#fbcfe8}
+
+.machine .machine-title{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.machine-symbol{width:56px;height:40px;flex:none;color:#253652}
+.machine-symbol .boom{transform-box:view-box;transform-origin:var(--boom-pivot)}
+.machine-symbol .exhaust{opacity:0}
+.machine.running .machine-symbol .boom{animation:machine-boom 2s ease-in-out infinite;animation-delay:var(--machine-phase)}
+.machine.running .machine-symbol .exhaust{animation:machine-exhaust 2s ease-out infinite;animation-delay:var(--machine-phase)}
+.machine-symbol .fault{display:none}
+.machine.broken .machine-symbol .fault{display:block;color:#b91c1c}
+@keyframes machine-boom{0%,100%{transform:rotate(0)}50%{transform:rotate(-14deg)}}
+@keyframes machine-exhaust{0%,100%{opacity:0;transform:translate(0,0)}25%{opacity:.45}85%{opacity:0;transform:translate(-5px,-9px)}}
+@media(prefers-reduced-motion:reduce){.machine.running .machine-symbol .boom,.machine.running .machine-symbol .exhaust{animation:none}}
 </style></head><body>
 <header><div><h1>🚜 Puantör | Yönetici</h1><div class="muted">Canlı saha takip merkezi</div><div id="activeAccount" class="muted" style="overflow-wrap:anywhere" hidden></div></div><button id="logout" class="secondary hidden" style="width:auto">Çıkış</button></header>
 <div id="status" class="card">Firebase bağlantısı hazırlanıyor…</div>
@@ -722,13 +734,23 @@ function refreshSuggestions(){
  const names=[...new Set([...cached.map(m=>m.operatorUsername),...operators.map(o=>o.username)].filter(Boolean))];
  $("operatorSuggestions").replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
 }
+
+function machineSymbol(machine){
+ const name=String(machine.machineType||machine.type||machine.machineName||"").toLocaleLowerCase("tr");
+ const loader=/yükleyici|loader|traktör|jcb|kazıcı|makine\s*2\s*$/.test(name);
+ const phase=-(Date.now()%2000);
+ const equipment=loader
+  ? '<path d="M4 27h7l4-12h16l5 12h8v9H4z"/><path fill="#fff" d="M18 18h8v9H15zm10 0h2l4 9h-6z"/><circle cx="12" cy="37" r="7"/><circle cx="34" cy="37" r="7"/><circle fill="#fff" cx="12" cy="37" r="3"/><circle fill="#fff" cx="34" cy="37" r="3"/><g class="boom"><path d="m37 25 17 9 5-2 8 11H54L36 30z"/></g>'
+  : '<rect x="3" y="33" width="35" height="10" rx="5"/><path d="M8 31v-9h9v-8h11l6 17z"/><path fill="#fff" d="M20 17h6l4 9H20z"/><path fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" d="M9 38h.1m7 0h.1m7 0h.1m7 0h.1"/><g class="boom"><path fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="m31 23 15-14 12 21"/><path d="m57 29 8 5q-1 8-12 5l-4-3z"/></g>';
+ return '<svg class="machine-symbol" viewBox="0 0 70 46" aria-hidden="true" focusable="false" fill="currentColor" style="--machine-phase:'+phase+'ms;--boom-pivot:'+(loader?'37px 26px':'31px 23px')+'">'+equipment+'<path d="M10 24v-9h3v9z"/><g class="exhaust"><circle cx="11" cy="13" r="3"/><circle cx="8" cy="9" r="2"/></g><g class="fault"><path fill="currentColor" d="M60 2 69 17H51z"/><path stroke="#fff" stroke-width="1.8" stroke-linecap="round" d="M60 7v4m0 3h.01"/></g></svg>';
+}
 function render(){
  const archiveMachines=cached.filter(m=>m.status==="done");
  const pendingArchive=archiveMachines.length;
  const archiveButton=document.querySelector('button[data-panel="7"]');
  if(archiveButton){let badge=archiveButton.querySelector(".archive-notification");if(!badge){badge=document.createElement("span");badge.className="archive-notification";badge.setAttribute("aria-live","polite");archiveButton.appendChild(badge)}badge.hidden=pendingArchive===0;badge.textContent=pendingArchive>0?String(pendingArchive):"";archiveButton.setAttribute("aria-label","Arşiv Bekleyen İşler"+(pendingArchive?" - "+pendingArchive+" tamamlanan iş bekliyor":""))}
  $("total").textContent=cached.length;$("running").textContent=cached.filter(m=>m.status==="running").length;$("paused").textContent=cached.filter(m=>m.status==="paused").length;$("broken").textContent=cached.filter(m=>m.status==="broken").length;
- const renderMachine=m=>'<article class="card machine '+safe(["running","paused","broken","done"].includes(m.status)?m.status:"")+'"><div class="top"><strong>🚜 '+safe(m.machineName||m.plaka||m.id)+'</strong><span class="tag">'+safe((m.operatorName?m.operatorName.trim()+" ":"")+(m.status==="running"?"çalışıyor":m.status==="paused"?"bekliyor":m.status==="done"?"tamamladı":m.status==="broken"?"arızada":labels[m.status]||"Bilinmiyor"))+'</span></div><p>Operatör: '+safe(m.operatorName||"Atanmadı")+(m.operatorUsername?" (@"+safe(m.operatorUsername)+")":"")+'</p><p>Müşteri: '+safe(m.customerName||"Atanmadı")+'</p><p>Çalışma süresi: <strong>'+duration(m)+'</strong></p><details class="timeline-details"><summary>🕒 Çalışma zaman çizelgesi</summary>'+timelineHtml(m.timeline)+'</details>'+ (m.status==="broken"?'<p style="color:#b91c1c">Arıza: '+safe(m.faultReason||"Açıklama yok")+'</p>':"")+'<small>Son güncelleme: '+safe(m.updatedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small><button type="button" class="secondary edit-machine" data-id="'+safe(m.id)+'">Makineyi düzenle</button>'+(m.status==="done"?'<button type="button" class="reset-machine" data-id="'+safe(m.id)+'">Bitirilen İşi Arşivle</button>':"")+'</article>';
+ const renderMachine=m=>'<article class="card machine '+safe(["running","paused","broken","done"].includes(m.status)?m.status:"")+'"><div class="top"><strong class="machine-title">'+machineSymbol(m)+'<span>'+safe(m.machineName||m.plaka||m.id)+'</span></strong><span class="tag">'+safe((m.operatorName?m.operatorName.trim()+" ":"")+(m.status==="running"?"çalışıyor":m.status==="paused"?"bekliyor":m.status==="done"?"tamamladı":m.status==="broken"?"arızada":labels[m.status]||"Bilinmiyor"))+'</span></div><p>Operatör: '+safe(m.operatorName||"Atanmadı")+(m.operatorUsername?" (@"+safe(m.operatorUsername)+")":"")+'</p><p>Müşteri: '+safe(m.customerName||"Atanmadı")+'</p><p>Çalışma süresi: <strong>'+duration(m)+'</strong></p><details class="timeline-details"><summary>🕒 Çalışma zaman çizelgesi</summary>'+timelineHtml(m.timeline)+'</details>'+ (m.status==="broken"?'<p style="color:#b91c1c">Arıza: '+safe(m.faultReason||"Açıklama yok")+'</p>':"")+'<small>Son güncelleme: '+safe(m.updatedAt?.toDate?.().toLocaleString("tr-TR")||"Bilinmiyor")+'</small><button type="button" class="secondary edit-machine" data-id="'+safe(m.id)+'">Makineyi düzenle</button>'+(m.status==="done"?'<button type="button" class="reset-machine" data-id="'+safe(m.id)+'">Bitirilen İşi Arşivle</button>':"")+'</article>';
  $("machines").innerHTML=cached.filter(m=>m.status!=="done").map(renderMachine).join("")||'<p class="muted">Canlı çalışma listesinde makine yok.</p>';
  $("archiveMachines").innerHTML=archiveMachines.map(renderMachine).join("")||'<p class="muted">Arşiv bekleyen iş yok.</p>';
 }
