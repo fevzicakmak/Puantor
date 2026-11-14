@@ -9,10 +9,11 @@ input,select,textarea{font-size:16px!important}
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-functions.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const resolveOperatorLogin=httpsCallable(getFunctions(app,"europe-west1"),"operatorLoginAddress");
+const completeBusinessRegistration=httpsCallable(getFunctions(app,"europe-west1"),"completeBusinessRegistration");
 const loginHistoryKey="puantor_login_history";
 function readLoginHistory(){
  try{
@@ -72,38 +73,45 @@ attachSuggestions("email","emailSuggestions",history=>history.map(({login,code})
   $("password").value="";
  }]));
 function refreshBusinessRegistration(){$("showBusinessRegister").hidden=false;}
-let checking=false,registering=false;refreshBusinessRegistration();
+let checking=false,registering=false,resumingRegistration=false;refreshBusinessRegistration();
 async function route(user){if(checking)return;checking=true;$("submit").disabled=true;$("status").textContent="Hesap yetkisi kontrol ediliyor…";
 try{const snap=await getDoc(doc(db,"users",user.uid));const profile=snap.exists()?snap.data():{};const role=profile.role||null;
 if(role==="admin"){location.replace("./yonetici.html");return}
 if(role==="operator"){location.replace("./operator.html");return}
-if(role==="tenant_admin"){if(profile.tenantId!==user.uid){$("status").textContent="Firma yöneticisi hesabı doğrulanamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-manager-preview.html");return}
+if(role==="tenant_admin"){if(profile.tenantId!==user.uid){$("status").textContent="Firma yöneticisi hesabı doğrulanamadı.";checking=false;$("submit").disabled=false;return}await completeBusinessRegistration({});location.replace("./tenant-manager-preview.html");return}
 if(role==="tenant_operator"){if(!profile.tenantId){$("status").textContent="Operatör firma kaydı bulunamadı.";checking=false;$("submit").disabled=false;return}location.replace("./tenant-operator-preview.html");return}
 if(role==="business_pending"){refreshBusinessRegistration();$("status").textContent="İşletme kaydınız alındı. Yönetim paneli henüz etkinleştirilmedi.";return}
 if(role==="pending"){$("status").textContent="Kaydınız oluşturuldu. Yönetici onayı bekleniyor.";return}
+if(!role&&user.email&&!user.email.toLowerCase().endsWith("@operators.puantor.invalid")){
+ try{await completeBusinessRegistration({});location.replace("./tenant-manager-preview.html");return}
+ catch(error){if(error.code!=="functions/failed-precondition")throw error;}
+ resumingRegistration=true;$("login").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;
+ $("businessEmail").value=user.email;$("businessEmail").readOnly=true;$("businessPassword").required=false;
+ $("businessStatus").textContent="Giriş hesabınız hazır. Yarım kalan işletme kaydını aşağıdaki bilgilerle tamamlayın.";
+ $("status").textContent="İşletme kaydı tamamlanmalı.";return;
+}
 $("status").textContent="Hesap henüz yönetici tarafından yetkilendirilmemiş.";await signOut(auth);
 }catch(err){$("status").textContent="Yetki kontrolü yapılamadı: "+(err.code||err.message)}
 finally{checking=false;$("submit").disabled=false}}
 onAuthStateChanged(auth,user=>{if(registering)return;if(user)route(user);else if(!checking)$("status").textContent="Giriş yapmak için bilgilerinizi yazın."},err=>$("status").textContent="Oturum hatası: "+(err.code||err.message));
 $("resetManagerPassword").onclick=async()=>{const email=$("email").value.trim().toLowerCase();if(!email.includes("@")||email.endsWith("@operators.puantor.invalid")){$("status").textContent="Şifre sıfırlamak için önce yönetici e-posta adresinizi yazın.";return;}const b=$("resetManagerPassword");b.disabled=true;$("status").textContent="Şifre sıfırlama bağlantısı gönderiliyor…";try{await sendPasswordResetEmail(auth,email);$("status").textContent="E-posta adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu kontrol edin.";}catch(err){$("status").textContent="Şifre sıfırlama işlemi başarısız: "+(err.code||err.message);}finally{b.disabled=false;}};
 $("showBusinessRegister").onclick=()=>{$("login").hidden=true;$("showBusinessRegister").hidden=true;$("businessRegister").hidden=false;$("status").textContent="Yeni işletme kaydı";};
-$("businessBack").onclick=()=>{$("businessRegister").hidden=true;$("login").hidden=false;refreshBusinessRegistration();};
+$("businessBack").onclick=async()=>{if(resumingRegistration){resumingRegistration=false;await signOut(auth);$("businessEmail").readOnly=false;$("businessPassword").required=true;}$("businessRegister").hidden=true;$("login").hidden=false;refreshBusinessRegistration();};
 $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();const b=$("businessSubmit");b.disabled=true;b.textContent="Hesap oluşturuluyor…";$("businessStatus").textContent="Firebase bağlantısı ve hesap kaydı yapılıyor. Lütfen bekleyin…";registering=true;let cred;try{
  const company=$("businessName").value.trim(),manager=$("businessManager").value.trim(),email=$("businessEmail").value.trim().toLowerCase(),password=$("businessPassword").value;
- if(company.length<2||manager.length<2||password.length<8)throw Error("İşletme, yönetici adı ve şifreyi kontrol edin.");
+ if(company.length<2||manager.length<2||(!resumingRegistration&&password.length<8))throw Error("İşletme, yönetici adı ve şifreyi kontrol edin.");
  await setPersistence(auth,browserLocalPersistence);
- cred=await createUserWithEmailAndPassword(auth,email,password);
- const uid=cred.user.uid;
+ if(resumingRegistration){if(!auth.currentUser||auth.currentUser.email?.toLowerCase()!==email)throw Error("Oturum değişti. Yeniden giriş yapın.");cred={user:auth.currentUser};}
+ else{try{cred=await createUserWithEmailAndPassword(auth,email,password)}catch(error){if(error.code!=="auth/email-already-in-use")throw error;cred=await signInWithEmailAndPassword(auth,email,password);}}
  $("businessStatus").textContent="Kimlik hesabı oluşturuldu. İşletme kaydı tamamlanıyor…";
- await setDoc(doc(db,"users",uid),{role:"tenant_admin",tenantId:uid,businessName:company,managerName:manager,email,createdAt:serverTimestamp()});
- await setDoc(doc(db,"businesses",uid),{name:company,managerName:manager,ownerUid:uid,createdAt:serverTimestamp()});
+ await completeBusinessRegistration({company,manager});
  refreshBusinessRegistration();
  $("businessStatus").textContent="İşletme kaydedildi. Doğrulama e-postası gönderiliyor…";
  await sendEmailVerification(cred.user).catch(()=>{});
  $("status").textContent="İşletme hesabı oluşturuldu. Giriş yaparak işletme panelini açabilirsiniz. E-posta doğrulama bağlantısını da kontrol edin.";
  $("businessRegister").hidden=true;$("login").hidden=false;refreshBusinessRegistration();
- await signOut(auth);
- }catch(err){$("businessStatus").textContent="Kayıt hatası: "+(err.code||err.message)+(err.code==="permission-denied"?" — Firebase güvenlik kuralları henüz yayımlanmamış olabilir.":"");$("status").textContent=$("businessStatus").textContent;if(cred)await signOut(auth).catch(()=>{});}finally{registering=false;b.disabled=false;b.textContent="İşletme Hesabı Oluştur";$("businessPassword").value="";}
+ resumingRegistration=false;$("businessEmail").readOnly=false;$("businessPassword").required=true;await signOut(auth);
+ }catch(err){$("businessStatus").textContent="Kayıt hatası: "+(err.code||err.message)+(err.code==="permission-denied"?" — Firebase güvenlik kuralları henüz yayımlanmamış olabilir.":"");$("status").textContent=$("businessStatus").textContent;if(cred){resumingRegistration=false;$("businessEmail").readOnly=false;$("businessPassword").required=true;await signOut(auth).catch(()=>{});}}finally{registering=false;b.disabled=false;b.textContent="İşletme Hesabı Oluştur";$("businessPassword").value="";}
 });
 $("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const code=$("operatorFirmCode").value.trim().toLowerCase();const email=login.includes("@")?login:code?(await resolveOperatorLogin({code,username:login})).data.email:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);saveLoginHistory(login,login.includes("@")?"":code)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
 </script></body></html>

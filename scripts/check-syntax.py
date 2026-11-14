@@ -36,7 +36,7 @@ for path in sorted(Path(".").glob("*.html")):
             subprocess.run(["node", "--check", script.name], check=True)
     print(f"{path}: PASS ({len(parser.scripts)} scripts)")
 
-for pattern in ("*.js", "functions/*.js", "tests/*.cjs"):
+for pattern in ("*.js", "*.mjs", "functions/*.js", "tests/*.cjs", "tests/*.mjs"):
     for path in sorted(Path(".").glob(pattern)):
         subprocess.run(["node", "--check", str(path)], check=True)
         print(f"{path}: PASS")

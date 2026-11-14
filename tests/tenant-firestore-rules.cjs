@@ -79,10 +79,16 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
   await assertSucceeds(updateDoc(payment,{amount:50,note:"Düzeltme"}));
   await assertFails(updateDoc(payment,{amount:-1}));
   await assertFails(updateDoc(payment,{customerName:"Başka Müşteri"}));
+  await assertFails(updateDoc(payment,{customerId:"another"}));
   await assertFails(updateDoc(payment,{createdAt:serverTimestamp()}));
   await assertFails(updateDoc(payment,{note:"x".repeat(151)}));
   await assertFails(setDoc(doc(a,"businesses","firm-a","payments","bad"),{amount:-999,customerName:123}));
   await assertFails(getDoc(doc(b,"businesses","firm-a","payments","receipt")));
+  const identified=doc(a,"businesses","firm-a","payments","identified");
+  await assertSucceeds(setDoc(identified,{customerId:"customer1",customerName:"Müşteri",amount:100,date:"2026-11-14",note:"",createdAt:original}));
+  await assertSucceeds(updateDoc(identified,{amount:125}));
+  await assertFails(updateDoc(identified,{customerId:"customer2"}));
+  await assertFails(setDoc(doc(a,"businesses","firm-a","payments","invalid-id"),{customerId:12,customerName:"Müşteri",amount:100,date:"2026-11-14",note:"",createdAt:original}));
   await assertFails(getDoc(doc(a,"customers","wrong-root")));
   // All three rename paths remain in the current company.
   for(const type of ["customers","machines","operators"]){

@@ -137,6 +137,7 @@ async function request(f,action,extra={}){
   assert.deepEqual((await f.user.get()).data().machineIds,[f.machine.id]);
   const assigned=(await f.machine.get()).data();
   assert.equal(assigned.customerName,"Müşteri");assert.equal(assigned.hourlyRate,1500);assert.equal(assigned.travelFee,250);
+  assert.equal(assigned.customerId,"customer");
   await reject(()=>assign(req),"failed-precondition");
   await handle(await request(f,"start"));
   clock+=3600000;
@@ -154,6 +155,8 @@ async function request(f,action,extra={}){
   assert.equal((await job.get()).data().timeline.length,2);
   await assign(req);
   await handle(await request(f,"start"));
+  await parent.collection("customers").doc("archived").set({name:"Pasif",archived:true});
+  await reject(()=>assign({...req,data:{...req.data,customerId:"archived"}}),"failed-precondition");
   console.log("PASS: "+scope+" assignment/reassignment cleanup → work → finish → archive → new task, unchanged billing");
  }
 }finally{await deleteApp(app)}})().catch(error=>{console.error(error);process.exitCode=1});

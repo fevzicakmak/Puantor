@@ -26,6 +26,7 @@ function createAssignWorkHandler({db,Timestamp,HttpsError,adminUid}){
    if(assignments.docs.some(s=>s.id!==machineId&&(s.data().jobReady===true||["running","paused","broken","done"].includes(s.data().status))))fail("failed-precondition","Operatörün arşivlenmemiş başka bir işi var. Önce yönetici onayıyla arşivleyin.");
    if(machine.status!=="idle"||machine.jobReady===true)fail("failed-precondition","Önce makinenin mevcut işini tamamlayıp arşivleyin.");
    if(!Number.isFinite(machine.defaultHourlyRate)||machine.defaultHourlyRate<0||machine.defaultHourlyRate>100000000)fail("failed-precondition","Makinenin saatlik ücretini kontrol edin.");
+   if(customer.archived===true)fail("failed-precondition","Pasif müşteriye yeni görev atanamaz.");
    if(typeof customer.name!=="string"||!customer.name.trim())fail("failed-precondition","Müşteri adı gerekli.");
    let previousUser,previousOperator;
    if(id(machine.operatorUid)&&machine.operatorUid!==operator.authUid){
@@ -41,7 +42,7 @@ function createAssignWorkHandler({db,Timestamp,HttpsError,adminUid}){
    }
    const machineIds=[...new Set([...assignments.docs.map(s=>s.id),machineId])];
    if(machineIds.length>100)fail("failed-precondition","Operatör makine atama sınırını aşıyor.");
-   tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username||operatorId,operatorName:operator.displayName||"",customerName:customer.name,hourlyRate:machine.defaultHourlyRate,travelFee,jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",timeline:[],updatedAt:now});
+   tx.update(machineRef,{operatorUid:operator.authUid,operatorUsername:operator.username||operatorId,operatorName:operator.displayName||"",customerId,customerName:customer.name,hourlyRate:machine.defaultHourlyRate,travelFee,jobReady:true,status:"idle",elapsedMs:0,startedAt:null,faultReason:"",timeline:[],updatedAt:now});
    tx.update(userRef,{machineIds,activeMachineId:"",updatedAt:now});
    tx.update(operatorRef,{machineIds,updatedAt:now});
    return {ok:true};

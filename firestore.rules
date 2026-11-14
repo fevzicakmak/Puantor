@@ -48,7 +48,8 @@ service cloud.firestore {
   }
   function validPayment(data) {
    return data.keys().hasAll(['customerName','amount','date','note','createdAt']) &&
-     data.keys().hasOnly(['customerName','amount','date','note','createdAt']) &&
+     data.keys().hasOnly(['customerId','customerName','amount','date','note','createdAt']) &&
+     (!('customerId' in data) || (data.customerId is string && data.customerId.size() > 0 && data.customerId.size() <= 128)) &&
      data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 500 &&
      data.amount is number && data.amount > 0 && data.amount <= 100000000 &&
      data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') &&

@@ -32,6 +32,35 @@ Dal: `fix/preserve-ui-workflow-integrity`.
   Firestore kurallarını ve sunucu iş akışını kontrol eder. Bağımlılık kilit
   dosyaları eklendi; staging yayın paketine ortak operatör modülü dahil edildi.
 
+### İkinci düzeltme grubu
+
+- `completeBusinessRegistration`, Auth hesabının ardından users ve businesses
+  belgelerini aynı transaction'da oluşturur. Eski kayıttan yalnızca biri kalmışsa
+  eksik olanı tamamlar; mevcut adları, firma kodunu ve yetkileri değiştirmez.
+  İki belge de yoksa mevcut kayıt formu kullanılır. Aynı e-postayla yeniden
+  denemede şifreyle giriş yapılarak kayıt tamamlanır; mevcut operatör/admin
+  hesabı işletme yöneticisine dönüştürülmez.
+- Yeni görev, arşiv ve tahsilat kayıtları `customerId` bilgisini taşır.
+  Tahsilat geri yüklemesi de bu bilgiyi korur; ID tahsilat düzenlemesiyle
+  değiştirilemez. İsimler tarihsel görünüm için ayrıca saklanır.
+- Müşteri adları değiştiğinde `previousNames` eski isimleri korur. Eski
+  isimli kayıtlar yalnızca tek müşteriyle kesin eşleştiğinde aynı hesapta
+  gösterilir; belirsiz kayıtlar ayrı kalır. Arşiv belgelerine toplu veri
+  dönüşümü uygulanmaz. Önceden kaybolmuş isim eşleşmeleri tahmin edilmez.
+- Mevcut seçim alanlarının görünür etiketleri müşteri adıdır; değerleri
+  sabit kimliklerdir. Yeniden adlandırma seçimi ve bakiyeyi değiştirmez.
+  Geçmiş işin ve PDF satırının kayıt anındaki müşteri adı korunur.
+- Müşteri kaldırma işlemi yeni görev listesinde müşteriyi pasife alır;
+  finansal hesap ve eski isimler silinmez. Pasif müşteriye sunucu üzerinden
+  de yeni görev atanamaz. Aynı isim mevcut müşteri ekleme formundan yeniden
+  girilirse eski kimliğiyle aktif edilir; yeni ve kopuk bir hesap oluşturulmaz.
+  Formun yerleşimi değişmemiştir.
+- Ortak CSV kaçış işlevi formül başlangıçlarını metne dönüştürür.
+- jsdom üzerinde gerçek HTML scriptleriyle iki yönetici formunda yeniden
+  adlandırma, hesap bakiyesi, tahsilat/görev kimliği, PDF başlığı, arşiv kimliği
+  ve müşteri pasife alma akışları test edilir. Giriş formunda yeni/yarım kayıt
+  ve bağlantı hatası sonrası yeniden deneme senaryoları çalıştırılır.
+
 ## Doğrulama
 
 Node 22 ve Java 21 ile:
@@ -62,7 +91,10 @@ test edin.
 1. Staging'de Functions, güncel HTML/ortak modül ve kuralları birlikte test edin.
 2. Üretim yayını ayrıca kararlaştırıldığında önce `operatorWorkState` ve
    `assignOperatorWork` fonksiyonlarını yayınlayın.
-3. Ortak `operator-actions.js` dosyasıyla birlikte dört güncel ekranı yayınlayın.
+   İkinci grup için `completeBusinessRegistration` da ekranlardan önce
+   yayınlanmalıdır.
+3. Ortak `operator-actions.js` ve `customer-ledger.mjs` dosyalarıyla birlikte
+   giriş ve dört güncel ekranı yayınlayın.
 4. Yeni ekranların çalıştığı doğrulandıktan sonra Firestore kurallarını yayınlayın.
    Kurallar sıkılaştırıldığında eski açık operatör sekmeleri yenilenmelidir.
 
@@ -73,9 +105,9 @@ uyumlu olarak geri alınmalıdır; yeni fonksiyonları kaldırmak gerekmez.
 
 ## Kalan işler ve sınırlar
 
-- Müşteri kimliğine geçiş, eski cari hesapların eşlenmesi, yarım işletme
-  kaydını tamamlama, geçmiş sayfalama ve mali değişiklik denetim izi bu
-  düzeltme grubunun dışında kaldı. Bunlar ayrı, veri koruyan değişikliklerdir.
+- Büyük geçmiş için sayfalama, mali değişiklik denetim izi ve geçmişten
+  kaybolmuş/belirsiz müşteri eşlemelerinin yönetici tarafından doğrulanması
+  ayrı işlerdir. Eski belirsiz hesaplar otomatik birleştirilmez.
 - Hareket geçmişi uyumluluk için aynı dokümanın dizisinde kalır. 250 sınırı
   kalkmıştır fakat Firestore'un 1 MiB doküman sınırı devam eder. Çok uzun
   görevler için geçmişin sayfalı alt koleksiyona taşınması ayrıca tasarlanmalı;
