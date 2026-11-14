@@ -37,3 +37,19 @@ jobs:
         env:
           PUANTOR_STAGING_APP_ID: ${{ vars.FIREBASE_STAGING_WEB_APP_ID }}
         run: bash scripts/deploy-staging.sh
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: puantor-staging
+      # A previous failed create can leave a callable without its invoker
+      # policy. Firebase skips unchanged code and does not repair that policy.
+      # These are exactly the Firebase callable endpoints; handler Auth and
+      # role checks still enforce access to all business data.
+      - name: Reconcile staging callable invocation policies
+        run: |
+          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin; do
+            gcloud run services add-iam-policy-binding "$service" \
+              --project=puantor-staging --region=europe-west1 \
+              --member=allUsers --role=roles/run.invoker --quiet
+          done
+      - name: Verify reachable callables enforce application authentication
+        run: node scripts/verify-staging-endpoints.cjs
