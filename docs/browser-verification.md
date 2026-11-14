@@ -66,9 +66,37 @@ Ekran görüntüleri ve sonuç: `test-results/browser/operator-mobile.png`,
 
 ## Gerçek staging ve kalan sınırlar
 
-Gerçek `puantor-staging` dağıtımı yapılmadı. Bu oturumda Firebase CLI hesap
-sayısı 0 ve uygulama kimlik bilgisi bağlantısı yok. Önce staging için yetkili
-Firebase oturumu veya GitHub ortamındaki OIDC bağlantısı sağlanmalıdır.
+Gerçek `puantor-staging` dağıtımı henüz yapılmadı. Yerel Firebase CLI hesabı
+yok; GitHub üzerinden mevcut OIDC iş akışı çalıştırıldı:
+https://github.com/fevzicakmak/Puantor/actions/runs/43625773094.
+Paket kurulumu başarılı oldu ancak Google Cloud federasyon adımı
+`unauthorized_client: The given credential is rejected by the attribute condition`
+hatasıyla durdu. Provider'ın mevcut kısıtlamaları korunarak yalnızca ref ve
+workflow_ref alanlarındaki eski dal, kullanıcı tarafından
+`fix/preserve-ui-workflow-integrity` olarak güncellendi.
+
+https://github.com/fevzicakmak/Puantor/actions/runs/43630415270
+denemesinde federasyon ve staging Web App yapılandırmasının alınması geçti.
+Yayın, Firebase CLI 14'ün kullanılmayan Extensions listesini okuma
+kontrolünde HTTP 403 ile durdu. Firebase CLI 15.36.0 sabitlendi; bu sürüm
+Extensions kullanmayan Functions kaynaklarında ilgili isteği uyarıyla
+tamamlayabiliyor. Extensions erişim yetkileri genişletilmedi.
+
+Provider: `puantor-staging-github/github-actions`, proje numarası
+`587333598841`; dağıtım hesabı
+`puantor-staging-deploy@puantor-staging.iam.gserviceaccount.com`.
+Mevcut koşulu okumak için Cloud Shell komutu:
+
+```sh
+gcloud iam workload-identity-pools providers describe github-actions \
+  --workload-identity-pool=puantor-staging-github --location=global \
+  --project=puantor-staging --format='value(attributeCondition)'
+```
+
+Eski özellik dalındaki 43077026768 numaralı denemede federasyon başarılı
+olmuş, yayın Cloud Run hizmetinde IAM politikası ayarlanırken durmuştu.
+Mevcut dalın federasyon sorunu çözüldükten sonra bu ikinci sınır ayrıca
+doğrulanmalıdır; geçmiş hata yeni çalışmada yeniden oluşmuş sayılmaz.
 
 `scripts/deploy-staging.sh` yalnızca main veya mevcut düzeltme dalından
 `puantor-staging` projesine yayın yapar. Web uygulaması yapılandırmasını
