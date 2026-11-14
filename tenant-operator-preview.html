@@ -32,9 +32,11 @@ input,select,textarea{font-size:16px!important}
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,onSnapshot,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {createOperatorActions} from "./operator-actions.js";
+import {getFirestore,doc,getDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);let tenantId=null;
 const $=id=>document.getElementById(id);
+const performWorkAction=createOperatorActions(app,auth);
 let unsubscribe=null,machineId=null,machineData=null,busy=false,assignedIds=[],clockMismatch=false;async function checkDeviceClock(){try{const t0=Date.now();const res=await fetch("./operator.html?timecheck="+Date.now(),{method:"HEAD",cache:"no-store"});const t1=Date.now();const date=res.headers.get("Date");if(!date) return;const server=Date.parse(date);if(!Number.isFinite(server))return;clockMismatch=Math.abs(server-(t0+t1)/2)>30000;$("clockWarning").hidden=!clockMismatch;if(clockMismatch)$("clockWarningText").textContent="Telefon saati sunucu saatinden 30 saniyeden fazla farklı. Ayarlar → Tarih ve saat → Otomatik tarih ve saat seçeneğini açın ve tekrar kontrol edin.";updateControls();}catch(e){}}$("retryClock").addEventListener("click",checkDeviceClock);checkDeviceClock();const controls=["start","pause","fault","finish"];
 function fmt(ms){let sec=Math.max(0,Math.floor(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,"0")).join(":")}
 function showError(e){$("error").textContent=e; if(e) $("controlInfo").textContent=e}
@@ -47,37 +49,22 @@ function renderTime(){
  const totalMs=elapsed+delta;$("machineTime").textContent=fmt(totalMs);const rate=Number(machineData.hourlyRate);$("liveAmount").textContent=machineData.hourlyRate==null||!Number.isFinite(rate)?"Ücret belirlenmemiş":(totalMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});$("rateInfo").textContent="Saatlik ücret: "+(machineData.hourlyRate==null||!Number.isFinite(rate)?"Belirlenmemiş":rate.toLocaleString("tr-TR",{style:"currency",currency:"TRY"}));
 }
 setInterval(renderTime,1000);
-function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&clockMismatch)||(id==="start"&&machineData.jobReady!==true)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
+function updateControls(){const s=machineData?.status;for(const id of controls)$(id).disabled=busy||!machineId||!machineData||(id==="start"&&machineData.jobReady!==true)||({start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]}[id]||[]).indexOf(s)<0}
 async function changeState(action){
- if(action==="start"){await checkDeviceClock();if(clockMismatch){$("controlInfo").textContent="Telefon saati yanlış. Otomatik tarih ve saati açıp tekrar deneyin.";return}}if(!machineId||busy){$("controlInfo").textContent="Başlatma engellendi: "+(!machineId?"makine bulunamadı":"işlem devam ediyor");return}let reason="";
+ if(!machineId||busy){$("controlInfo").textContent="Başlatma engellendi: "+(!machineId?"makine bulunamadı":"işlem devam ediyor");return}let reason="";
  if(action==="fault"){reason=prompt("Arıza açıklaması (zorunlu):")||"";if(!reason.trim())return}
  if(action==="finish"&&!confirm("Bu makinenin çalışmasını bitirmek istiyor musunuz?"))return;
  busy=true;updateControls();showError("");$("controlInfo").textContent="İşlem gönderiliyor: "+action+"…";
  try{
-  await runTransaction(db,async tx=>{
-   const ref=doc(db,"businesses",tenantId,"machines",machineId),userRef=doc(db,"users",auth.currentUser.uid);const [snap,userSnap]=await Promise.all([tx.get(ref),tx.get(userRef)]);if(!userSnap.exists()||userSnap.data().role!=="tenant_operator"||userSnap.data().tenantId!==tenantId)throw Error("Operatör hesabı doğrulanamadı.");
-   if(!snap.exists())throw Error("Makine bulunamadı");if(action==="start"){
-    const otherIds=[...new Set(Array.isArray(userSnap.data().machineIds)?userSnap.data().machineIds:[])].filter(id=>id!==machineId);
-    const otherSnaps=await Promise.all(otherIds.map(id=>tx.get(doc(db,"businesses",tenantId,"machines",id))));
-    for(const other of otherSnaps){if(!other.exists())continue;const om=other.data();if(om.operatorUid===auth.currentUser.uid&&(om.jobReady===true||["running","paused","broken","done"].includes(om.status)))throw Error("Başka makinede arşivlenmemiş işiniz var ("+(om.machineName||other.id)+"). Yönetici onayıyla arşivlenmeden yeni işe başlayamazsınız.");}
-   }
-   
-   const m=snap.data(),start=m.startedAt?.toMillis?.()||0;if(m.operatorUid!==auth.currentUser?.uid)throw Error("Bu makine başka operatöre atanmış.");const activeMachine=userSnap.data().activeMachineId||"";if(action==="start"&&activeMachine&&activeMachine!==machineId)throw Error("Başka bir makinede çalışmanız devam ediyor. Önce o makineyi duraklatın veya bitirin.");
-   // Use the same server-adjusted clock for display and persistence.
-   // A device clock behind Firestore must not erase active working time.
-   const serverNow=Math.max(Date.now(),m.updatedAt?.toMillis?.()||0);
-   const allowed={start:["idle","paused","broken"],pause:["running"],fault:["running","paused","idle"],finish:["running","paused","broken","idle"]};
-   if(!allowed[action].includes(m.status))throw Error("Makinenin durumu değişti. Yeniden deneyin.");if(action==="start"&&m.jobReady!==true)throw Error("Yeni iş yönetici tarafından açılmadı.");
-   if(m.status==="running"&&!start)throw Error("Firebase başlangıç zamanı henüz alınamadı. Birkaç saniye sonra tekrar deneyin.");const previous=Math.max(0,Number(m.elapsedMs)||0);
-   const elapsed=previous+(m.status==="running"&&start?Math.max(0,serverNow-start):0);
-   const status={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
-   const event={action,at:Timestamp.fromMillis(serverNow),elapsedMs:Math.floor(elapsed),operatorName:m.operatorName||"",reason:action==="fault"?reason.trim():""};const timeline=Array.isArray(m.timeline)?m.timeline:[];if(timeline.length>=250)throw Error("Zaman çizelgesi doldu; yöneticiden işi arşivlemesini isteyin.");
-   tx.update(ref,{status,elapsedMs:Math.floor(elapsed),startedAt:action==="start"?serverTimestamp():null,faultReason:action==="fault"?reason.trim():"",jobReady:action==="finish"?false:(m.jobReady===true),updatedAt:serverTimestamp(),timeline:[...timeline,event]});
-   if(action==="start")tx.update(userRef,{activeMachineId:machineId});else if(activeMachine===machineId)tx.update(userRef,{activeMachineId:""});
-  });
+  const selectedMachine=machineData;
+  const result=await performWorkAction(machineId,selectedMachine,action,reason.trim());
   const expected={start:"running",pause:"paused",fault:"broken",finish:"done"}[action];
   $("controlInfo").textContent="Firebase işlemi kaydetti: "+expected+". Canlı veri bekleniyor.";
-  if(action==="finish")showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");
+  if(action==="finish"){
+   $("machineStatus").textContent="Tamamlandı";$("machineTime").textContent=fmt(result.elapsedMs);
+   const rate=Number(selectedMachine.hourlyRate);if(selectedMachine.hourlyRate!=null&&Number.isFinite(rate))$("liveAmount").textContent=(result.elapsedMs/3600000*rate).toLocaleString("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:2,maximumFractionDigits:2});
+   showError("İş tamamlandı. Yeni çalışma için yönetici bekleniyor.");
+  }
  }catch(e){showError("İşlem başarısız ["+(e.code||"hata")+"]: "+(e.message||"Bilinmeyen hata"))}
  finally{busy=false;updateControls()}
 }

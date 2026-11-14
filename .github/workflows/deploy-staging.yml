@@ -9,32 +9,47 @@ concurrency:
   cancel-in-progress: false
 jobs:
   staging:
-    if: github.ref == 'refs/heads/feature/single-app-multicompany-from-last-single'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/preserve-ui-workflow-integrity'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: puantor-staging
     steps:
       - name: Fetch staging branch
         uses: actions/checkout@v4
-        with:
-          ref: feature/single-app-multicompany-from-last-single
       - name: Assert isolated staging target
         run: |
-          test "${{ github.ref_name }}" = "feature/single-app-multicompany-from-last-single"
-          grep -q 'projectId: "puantor-staging"' firebase-config.js
+          test -f scripts/build-staging-public.cjs
           grep -q '^PROJECT="puantor-staging"' scripts/deploy-staging.sh
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Functions packages
-        run: npm --prefix functions install --no-audit --no-fund
+      - name: Install locked application and Functions packages
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --prefix functions --no-audit --no-fund
       - name: Google Cloud OIDC authentication (no static keys)
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_STAGING_DEPLOY_SERVICE_ACCOUNT }}
           project_id: puantor-staging
-      - name: Install Firebase CLI
-        run: npm install --global firebase-tools@15
       - name: Deploy staging only
+        env:
+          PUANTOR_STAGING_APP_ID: ${{ vars.FIREBASE_STAGING_WEB_APP_ID }}
         run: bash scripts/deploy-staging.sh
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: puantor-staging
+      # A previous failed create can leave a callable without its invoker
+      # policy. Firebase skips unchanged code and does not repair that policy.
+      # These are exactly the Firebase callable endpoints; handler Auth and
+      # role checks still enforce access to all business data.
+      - name: Reconcile staging callable invocation policies
+        run: |
+          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin; do
+            gcloud run services add-iam-policy-binding "$service" \
+              --project=puantor-staging --region=europe-west1 \
+              --member=allUsers --role=roles/run.invoker --quiet
+          done
+      - name: Verify reachable callables enforce application authentication
+        run: node scripts/verify-staging-endpoints.cjs

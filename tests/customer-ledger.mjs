@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import {createCustomerLedger,customerKey,customerNameAvailable,csvCell} from "../customer-ledger.mjs";
+
+const customers=[{id:"c1",name:"Yeni Ad",previousNames:["Eski Ad","İlk Ad"]}];
+const jobs=[{customerName:"İlk Ad",amount:100},{customerName:"Eski Ad",amount:200},{customerId:"c1",customerName:"Eski Ad",amount:300}];
+const payments=[{customerName:"Eski Ad",amount:50},{customerId:"c1",customerName:"Yeni Ad",amount:100}];
+const original=JSON.stringify({customers,jobs,payments});
+const ledger=createCustomerLedger(customers,jobs,payments),key=customerKey("c1");
+assert.equal(ledger.accounts.length,1);
+assert.equal(jobs.filter(j=>ledger.matches(j,key)).reduce((n,j)=>n+j.amount,0),600);
+assert.equal(payments.filter(p=>ledger.matches(p,key)).reduce((n,p)=>n+p.amount,0),150);
+assert.equal(JSON.stringify({customers,jobs,payments}),original,"rendering never migrates or mutates historical records");
+assert.equal(customerNameAvailable("eski ad",customers,jobs,payments),false);
+assert.equal(customerNameAvailable("Yeni Ad",customers,jobs,payments,"c1"),true);
+assert.equal(customerNameAvailable("Başka Ad",customers,jobs,payments),true);
+const ambiguous=createCustomerLedger([...customers,{id:"c2",name:"Eski Ad"}],jobs,payments);
+assert.equal(ambiguous.matches(jobs[1],key),false);
+assert.equal(ambiguous.matches(jobs[1],customerKey("c2")),false);
+assert.equal(ambiguous.matches(jobs[2],key),true);
+const missing=createCustomerLedger([{id:"new",name:"Eski Ad"}],[{customerId:"deleted",customerName:"Eski Ad",amount:500}],[]);
+assert.equal(missing.accounts.length,2);
+assert.equal(new Set(missing.accounts.map(a=>a.label)).size,2);
+assert.equal(missing.matches({customerId:"deleted",customerName:"Eski Ad"},customerKey("new")),false);
+const archived=createCustomerLedger([{...customers[0],archived:true}],jobs,payments);
+assert.equal(archived.accounts.length,1);
+assert.equal(archived.matches(jobs[0],key),true);
+assert.equal(customerNameAvailable("Eski Ad",[],jobs,payments),false);
+for(const formula of ['=HYPERLINK("https://invalid")',"+SUM(1,2)","-1+2","@SUM(1)"," \t=1+1","\n=1"]){assert.ok(csvCell(formula).startsWith('"\''),formula)}
+assert.equal(csvCell('Ali "Veli"'),'"Ali ""Veli"""');
+assert.equal(csvCell(-125.5),'"-125.5"');
+console.log("PASS: customer identity, aliases, ambiguous history, archived/deleted accounts, non-mutating reads and safe CSV");

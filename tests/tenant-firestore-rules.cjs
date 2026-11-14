@@ -59,38 +59,44 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
   await assertFails(updateDoc(doc(op,"businesses","firm-b","machines","machine1"),{status:"running"}));
   await assertSucceeds(setDoc(doc(a,"businesses","firm-a","searchPreferences","firm-a"),{preferences:{},updatedAt:serverTimestamp()}));
   await assertFails(getDoc(doc(b,"businesses","firm-a","searchPreferences","firm-a")));
-  // A legitimate operator transition must update machine and own activeMachineId atomically.
+  // Runtime changes are now server-only; even an atomic valid-looking batch
+  // cannot supply elapsed time, replace history, or claim activeMachineId.
   const machineRef=doc(op,"businesses","firm-a","machines","machine1");
   const userRef=doc(op,"users","firm-a-op");
-  const startEvent={action:"start",at:Timestamp.now(),elapsedMs:0,operatorName:"Test",reason:""};
-  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent]}));
   const start=writeBatch(op);
-  start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:0,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent]});
+  start.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:3600000000,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[{action:"start"}]});
   start.update(userRef,{activeMachineId:"machine1"});
-  await assertSucceeds(start.commit());
-  const pauseEvent={action:"pause",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""};
-  const pause=writeBatch(op);
-  pause.update(machineRef,{status:"paused",startedAt:null,elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent]});
-  pause.update(userRef,{activeMachineId:""});
-  await assertSucceeds(pause.commit());
-  const resume=writeBatch(op);
-  const resumeEvent={action:"start",at:Timestamp.now(),elapsedMs:1,operatorName:"Test",reason:""};
-  resume.update(machineRef,{status:"running",startedAt:serverTimestamp(),elapsedMs:1,faultReason:"",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent]});
-  resume.update(userRef,{activeMachineId:"machine1"});
-  await assertSucceeds(resume.commit());
-  // An operator cannot falsify a fault reason by changing unrelated machine fields.
-  await assertFails(updateDoc(machineRef,{hourlyRate:999999,status:"broken",startedAt:null,elapsedMs:2,faultReason:"Hidrolik arıza",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent,{action:"fault",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:"Hidrolik arıza"}]}));
-  const fault=writeBatch(op);
-  const faultEvent={action:"fault",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:"Hidrolik arıza"};
-  fault.update(machineRef,{status:"broken",startedAt:null,elapsedMs:2,faultReason:"Hidrolik arıza",jobReady:true,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent,faultEvent]});
-  fault.update(userRef,{activeMachineId:""});
-  await assertSucceeds(fault.commit());
-  const finish=writeBatch(op);
-  finish.update(machineRef,{status:"done",startedAt:null,elapsedMs:2,faultReason:"",jobReady:false,updatedAt:serverTimestamp(),timeline:[startEvent,pauseEvent,resumeEvent,faultEvent,{action:"finish",at:Timestamp.now(),elapsedMs:2,operatorName:"Test",reason:""}]});
-  await assertSucceeds(finish.commit());
+  await assertFails(start.commit());
+  await assertFails(updateDoc(userRef,{activeMachineId:"machine1"}));
   await assertFails(updateDoc(userRef,{role:"tenant_admin"}));
   await assertFails(updateDoc(userRef,{machineIds:["machine1","machine2"]}));
-  await assertFails(updateDoc(machineRef,{status:"running",startedAt:serverTimestamp(),jobReady:true,updatedAt:serverTimestamp()}));
+  const roleless=env.authenticatedContext("new-account").firestore();
+  await assertFails(setDoc(doc(roleless,"jobs","fake"),{operatorUid:"new-account",amount:1000}));
+  await assertFails(setDoc(doc(op,"jobs","fake-op"),{operatorUid:"firm-a-op"}));
+  const payment=doc(a,"businesses","firm-a","payments","receipt");
+  const original=Timestamp.fromMillis(1000);
+  await assertSucceeds(setDoc(payment,{customerName:"Müşteri",amount:100,date:"2026-11-14",note:"",createdAt:original}));
+  await assertSucceeds(updateDoc(payment,{amount:50,note:"Düzeltme"}));
+  await assertFails(updateDoc(payment,{amount:-1}));
+  await assertFails(updateDoc(payment,{customerName:"Başka Müşteri"}));
+  await assertFails(updateDoc(payment,{customerId:"another"}));
+  await assertFails(updateDoc(payment,{createdAt:serverTimestamp()}));
+  await assertFails(updateDoc(payment,{note:"x".repeat(151)}));
+  await assertFails(setDoc(doc(a,"businesses","firm-a","payments","bad"),{amount:-999,customerName:123}));
+  await assertFails(getDoc(doc(b,"businesses","firm-a","payments","receipt")));
+  const identified=doc(a,"businesses","firm-a","payments","identified");
+  await assertSucceeds(setDoc(identified,{customerId:"customer1",customerName:"Müşteri",amount:100,date:"2026-11-14",note:"",createdAt:original}));
+  await assertSucceeds(updateDoc(identified,{amount:125}));
+  await assertFails(updateDoc(identified,{customerId:"customer2"}));
+  await assertFails(setDoc(doc(a,"businesses","firm-a","payments","invalid-id"),{customerId:12,customerName:"Müşteri",amount:100,date:"2026-11-14",note:"",createdAt:original}));
+  await assertFails(getDoc(doc(a,"customers","wrong-root")));
+  // All three rename paths remain in the current company.
+  for(const type of ["customers","machines","operators"]){
+   const ref=doc(a,"businesses","firm-a",type,"rename-test");
+   await assertSucceeds(setDoc(ref,{name:"Eski"}));
+   await assertSucceeds(updateDoc(ref,{name:"Yeni"}));
+   await assertFails(updateDoc(doc(b,"businesses","firm-a",type,"rename-test"),{name:"İzinsiz"}));
+  }
   console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
  }finally{await env.cleanup();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
