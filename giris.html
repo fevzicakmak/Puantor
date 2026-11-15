@@ -14,6 +14,8 @@ import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const resolveOperatorLogin=httpsCallable(getFunctions(app,"europe-west1"),"operatorLoginAddress");
 const completeBusinessRegistration=httpsCallable(getFunctions(app,"europe-west1"),"completeBusinessRegistration");
+let loginTenantId="";
+const validLoginTenant=value=>typeof value==="string"&&/^[a-zA-Z0-9_-]{1,128}$/.test(value);
 const loginHistoryKey="puantor_login_history";
 function readLoginHistory(){
  try{
@@ -21,23 +23,31 @@ function readLoginHistory(){
   const history=Array.isArray(saved)?saved.filter(entry=>typeof entry?.login==="string"&&typeof entry?.code==="string"):[];
   const login=localStorage.getItem("puantor_last_login");
   const code=localStorage.getItem("puantor_last_firm_code")||"";
-  if(login&&!history.some(entry=>entry.login===login.toLowerCase()&&entry.code===code))history.push({login:login.toLowerCase(),code});
+  const tenantId=localStorage.getItem("puantor_last_tenant_id")||"";
+  if(login&&!history.some(entry=>entry.login===login.toLowerCase()&&entry.code===code&&(entry.tenantId||"")===tenantId))history.push({login:login.toLowerCase(),code,tenantId});
   return history;
  }catch{return []}
 }
-function saveLoginHistory(login,code){
+function saveLoginHistory(login,code,tenantId=""){
  try{
-  const history=readLoginHistory().filter(entry=>entry.login!==login||entry.code!==code);
-  localStorage.setItem(loginHistoryKey,JSON.stringify([{login,code},...history].slice(0,12)));
+  const history=readLoginHistory().filter(entry=>entry.login!==login||entry.code!==code||(entry.tenantId||"")!==tenantId);
+  localStorage.setItem(loginHistoryKey,JSON.stringify([{login,code,tenantId},...history].slice(0,12)));
   localStorage.setItem("puantor_last_firm_code",code);
   localStorage.setItem("puantor_last_login",login);
+  localStorage.setItem("puantor_last_tenant_id",tenantId);
  }catch{}
 }
 const previousLogin=readLoginHistory()[0];
 if(previousLogin){
  $("operatorFirmCode").value=previousLogin.code;
  $("email").value=previousLogin.login;
+ loginTenantId=validLoginTenant(previousLogin.tenantId)?previousLogin.tenantId:"";
 }
+const invitation=new URLSearchParams(location.search),invitedUser=invitation.get("u")||"",invitedCode=invitation.get("f")||"",invitedTenant=invitation.get("t")||"";
+if(/^[a-z0-9._-]{3,32}$/.test(invitedUser)&&(/^[a-z0-9-]{3,20}$/.test(invitedCode)||validLoginTenant(invitedTenant))){
+ $("email").value=invitedUser;$("operatorFirmCode").value=invitedCode;loginTenantId=invitedCode?"":invitedTenant;
+}
+$("operatorFirmCode").addEventListener("input",()=>{loginTenantId=""});
 function attachSuggestions(fieldId,listId,getOptions){
  const field=$(fieldId),list=$(listId);
  function close(){list.hidden=true;list.replaceChildren()}
@@ -62,14 +72,14 @@ function attachSuggestions(fieldId,listId,getOptions){
 }
 attachSuggestions("operatorFirmCode","firmSuggestions",history=>
  [...new Set(history.map(entry=>entry.code).filter(Boolean))].map(code=>[code,()=>{
-  $("operatorFirmCode").value=code;
+  $("operatorFirmCode").value=code;loginTenantId="";
   $("email").value=history.find(entry=>entry.code===code).login;
   $("password").value="";
  }]));
-attachSuggestions("email","emailSuggestions",history=>history.map(({login,code})=>
+attachSuggestions("email","emailSuggestions",history=>history.map(({login,code,tenantId=""})=>
  [code?login+" · "+code:login,()=>{
   $("email").value=login;
-  $("operatorFirmCode").value=code;
+  $("operatorFirmCode").value=code;loginTenantId=validLoginTenant(tenantId)?tenantId:"";
   $("password").value="";
  }]));
 function refreshBusinessRegistration(){$("showBusinessRegister").hidden=false;}
@@ -113,5 +123,5 @@ $("businessRegister").addEventListener("submit",async e=>{e.preventDefault();con
  resumingRegistration=false;$("businessEmail").readOnly=false;$("businessPassword").required=true;await signOut(auth);
  }catch(err){$("businessStatus").textContent="Kayıt hatası: "+(err.code||err.message)+(err.code==="permission-denied"?" — Firebase güvenlik kuralları henüz yayımlanmamış olabilir.":"");$("status").textContent=$("businessStatus").textContent;if(cred){resumingRegistration=false;$("businessEmail").readOnly=false;$("businessPassword").required=true;await signOut(auth).catch(()=>{});}}finally{registering=false;b.disabled=false;b.textContent="İşletme Hesabı Oluştur";$("businessPassword").value="";}
 });
-$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const code=$("operatorFirmCode").value.trim().toLowerCase();const email=login.includes("@")?login:code?(await resolveOperatorLogin({code,username:login})).data.email:login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);saveLoginHistory(login,login.includes("@")?"":code)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
+$("login").addEventListener("submit",async e=>{e.preventDefault();$("submit").disabled=true;$("status").textContent="Giriş yapılıyor…";try{await setPersistence(auth,$("remember").checked?browserLocalPersistence:browserSessionPersistence);const login=$("email").value.trim().toLowerCase();const code=$("operatorFirmCode").value.trim().toLowerCase();const email=login.includes("@")?login:code?(await resolveOperatorLogin({code,username:login})).data.email:loginTenantId?loginTenantId+"."+login+"@operators.puantor.invalid":login+"@operators.puantor.invalid";await signInWithEmailAndPassword(auth,email,$("password").value);saveLoginHistory(login,login.includes("@")?"":code,login.includes("@")||code?"":loginTenantId)}catch(err){$("status").textContent="Giriş başarısız ("+(err.code||"bilinmeyen hata")+"). Şifre için yöneticinize başvurun.";$("submit").disabled=false}finally{$("password").value=""}});
 </script></body></html>

@@ -58,12 +58,20 @@ async function login(page,email,password){
   await manager.locator("#addType").selectOption("operator");await manager.locator("#opName").fill("Test Operatörü");await manager.locator("#opPhone").fill("05321234567");await manager.locator("#opSave").click();
   await manager.locator("#opMessage").waitFor({state:"visible"});
   const message=await manager.locator("#opMessageText").inputValue();
-  const email=message.match(/Giriş adresi:\s*(\S+)/)?.[1],password=message.match(/İlk giriş şifresi:\s*(\S+)/)?.[1];
-  assert.ok(email&&password,"operator credentials are available in the existing form");
+  const invite=message.split("\n")[1],username=message.match(/Kullanıcı:\s*(\S+)/)?.[1],password=message.match(/Şifre:\s*(\S+)/)?.[1];
+  assert.ok(invite&&username&&password,"operator credentials are available in the existing form");
+  assert.equal(password.length,8);assert.equal(username,"test");assert.ok(!message.includes("@operators.puantor.invalid"));
   // No SMS is opened or sent. The generated credentials are only used locally.
-  operator=await (await context()).newPage();await operator.goto(URL+"/giris.html");await operator.waitForFunction(()=>document.getElementById("status").textContent.includes("Giriş yapmak"));await login(operator,email,password);
+  operator=await (await context()).newPage();await operator.goto(invite);await operator.waitForFunction(()=>document.getElementById("status").textContent.includes("Giriş yapmak"));
+  assert.equal(await operator.locator("#email").inputValue(),username);
+  await operator.locator("#password").fill(password);await operator.locator("#submit").click();
   await operator.waitForURL("**/tenant-operator-preview.html");
   await until(async()=>(await operator.locator("#error").textContent()).includes("Makine ataması"),"unassigned operator");
+  await operator.locator("#signout").click();await operator.waitForURL("**/giris.html");
+  await operator.waitForFunction(()=>document.getElementById("status").textContent.includes("Giriş yapmak"));
+  assert.equal(await operator.locator("#email").inputValue(),username);
+  await operator.locator("#password").fill(password);await operator.locator("#submit").click();
+  await operator.waitForURL("**/tenant-operator-preview.html");
   await manager.locator("#operatorToolbarButtons button").filter({hasText:"Test Operatörü"}).click();
   await manager.locator("#taskMachine").selectOption({label:"Test Makinesi"});await manager.locator("#taskCustomer").selectOption({label:"Eski Müşteri"});await manager.locator("#taskRate").fill("250");await manager.locator("#taskSave").click();
   await until(async()=>await operator.locator("#start").isEnabled(),"live assignment without reload");
@@ -109,6 +117,23 @@ async function login(page,email,password){
   },{tenantId,customerId:customer.id});
   assert.equal(denied,true);assert.equal(await second.locator("#statementCustomer option").count(),1);
   console.log("PASS browser: second firm has no first-firm records and cross-firm Firestore access is denied");
+  const createdNames=[];
+  manager.on("request",request=>{if(request.url().endsWith("/tenantOperatorAdmin")&&request.method()==="POST"){try{const data=request.postDataJSON().data;if(data.action==="create")createdNames.push(data.username)}catch{}}});
+  async function operatorAction(data){return manager.evaluate(async data=>{
+   const {getApp}=await import("https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js");
+   const {getFunctions,httpsCallable}=await import("./emulator-functions.js");
+   return (await httpsCallable(getFunctions(getApp(),"europe-west1"),"tenantOperatorAdmin")(data)).data;
+  },data)}
+  await operatorAction({action:"create",username:"taken",displayName:"Taken Test",password:"Testpass23"});
+  await manager.waitForFunction(()=>window.__puantorSearchData.operators.some(o=>o.username==="taken"));
+  await operatorAction({action:"delete",username:"taken"});
+  await manager.waitForFunction(()=>!window.__puantorSearchData.operators.some(o=>o.username==="taken"));
+  await manager.locator('#managerToolbar button[data-panel="0"]').click();await manager.locator("#addType").selectOption("operator");
+  await manager.locator("#opName").fill("Taken Test");await manager.locator("#opPhone").fill("05321234567");
+  await manager.locator("#opSave").click();
+  await until(async()=>(await manager.locator("#opMessageText").inputValue()).includes("Kullanıcı: taken2"),"disabled Auth name collision recovered");
+  assert.deepEqual(createdNames.slice(-2),["taken","taken2"]);
+  console.log("PASS browser: deleted operator Auth username is skipped automatically without account overwrite");
   assert.deepEqual(errors,[],"unhandled browser errors");assert.deepEqual(outbound,[],"unexpected production/network endpoint");assert.deepEqual(failed,[],"failed browser requests");
   fs.writeFileSync(path.join(artifacts,"result.json"),JSON.stringify({project:PROJECT,status:"passed",viewport:"390x844 Chromium",productionRequests:outbound.length,browserErrors:errors,failedRequests:failed},null,2));
  }catch(error){

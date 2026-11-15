@@ -26,10 +26,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch the exact staging-approved source
+      - name: Fetch the immutable main revision selected for this release
         uses: actions/checkout@v4
         with:
-          ref: 94c7252eebc7937be0763889cc7285c381a685b7
+          ref: ${{ github.sha }}
           path: release
       - uses: actions/setup-node@v4
         with:
