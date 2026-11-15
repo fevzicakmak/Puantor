@@ -140,7 +140,7 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
     tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:FieldValue.serverTimestamp()});
     tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:FieldValue.serverTimestamp()});
    });
-  }catch(err){if(created)await auth.deleteUser(created.uid).catch(()=>{});throw err;}
+  }catch(err){if(created)await auth.deleteUser(created.uid).catch(()=>{});if(err.code==="auth/email-already-exists")throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");throw err;}
   return {username:name,loginEmail:email};
  }
  if(action==="delete"){

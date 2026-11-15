@@ -18,7 +18,9 @@ const {JSDOM}=require("jsdom");
   const update=(r,patch)=>{writes.push({path:r.path,patch});store.set(r.path,{...store.get(r.path),...patch});};
   Object.assign(w,ledger,{
    firebaseConfig:{},initializeApp:()=>({}),getAuth:()=>({currentUser:{uid,email:"manager@example.com"}}),getFirestore:()=>({}),getFunctions:()=>({}),
-   httpsCallable:(_,name)=>async data=>{calls.push({name,data});return {data:{ok:true}}},
+   httpsCallable:(_,name)=>async data=>{calls.push({name,data});
+    if(name==="tenantOperatorAdmin"&&data.action==="create"&&data.username==="bekir3")throw Object.assign(new Error("Kullanımda"),{code:"functions/already-exists"});
+    return {data:{ok:true,username:data.username,loginEmail:"manager."+data.username+"@operators.puantor.invalid"}}},
    onAuthStateChanged:(_,callback)=>{authChanged=callback},signInWithEmailAndPassword:async()=>{},signOut:async()=>{},
    doc:ref,collection:ref,getDoc:async r=>snap(r.path),
    onSnapshot:(r,callback)=>{listeners.set(r.path,callback);return ()=>{}},
@@ -88,6 +90,21 @@ const {JSDOM}=require("jsdom");
    feed("customers",[{id:"c1",...store.get(base+"customers/c1")}]);
    assert.equal([...el("taskCustomer").options].some(o=>o.value==="c1"),true);
    assert.match(el("statementBalance").textContent,/900,00/);
+   if(tenant){
+    assert.equal(vm.runInContext('shortOperatorUsername("Şükrü Çakmak")',ctx),"sukru");
+    vm.runInContext('operators.push({id:"bekir",username:"bekir",loginUsername:"bekir2"})',ctx);
+    el("opName").value="Bekir Çakmak";el("opPhone").value="05321234567";
+    el("operatorForm").dispatchEvent(new w.Event("submit",{cancelable:true}));
+    await new Promise(resolve=>setImmediate(resolve));
+    const creates=calls.filter(x=>x.name==="tenantOperatorAdmin"&&x.data.action==="create");
+    assert.deepEqual(creates.map(x=>x.data.username),["bekir3","bekir4"]);
+    const password=creates[1].data.password;assert.equal(password.length,8);
+    assert.match(password,/[A-Z]/);assert.match(password,/[a-z]/);assert.match(password,/[2-9]/);assert.doesNotMatch(password,/[01IOl]/);
+    const message=el("opMessageText").value;assert.ok(!message.includes("@operators.puantor.invalid"));
+    const link=new URL(message.split("\n")[1]);assert.equal(link.searchParams.get("t"),"manager");assert.equal(link.searchParams.get("u"),"bekir4");assert.ok(!link.href.includes(password));
+    assert.ok(el("opOpenSms").getAttribute("href").includes(encodeURIComponent(message)));
+    console.log("PASS: short operator credentials, reserved aliases, server collision retry and prefilled SMS link");
+   }
    console.log("PASS: "+file+" existing forms retain balance/selection after rename; ID payment/task, PDF and customer archive");
   }finally{w.close()}
  }

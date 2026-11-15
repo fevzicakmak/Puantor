@@ -801,6 +801,19 @@ $("opCopyMessage").onclick=async ()=>{
  try{await navigator.clipboard.writeText(field.value);$("opResult").textContent="Mesaj kopyalandı."}
  catch{field.focus();field.select();$("opResult").textContent="Seçili mesajı kopyalayın."}
 };
+function shortOperatorUsername(displayName,excluded=new Set()){
+ const first=displayName.trim().split(/\s+/)[0].toLowerCase().replaceAll("ı","i").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"").slice(0,8)||"operator";
+ const base=first.length<3?(first+"11").slice(0,3):first;
+ const taken=new Set([...excluded,...operators.flatMap(o=>[o.id,o.username,o.loginUsername]).filter(Boolean)]);
+ let candidate=base,index=2;while(taken.has(candidate))candidate=base+index++;
+ return candidate;
+}
+function shortOperatorPassword(){
+ const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789",limit=Math.floor(256/alphabet.length)*alphabet.length;
+ for(;;){let value="";while(value.length<8){for(const byte of crypto.getRandomValues(new Uint8Array(16)))if(byte<limit&&value.length<8)value+=alphabet[byte%alphabet.length]}
+  if(/[A-Z]/.test(value)&&/[a-z]/.test(value)&&/[2-9]/.test(value))return value;
+ }
+}
 $("operatorForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const button=$("opSave"),out=$("opResult");
@@ -813,14 +826,15 @@ $("operatorForm").addEventListener("submit",async e=>{
   const phone=mobile?"+90"+mobile[1]:rawPhone;
   if(!displayName)throw Error("Operatör adını girin.");
   if(!mobile&&!/^\+(?!90)[1-9]\d{7,14}$/.test(phone))throw Error("Geçerli bir cep telefonu girin. Türkiye dışı numaralarda ülke kodunu + ile yazın.");
-  const randomHex=size=>Array.from(crypto.getRandomValues(new Uint8Array(size)),byte=>byte.toString(16).padStart(2,"0")).join("");
-  const namePrefix=displayName.toLowerCase().replaceAll("ı","i").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,12)||"operator";
-  const username=namePrefix+"-"+randomHex(3),password=randomHex(12);
-  const {data}=await tenantOperatorAdmin({action:"create",username,displayName,password});
+  const password=shortOperatorPassword(),excluded=new Set();let data;
+  for(let attempt=0;attempt<5;attempt++){
+   const username=shortOperatorUsername(displayName,excluded);
+   try{({data}=await tenantOperatorAdmin({action:"create",username,displayName,password}));break}
+   catch(error){if(error.code!=="functions/already-exists"||attempt===4)throw error;excluded.add(username)}
+  }
   const code=$("firmCode").readOnly?$("firmCode").value:"";
-  const login=new URL("./giris.html",location.href).href;
-  const loginDetails=code?"Firma kodu: "+code+"\nKullanıcı adı: "+data.username:"Giriş adresi: "+data.loginEmail;
-  const body="Puantör giriş bilgileriniz\n"+login+"\n"+loginDetails+"\nİlk giriş şifresi: "+password;
+  const login=new URL("./giris.html",location.href);login.searchParams.set(code?"f":"t",code||tenantId);login.searchParams.set("u",data.username);
+  const body="Puantör\n"+login.href+"\nKullanıcı: "+data.username+"\nŞifre: "+password;
   const appleMobile=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
   $("opMessageText").value=body;
   $("opOpenSms").href="sms:"+phone+(appleMobile?"&":"?")+"body="+encodeURIComponent(body);
