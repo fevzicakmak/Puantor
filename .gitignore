@@ -5,4 +5,15 @@ node_modules/
 .puantor-staging-public/
 .puantor-e2e-public/
 test-results/
+.puantor-ios-public/
+.puantor-ios-derived/
+ios-simulator-app.zip
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/CapApp-SPM/.build/
+ios/App/Pods/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
 *.log
+functions/.env.puantor-live
+**/__pycache__/

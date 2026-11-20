@@ -5,9 +5,49 @@ on:
       - main
       - fix/**
       - feature/**
+      - feat/**
   pull_request:
   workflow_dispatch:
 jobs:
+  ios-simulator:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:ios && npm run ios:sync
+      - name: Compile unsigned iOS Simulator app
+        run: |
+          xcodebuild -version
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath .puantor-ios-derived \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package simulator build
+        run: ditto -c -k --sequesterRsrc --keepParent .puantor-ios-derived/Build/Products/Debug-iphonesimulator/App.app ios-simulator-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: ios-simulator-app.zip
+          retention-days: 14
+  ios-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Verify local iOS package boundaries and existing screens
+        run: npm run test:ios
+      - name: Generate iOS assets and sync native project
+        run: npm run ios:sync
   syntax:
     runs-on: ubuntu-latest
     timeout-minutes: 10

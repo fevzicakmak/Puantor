@@ -46,7 +46,7 @@ jobs:
       # role checks still enforce access to all business data.
       - name: Reconcile staging callable invocation policies
         run: |
-          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin; do
+          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin accountdeletion; do
             gcloud run services add-iam-policy-binding "$service" \
               --project=puantor-staging --region=europe-west1 \
               --member=allUsers --role=roles/run.invoker --quiet

@@ -17,6 +17,7 @@ const assign=createAssignWorkHandler({db,Timestamp:{now:()=>Timestamp.fromMillis
 const reject=(fn,code)=>assert.rejects(fn,e=>e.code===code);
 async function seed(scope="tenant",suffix=""){
  const uid="state-op"+suffix,tenantId="state-firm"+suffix;
+ if(scope==="tenant")await db.collection("businesses").doc(tenantId).set({ownerUid:tenantId});
  const machines=scope==="tenant"?db.collection("businesses").doc(tenantId).collection("machines"):db.collection("machines");
  const user=db.collection("users").doc(uid),machine=machines.doc("state-machine"+suffix);
  await user.set({role:scope==="tenant"?"tenant_operator":"operator",...(scope==="tenant"?{tenantId}:{}),machineIds:[machine.id,"old-machine"],activeMachineId:""});

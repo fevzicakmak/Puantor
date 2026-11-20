@@ -18,6 +18,17 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
   const op=env.authenticatedContext("firm-a-op").firestore();
   const outsider=env.unauthenticatedContext().firestore();
   const unassigned=env.authenticatedContext("firm-a-other-op").firestore();
+  // Requests can only be accessed through the own-account callable, including
+  // for company managers. No client can forge completion or inspect a colleague.
+  await env.withSecurityRulesDisabled(async ctx=>{
+   await setDoc(doc(ctx.firestore(),"accountDeletionRequests","firm-a-op"),{uid:"firm-a-op",status:"pending"});
+  });
+  for(const client of [a,b,op,outsider]){
+   await assertFails(getDoc(doc(client,"accountDeletionRequests","firm-a-op")));
+   await assertFails(setDoc(doc(client,"accountDeletionRequests","forged"),{uid:"firm-a-op",status:"completed"}));
+   await assertFails(getDoc(doc(client,"accountDeletionReceipts","secret-hash")));
+   await assertFails(setDoc(doc(client,"accountDeletionReceipts","secret-hash"),{status:"completed"}));
+  }
   await assertSucceeds(getDoc(doc(a,"users","firm-a-op")));
   await assertFails(getDoc(doc(a,"users","firm-b-op")));
   await assertSucceeds(getDoc(doc(op,"users","firm-a-op")));
@@ -97,6 +108,35 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
    await assertSucceeds(updateDoc(ref,{name:"Yeni"}));
    await assertFails(updateDoc(doc(b,"businesses","firm-a",type,"rename-test"),{name:"İzinsiz"}));
   }
-  console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes");
+  // Simulate previously issued valid ID tokens: authentication alone must not
+  // preserve access after a deletion lock or controlled business closure.
+  await env.withSecurityRulesDisabled(async ctx=>{
+   await setDoc(doc(ctx.firestore(),"jobs","former-op-job"),{operatorUid:"firm-a-op",amount:25});
+  });
+  for(const status of ["pending","processing","deleting","completed"]){
+   await env.withSecurityRulesDisabled(async ctx=>{
+    await setDoc(doc(ctx.firestore(),"accountDeletionRequests","firm-a-op"),{status});
+   });
+   const check=["pending","processing"].includes(status)?assertSucceeds:assertFails;
+   await check(getDoc(doc(op,"businesses","firm-a","machines","machine1")));
+   await check(getDoc(doc(op,"jobs","former-op-job")));
+   await check(getDoc(doc(op,"users","firm-a-op")));
+  }
+  await env.withSecurityRulesDisabled(async ctx=>{
+   await setDoc(doc(ctx.firestore(),"accountDeletionRequests","firm-a-op"),{status:"cancelled"});
+   await updateDoc(doc(ctx.firestore(),"businesses","firm-a"),{accountStatus:"closed",recordCustodianUid:"support"});
+  });
+  await assertFails(getDoc(doc(a,"businesses","firm-a")));
+  await assertFails(getDoc(doc(a,"businesses","firm-a","customers","customer1")));
+  await assertFails(getDoc(doc(op,"businesses","firm-a","machines","machine1")));
+  await assertFails(updateDoc(doc(a,"businesses","firm-a"),{accountStatus:"active"}));
+  await assertSucceeds(getDoc(doc(b,"businesses","firm-b")));
+  await env.withSecurityRulesDisabled(async ctx=>{
+   await deleteDoc(doc(ctx.firestore(),"users","firm-a"));
+   await setDoc(doc(ctx.firestore(),"accountDeletionRequests","firm-a"),{status:"completed"});
+  });
+  const formerOwner=env.authenticatedContext("firm-a",{email:"former-owner@example.com"}).firestore();
+  await assertFails(setDoc(doc(formerOwner,"users","firm-a"),{role:"tenant_admin",tenantId:"firm-a",businessName:"Tekrar",managerName:"Eski yönetici",email:"former-owner@example.com",createdAt:serverTimestamp()}));
+  console.log("PASS: tenant isolation, assigned operator reads, denied privileged writes, private receipts, deletion-token locks and closed-business access");
  }finally{await env.cleanup();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

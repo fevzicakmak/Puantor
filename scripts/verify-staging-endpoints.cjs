@@ -2,7 +2,7 @@
 // error, rather than a Cloud Run HTML 403 before the handler is reached.
 const assert=require("node:assert/strict");
 const probes=[
- ["completeBusinessRegistration",401,"UNAUTHENTICATED"],
+ ["completeBusinessRegistration",401,"UNAUTHENTICATED"],["accountDeletion",401,"UNAUTHENTICATED"],
  ["operatorWorkState",401,"UNAUTHENTICATED"],
  ["assignOperatorWork",401,"UNAUTHENTICATED"],
  ["tenantOperatorAdmin",401,"UNAUTHENTICATED"],
