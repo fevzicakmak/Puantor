@@ -5,9 +5,23 @@ on:
       - main
       - fix/**
       - feature/**
+      - feat/**
   pull_request:
   workflow_dispatch:
 jobs:
+  ios-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Verify local iOS package boundaries and existing screens
+        run: npm run test:ios
+      - name: Generate iOS assets and sync native project
+        run: npm run ios:sync
   syntax:
     runs-on: ubuntu-latest
     timeout-minutes: 10

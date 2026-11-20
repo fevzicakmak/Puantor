@@ -8,7 +8,7 @@ function buildStagingPublic(config,output=path.join(root,".puantor-staging-publi
  // Explicit public file list: never publish repository files or reset tools.
  fs.rmSync(output,{recursive:true,force:true});
  fs.mkdirSync(output,{recursive:true});
- for(const name of ["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs"])
+ for(const name of ["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","gizlilik.html","destek.html"])
   fs.copyFileSync(path.join(root,name),path.join(output,name));
  fs.copyFileSync(path.join(output,"giris.html"),path.join(output,"index.html"));
  fs.writeFileSync(path.join(output,"firebase-config.js"),"export const firebaseConfig = "+JSON.stringify(config,null,2)+";\n");
