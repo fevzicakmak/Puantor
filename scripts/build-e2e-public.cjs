@@ -3,7 +3,7 @@ const path=require("node:path");
 const root=path.resolve(__dirname,".."),output=path.join(root,".puantor-e2e-public");
 fs.rmSync(output,{recursive:true,force:true});
 fs.mkdirSync(output,{recursive:true});
-const files=["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","gizlilik.html","destek.html"];
+const files=["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","gizlilik.html","destek.html","hesap.html"];
 for(const name of files){
  let source=fs.readFileSync(path.join(root,name),"utf8");
  for(const sdk of ["auth","firestore","functions"])source=source.replaceAll(`https://www.gstatic.com/firebasejs/13.2.0/firebase-${sdk}.js`,`./emulator-${sdk}.js`);

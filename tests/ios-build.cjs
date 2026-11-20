@@ -6,9 +6,9 @@ const sourceIndex=fs.readFileSync("index.html","utf8"),sourceConfig=fs.readFileS
 try{
  fs.writeFileSync(path.join(output,"test-sifirla.html"),"stale reset tool");
  buildIosPublic(output);
- assert.deepEqual(fs.readdirSync(output).sort(),["index.html","giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","firebase-config.js","gizlilik.html","destek.html"].sort());
+ assert.deepEqual(fs.readdirSync(output).sort(),["index.html","giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","firebase-config.js","gizlilik.html","destek.html","hesap.html"].sort());
  assert.equal(fs.readFileSync(path.join(output,"index.html"),"utf8"),sourceLogin,"The app must launch the current login, never the legacy localStorage application");
- for(const name of ["giris.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","gizlilik.html","destek.html"])
+ for(const name of ["giris.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","gizlilik.html","destek.html","hesap.html"])
   assert.equal(fs.readFileSync(path.join(output,name),"utf8"),fs.readFileSync(name,"utf8"),name+" must preserve the existing UI and business logic");
  const manager=fs.readFileSync(path.join(output,"tenant-manager-preview.html"),"utf8");
  assert.equal(manager,sourceManager.replace('new URL("./giris.html",location.href)',`new URL(${JSON.stringify(publicLogin)})`));

@@ -18,6 +18,15 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,Timestam
   const op=env.authenticatedContext("firm-a-op").firestore();
   const outsider=env.unauthenticatedContext().firestore();
   const unassigned=env.authenticatedContext("firm-a-other-op").firestore();
+  // Requests can only be accessed through the own-account callable, including
+  // for company managers. No client can forge completion or inspect a colleague.
+  await env.withSecurityRulesDisabled(async ctx=>{
+   await setDoc(doc(ctx.firestore(),"accountDeletionRequests","firm-a-op"),{uid:"firm-a-op",status:"pending"});
+  });
+  for(const client of [a,b,op,outsider]){
+   await assertFails(getDoc(doc(client,"accountDeletionRequests","firm-a-op")));
+   await assertFails(setDoc(doc(client,"accountDeletionRequests","forged"),{uid:"firm-a-op",status:"completed"}));
+  }
   await assertSucceeds(getDoc(doc(a,"users","firm-a-op")));
   await assertFails(getDoc(doc(a,"users","firm-b-op")));
   await assertSucceeds(getDoc(doc(op,"users","firm-a-op")));

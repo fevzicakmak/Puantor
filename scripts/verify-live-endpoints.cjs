@@ -1,5 +1,5 @@
 const assert=require("node:assert/strict");
-const checks=[["completeBusinessRegistration",401,"UNAUTHENTICATED"],["operatorWorkState",401,"UNAUTHENTICATED"],["assignOperatorWork",401,"UNAUTHENTICATED"],["tenantOperatorAdmin",401,"UNAUTHENTICATED"],["operatorAdmin",403,"PERMISSION_DENIED"],["operatorLoginAddress",400,"INVALID_ARGUMENT"]];
+const checks=[["completeBusinessRegistration",401,"UNAUTHENTICATED"],["accountDeletion",401,"UNAUTHENTICATED"],["operatorWorkState",401,"UNAUTHENTICATED"],["assignOperatorWork",401,"UNAUTHENTICATED"],["tenantOperatorAdmin",401,"UNAUTHENTICATED"],["operatorAdmin",403,"PERMISSION_DENIED"],["operatorLoginAddress",400,"INVALID_ARGUMENT"]];
 (async()=>{
  for(const [name,status,error] of checks){
   let last;

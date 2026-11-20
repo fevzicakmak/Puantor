@@ -1,5 +1,31 @@
 # Puantör tarayıcı doğrulaması
 
+## 20 Kasım 2026 — hesap silme talebi ek doğrulaması
+
+Mevcut görev/çalışma/arşiv/tahsilat testlerine ek olarak gerçek yerel Auth,
+Functions ve Firestore emülatörleriyle şu akışlar geçti:
+
+- Yanlış mevcut şifre talep oluşturmadı; doğru şifreyle yeniden doğrulama sonrası
+  yalnızca oturumdaki hesaba ait talep sunucuda oluştu.
+- Sayfa yenilendiğinde bekleyen talep göründü; farklı işletme ve aynı işletmenin
+  operatörü kendi talep durumunu gördü.
+- Talep geri çekildi; işletme, iş geçmişi ve tahsilat kayıtları korundu.
+- Uygulama destek yöneticisi özel talep listesini açtı; şifre doğrulamasıyla
+  incelemeye aldı ve tekrar beklemeye döndürdü. Firma yöneticisi destek bölümüne
+  erişemedi. İncelemeye alınan talep kullanıcı tarafından geri çekilemedi.
+- Uzun operatör giriş adreslerinin mobil destek listesini taşırması düzeltildi.
+
+Son başarılı koşuda beklenmeyen tarayıcı hatası, başarısız ağ isteği ve üretim
+isteği sayısı 0. Sayfa değişiminde `net::ERR_ABORTED` ile kapanan yerel
+Firestore Listen/Write taşıma kanalları normal bağlantı kapanışı olarak
+ayrılır; callable hataları ve diğer ağ arızaları bu istisnaya dahil edilmez.
+
+Kanıtlar: `test-results/browser/account-deletion-mobile.png`,
+`support-deletion-mobile.png` ve `result.json`. Bunlar Chromium mobil görünüm
+kanıtıdır; iPhone/WKWebView veya gerçek hesabın fiilen silinmesi testi değildir.
+
+## 14 Kasım 2026 — ana iş akışı
+
 14 Kasım 2026. Akış: mevcut kayıt/giriş ekranı → Firebase Auth ve callable
 Functions → Firestore → yönetici/operatör ekranı → arşiv ve müşteri ekstresi.
 

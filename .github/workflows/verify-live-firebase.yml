@@ -55,15 +55,15 @@ jobs:
       - name: Deploy approved Functions without changing Firestore rules
         if: inputs.phase == 'functions'
         working-directory: release
-        run: ./node_modules/.bin/firebase deploy --config firebase.json --project puantor-live --only functions:operatorWorkState,functions:assignOperatorWork,functions:completeBusinessRegistration,functions:operatorAdmin,functions:operatorLoginAddress,functions:tenantOperatorAdmin --non-interactive
+        run: ./node_modules/.bin/firebase deploy --config firebase.json --project puantor-live --only functions:operatorWorkState,functions:assignOperatorWork,functions:completeBusinessRegistration,functions:operatorAdmin,functions:operatorLoginAddress,functions:tenantOperatorAdmin,functions:accountDeletion --non-interactive
       - uses: google-github-actions/setup-gcloud@v2
         if: inputs.phase == 'functions'
         with:
           project_id: puantor-live
-      - name: Reconcile invocation policies for the six Firebase callables
+      - name: Reconcile invocation policies for the Firebase callables
         if: inputs.phase == 'functions'
         run: |
-          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin; do
+          for service in operatorworkstate assignoperatorwork completebusinessregistration operatorloginaddress operatoradmin tenantoperatoradmin accountdeletion; do
             gcloud run services add-iam-policy-binding "$service" \
               --project=puantor-live --region=europe-west1 \
               --member=allUsers --role=roles/run.invoker --quiet

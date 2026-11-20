@@ -2,7 +2,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 const root=path.resolve(__dirname,"..");
 const publicLogin="https://fevzicakmak.github.io/Puantor/giris.html";
-const files=["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","firebase-config.js","gizlilik.html","destek.html"];
+const files=["giris.html","tenant-manager-preview.html","tenant-operator-preview.html","yonetici.html","operator.html","operator-actions.js","customer-ledger.mjs","firebase-config.js","gizlilik.html","destek.html","hesap.html"];
 function buildIosPublic(output=path.join(root,".puantor-ios-public")){
  // Always package a local, explicit application file set. Never use a remote
  // server.url, the legacy localStorage index, reset tools, or repository files.

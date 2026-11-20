@@ -42,12 +42,13 @@ kullanın. Firebase web yapılandırması gizli servis hesabı anahtarı değild
 
 ## Gönderimi engelleyen açık işler
 
-1. Uygulama içinden hesabın silinmesini başlatma ve gerçek sunucu silme akışı.
-   Firma sahibi ile operatör ayrı ele alınmalı. Sahip hesabı, diğer operatörleri
-   ve ticari kayıtları sahipsiz bırakacak şekilde yalnızca Auth'tan silinmemeli.
-   Yeniden kimlik doğrulama, kapsam/sonuç açıklaması, bağımlı kayıt temizliği,
-   yasal saklama politikası ve yarım kalan işlemden kurtarma doğrulanmalı.
-   E-posta destek sayfası bu Apple gereksiniminin yerine geçmez.
+1. Hesap silmenin fiilen tamamlanması ve destek işleyişi. Uygulama içinden
+   şifreyle yeniden doğrulanan özel sunucu talebi, durum ve geri çekme akışı
+   hazırlandı. Kullanıcı tercihi: işletme kayıtları korunsun, destek incelesin.
+   Bu talep hesabı otomatik silmez. Tamamlanma süresi, zorunlu saklanacak
+   kayıtlar, kişisel veri temizliği ve firma erişiminin devamı için destek
+   prosedürü henüz tamamlanmış değildir. Sadece talep kaydetmek App Store
+   hazırlığının tamamlandığı anlamına gelmez. Ayrıntı: account-deletion-requests.md.
 2. Gerçek iPhone/WKWebView ve TestFlight doğrulaması. Linux'ta `cap sync` ve
    Chromium başarısı, imzalı iOS derlemesi veya fiziksel cihaz testi değildir.
 3. PDF/yazdırma penceresi, Blob dosya indirme, SMS, mailto ve harici bağlantılar
