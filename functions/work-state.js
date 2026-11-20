@@ -18,6 +18,10 @@ function createWorkStateHandler({db, Timestamp, HttpsError}) {
    const user=profile.data(),tenant=user.role==="tenant_operator";
    if(!tenant&&user.role!=="operator")fail("permission-denied","Operatör yetkisi gerekli.");
    if(tenant&&!segment(user.tenantId))fail("permission-denied","Firma kaydı doğrulanamadı.");
+   if(tenant){
+    const business=await tx.get(db.collection("businesses").doc(user.tenantId));
+    if(!business.exists||business.data().accountStatus==="closed")fail("permission-denied","İşletme erişimi kapatılmış.");
+   }
    if(receipt.exists){
     const saved=receipt.data();
     if(saved.machineId!==machineId||saved.action!==action||saved.reason!==reason||saved.tenantId!==(tenant?user.tenantId:null))fail("invalid-argument","İşlem kimliği başka bir istekte kullanılmış.");

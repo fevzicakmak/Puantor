@@ -7,7 +7,7 @@ assert.match(process.env.FIRESTORE_EMULATOR_HOST,/^(127\.0\.0\.1|localhost):\d+$
 const app=initializeApp({projectId:"puantor-tenant-rules-test"},"account-deletion-tests"),db=getFirestore(app);
 class AccountError extends Error{constructor(code,message){super(message);this.code=code}}
 const now=Date.UTC(2026,10,20,12),adminUid="delete-support-admin",handle=createAccountDeletionHandler({db,Timestamp,HttpsError:AccountError,adminUid,now:()=>now});
-const request=(uid,action="request",extra={})=>({auth:{uid,token:{auth_time:now/1000,email:uid+"@example.com"}},data:{action,confirmation:"HESABIMI SİL",...extra}});
+const request=(uid,action="request",extra={})=>({auth:{uid,token:{auth_time:now/1000,email:uid+"@example.com"}},data:{action,confirmation:"HESABIMI SİL",ownerClosureConsent:true,expectedCompletionAt:now+7*86400000,...extra}});
 const denied=(req,code)=>assert.rejects(()=>handle(req),error=>error.code===code);
 (async()=>{try{
  await denied({data:{action:"request"}},"unauthenticated");
@@ -34,7 +34,7 @@ const denied=(req,code)=>assert.rejects(()=>handle(req),error=>error.code===code
  const stored=(await db.collection("accountDeletionRequests").doc(op).get()).data();
  assert.equal(stored.uid,op);assert.equal(stored.tenantId,owner);assert.equal(stored.role,"tenant_operator");assert.equal(stored.email,op+"@example.com");
  assert.equal((await handle(request("delete-other","status",{uid:owner}))).status,"none");
- for(const action of ["reviewList","reviewStart","reviewReopen"])
+ for(const action of ["reviewList","reviewStart","reviewReopen","reviewComplete","reviewCleanup"])
   await denied(request(owner,action,{uid:op}),"permission-denied");
  await denied(request(adminUid,"reviewList",{cursor:"../users"}),"invalid-argument");
  const list=await handle(request(adminUid,"reviewList"));
@@ -46,6 +46,8 @@ const denied=(req,code)=>assert.rejects(()=>handle(req),error=>error.code===code
  const staleAdmin=request(adminUid,"reviewStart",{uid:op});staleAdmin.auth.token.auth_time-=301;
  await denied(staleAdmin,"failed-precondition");
  await denied(request(adminUid,"reviewStart",{uid:"../users"}),"invalid-argument");
+ await denied(request(adminUid,"reviewComplete",{uid:op,confirmation:"wrong",recordsReviewed:true}),"invalid-argument");
+ await denied(request(adminUid,"reviewComplete",{uid:op,confirmation:"HESABI SİL:"+op,recordsReviewed:true}),"failed-precondition");
  const stale=request(owner,"status");delete stale.auth.token.auth_time;
  assert.equal((await handle(stale)).status,"pending","status does not require a password on every page visit");
  assert.equal((await handle(request(owner,"cancel"))).status,"cancelled");
@@ -55,7 +57,7 @@ const denied=(req,code)=>assert.rejects(()=>handle(req),error=>error.code===code
  await ref.update({status:"processing",privateNote:"Never expose an internal support note"});
  await denied(request(owner,"cancel"),"failed-precondition");
  const result=await handle(request(owner,"status"));
- assert.deepEqual(Object.keys(result).sort(),["requestedAt","scope","status"]);
+ assert.deepEqual(Object.keys(result).sort(),["completedAt","expectedCompletionAt","requestedAt","requiresOwnerConsent","scope","status"]);
  assert.equal((await handle(request(owner))).status,"processing");
  await ref.update({status:"completed"});
  assert.equal((await handle(request(owner))).status,"completed");

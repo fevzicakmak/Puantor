@@ -35,6 +35,11 @@ Archive/TestFlight adımı bu Linux ortamında çalıştırılamaz. iOS projesin
 dağıtım hedefi 15.0'dır; bu, App Store'un gönderim için istediği Xcode/SDK sürümü
 ile aynı şey değildir. Gönderim günündeki Apple gereksinimleri ayrıca kontrol edilir.
 
+GitHub CI'ya macOS üzerinde `xcodebuild` ile imzasız iOS Simulator derlemesi
+eklendi. Başarılı koşuda `ios-simulator-app` adlı ZIP kanıtı oluşturulur. Bu
+paket Simulator içindir; iPhone'a kurulabilen imzalı paket veya App Store
+gönderimi değildir. CI sonucu ayrıca kontrol edilmelidir.
+
 `npm run ios:sync` kaynak ekranları yeniden kopyalar; üretilen public dizinini
 elle düzenlemeyin. Uygulama canlı Firebase istemci yapılandırmasını kullanır.
 Test sırasında gerçek işletme verilerine yazmayın; ayrı test işletmesi/ortamı
@@ -42,13 +47,13 @@ kullanın. Firebase web yapılandırması gizli servis hesabı anahtarı değild
 
 ## Gönderimi engelleyen açık işler
 
-1. Hesap silmenin fiilen tamamlanması ve destek işleyişi. Uygulama içinden
-   şifreyle yeniden doğrulanan özel sunucu talebi, durum ve geri çekme akışı
-   hazırlandı. Kullanıcı tercihi: işletme kayıtları korunsun, destek incelesin.
-   Bu talep hesabı otomatik silmez. Tamamlanma süresi, zorunlu saklanacak
-   kayıtlar, kişisel veri temizliği ve firma erişiminin devamı için destek
-   prosedürü henüz tamamlanmış değildir. Sadece talep kaydetmek App Store
-   hazırlığının tamamlandığı anlamına gelmez. Ayrıntı: account-deletion-requests.md.
+1. Hesap silmenin staging ve gerçek iPhone'da doğrulanması; incelenerek
+   saklanacak ticari kayıtların gerekçe/süre politikasının işletilmesi. Sunucu
+   artık destek onayıyla gerçek Auth/profil temizliği, açık iş kontrolü,
+   yeniden deneme ve kapanış onaylı firma kapatmayı yapar. Talep ekranı,
+   eski token'ları kapatan Firestore kuralları ve Functions birlikte
+   doğrulanmalıdır. Emülatör başarısı canlıda yayınlandığı anlamına gelmez.
+   Ayrıntı: account-deletion-requests.md.
 2. Gerçek iPhone/WKWebView ve TestFlight doğrulaması. Linux'ta `cap sync` ve
    Chromium başarısı, imzalı iOS derlemesi veya fiziksel cihaz testi değildir.
 3. PDF/yazdırma penceresi, Blob dosya indirme, SMS, mailto ve harici bağlantılar

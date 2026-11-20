@@ -1,28 +1,60 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puantör | Hesap ve gizlilik</title>
-<style>body{font:16px/1.6 system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5;margin:0;padding:24px}main{max-width:580px;margin:auto;padding:24px;background:white;border-radius:20px;overflow-wrap:anywhere}h1{font-size:25px}a{color:#1d4ed8}label{display:block;margin:16px 0 6px}input{box-sizing:border-box;width:100%;font:inherit;padding:12px;border:1px solid #cbd5e1;border-radius:10px}input[type=checkbox]{width:20px;height:20px;vertical-align:middle;margin-right:8px}button{width:100%;font:inherit;font-weight:650;padding:13px;margin-top:14px;border:0;border-radius:10px;background:#9f1239;color:white}button:disabled{opacity:.5}#cancelRequest{background:#334155}.notice{padding:14px;border-radius:10px;background:#fff7df}#status{min-height:24px;overflow-wrap:anywhere}[hidden]{display:none!important}</style></head>
+<style>body{font:16px/1.6 system-ui,-apple-system,sans-serif;color:#142033;background:#e9eef5;margin:0;padding:24px}main{max-width:580px;margin:auto;padding:24px;background:white;border-radius:20px;overflow-wrap:anywhere}h1{font-size:25px}a{color:#1d4ed8}label{display:block;margin:16px 0 6px}input,textarea{box-sizing:border-box;width:100%;font:inherit;padding:12px;border:1px solid #cbd5e1;border-radius:10px}input[type=checkbox]{width:20px;height:20px;vertical-align:middle;margin-right:8px}button{width:100%;font:inherit;font-weight:650;padding:13px;margin-top:14px;border:0;border-radius:10px;background:#9f1239;color:white}button:disabled{opacity:.5}#cancelRequest{background:#334155}.notice{padding:14px;border-radius:10px;background:#fff7df}#status{min-height:24px;overflow-wrap:anywhere}[hidden]{display:none!important}</style></head>
 <body><main><a id="back" href="./giris.html">Girişe dön</a><h1>Hesap ve gizlilik</h1><p><a href="./gizlilik.html">Gizlilik politikası</a> · <a href="./destek.html">Destek</a></p>
 <p id="status" role="status" aria-live="polite">Oturum kontrol ediliyor…</p>
-<section id="signedIn" hidden><p>Bu ekrandan kendi hesabınızın ve ilişkili kişisel verilerinizin silinmesi için talep gönderebilirsiniz. Başka bir kullanıcının hesabı için talep oluşturulmaz.</p>
-<p class="notice">Talep göndermek hesabınızı veya işletme kayıtlarını hemen silmez. İşletme sahipliği, diğer kullanıcıların hakları ve varsa yasal saklama yükümlülükleri değerlendirilir. Tamamlanma zamanı bu sürümde belirlenmemiştir. Talebin işleme alınması hakkında <a href="mailto:fvzckmk35@gmail.com">fvzckmk35@gmail.com</a> adresinden bilgi alabilirsiniz.</p>
-<p id="ownerNotice" hidden>Firma sahibi hesabının silinmesi diğer operatörleri, iş geçmişini ve cari kayıtları etkileyebilir. Bu kayıtlar talep gönderildiğinde otomatik silinmez.</p>
-<form id="requestForm" hidden><label for="password">Mevcut şifreniz</label><input id="password" type="password" autocomplete="current-password" required><label><input id="acknowledge" type="checkbox" required>Kendi hesabımın silinmesini talep ediyorum ve yukarıdaki açıklamayı okudum.</label><button id="submit" type="submit">Hesabımın silinmesini talep et</button></form>
+<button id="forgetReceipt" type="button" hidden style="background:#334155">Bu cihazdaki talep takip bilgisini temizle</button><section id="signedIn" hidden><p>Bu ekrandan kendi hesabınızın ve ilişkili kişisel verilerinizin silinmesi için talep gönderebilirsiniz. Başka bir kullanıcının hesabı için talep oluşturulmaz.</p>
+<p class="notice">Talep göndermek hesabınızı veya işletme kayıtlarını hemen silmez. İşletme sahipliği, diğer kullanıcıların hakları ve varsa yasal saklama yükümlülükleri değerlendirilir. Destek incelemeye aldığında hedef tamamlanma tarihi bu ekranda gösterilir. İnceleme, saklanacak kayıtların gerekçe ve süresini de kapsar. Talebin işleme alınması hakkında <a href="mailto:fvzckmk35@gmail.com">fvzckmk35@gmail.com</a> adresinden bilgi alabilirsiniz.</p>
+<p id="ownerNotice" hidden>Firma sahibi hesabı silindiğinde işletme kapatılır ve operatör erişimi durdurulur. İncelenen ticari kayıtlar silinmez; destek sorumluluğunda saklanır. Açık işler önce tamamlanıp arşivlenmelidir.</p>
+<form id="requestForm" hidden><label for="password">Mevcut şifreniz</label><input id="password" type="password" autocomplete="current-password" required><label><input id="acknowledge" type="checkbox" required>Kendi hesabımın silinmesini talep ediyorum ve yukarıdaki açıklamayı okudum.</label><label id="ownerConsentLabel" hidden><input id="ownerClosureConsent" type="checkbox">Hesabım silindiğinde işletmenin kapanmasını ve operatör erişiminin durmasını onaylıyorum; incelenen ticari kayıtların korunacağını anlıyorum.</label><button id="submit" type="submit">Hesabımın silinmesini talep et</button></form>
 <form id="cancelForm" hidden><p>Bekleyen talebinizi işleme alınmadan önce geri çekebilirsiniz.</p><label for="cancelPassword">Mevcut şifreniz</label><input id="cancelPassword" type="password" autocomplete="current-password" required><button id="cancelRequest" type="submit">Silme talebimi geri çek</button></form>
-</section><section id="review" hidden><hr><h2>Destek talepleri</h2><p>Bu bölüm yalnızca uygulama destek yöneticisine açıktır. İncelemeye almak hesabı veya işletme kayıtlarını silmez.</p><button id="loadRequests" type="button" style="background:#334155">Talepleri yükle</button><p id="reviewStatus" role="status" aria-live="polite"></p><label for="reviewPassword">İnceleme işlemleri için mevcut şifreniz</label><input id="reviewPassword" type="password" autocomplete="current-password"><div id="requests"></div><button id="moreRequests" type="button" hidden style="background:#334155">Sonraki talepler</button></section></main>
+</section><section id="review" hidden><hr><h2>Destek talepleri</h2><p>Bu bölüm yalnızca uygulama destek yöneticisine açıktır. İncelemeye almak hesabı veya işletme kayıtlarını silmez.</p><button id="loadRequests" type="button" style="background:#334155">Talepleri yükle</button><button id="cleanupRequests" type="button" style="background:#334155">Süresi dolan takip ve eski talep kayıtlarını temizle</button><p id="reviewStatus" role="status" aria-live="polite"></p><label for="reviewPassword">İnceleme işlemleri için mevcut şifreniz</label><input id="reviewPassword" type="password" autocomplete="current-password"><label for="reviewDeadline">İncelemeye alırken hedef tamamlanma tarihi</label><input id="reviewDeadline" type="date"><label for="retentionNote">Korunacak kayıtlar, gerekçe ve saklama süresi (inceleme notu)</label><textarea id="retentionNote" rows="4" minlength="12" maxlength="500"></textarea><label><input id="recordsReviewed" type="checkbox">Kayıt kapsamını ve saklama gereğini inceledim; silme için kullanıcı onayını doğruladım.</label><div id="requests"></div><button id="moreRequests" type="button" hidden style="background:#334155">Sonraki talepler</button></section></main>
 <script type="module">
 import {firebaseConfig} from "./firebase-config.js";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import {getAuth,onAuthStateChanged,EmailAuthProvider,reauthenticateWithCredential} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getAuth,onAuthStateChanged,signOut,EmailAuthProvider,reauthenticateWithCredential} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-functions.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const accountDeletion=httpsCallable(getFunctions(app,"europe-west1"),"accountDeletion");
 let busy=false;
+const receiptKey="puantor_deletion_receipt";
+let receiptMemory=null;
+function savedReceipt(){try{return JSON.parse(localStorage.getItem(receiptKey)||"null")||receiptMemory}catch{return receiptMemory}}
+function receiptToken(user){
+ const previous=savedReceipt();if(previous?.uid===user.uid&&typeof previous.token==="string")return previous.token;
+ const token=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
+ receiptMemory={uid:user.uid,token};try{
+  const login=localStorage.getItem("puantor_last_login"),tenantId=localStorage.getItem("puantor_last_tenant_id")||"",code=localStorage.getItem("puantor_last_firm_code")||"";
+  if(login===user.email||(tenantId&&user.email?.toLowerCase().startsWith(tenantId.toLowerCase()+".")))Object.assign(receiptMemory,{login,tenantId,code});
+  localStorage.setItem(receiptKey,JSON.stringify(receiptMemory));
+ }catch{}
+ return token;
+}
+async function showSavedReceipt(user){
+ const saved=savedReceipt();if(!saved||user&&saved.uid!==user.uid)return false;
+ const {data}=await accountDeletion({action:"receipt",receiptToken:saved.token});if(data.status==="unknown"){receiptMemory=null;try{localStorage.removeItem(receiptKey)}catch{}return false}
+ render(data);$("requestForm").hidden=true;$("cancelForm").hidden=true;$("signedIn").hidden=false;$("forgetReceipt").hidden=false;return true;
+}
+$("forgetReceipt").addEventListener("click",()=>{receiptMemory=null;try{localStorage.removeItem(receiptKey)}catch{}location.reload()});
+const today=new Date(),lastDay=new Date(Date.now()+29*86400000),suggested=new Date(Date.now()+7*86400000);
+$("reviewDeadline").min=today.toISOString().slice(0,10);$("reviewDeadline").max=lastDay.toISOString().slice(0,10);$("reviewDeadline").value=suggested.toISOString().slice(0,10);
+function clearOwnLoginHints(){
+ const saved=savedReceipt();if(!saved?.login||(auth.currentUser&&saved.uid!==auth.currentUser.uid))return;
+ try{
+  localStorage.removeItem("puantor-search-learning-v1");
+  const history=JSON.parse(localStorage.getItem("puantor_login_history")||"[]");
+  if(Array.isArray(history))localStorage.setItem("puantor_login_history",JSON.stringify(history.filter(item=>!(item.login===saved.login&&(item.code||"")===saved.code&&(item.tenantId||"")===saved.tenantId))));
+  if(localStorage.getItem("puantor_last_login")===saved.login)for(const key of ["puantor_last_login","puantor_last_firm_code","puantor_last_tenant_id"])localStorage.removeItem(key);
+ }catch{}
+}
 function render(result){
- const state=result.status;
+ const state=result.status;if(state==="completed")clearOwnLoginHints();
  $("requestForm").hidden=!["none","cancelled"].includes(state);
  $("cancelForm").hidden=state!=="pending";
- $("status").textContent=({none:"Hesap silme talebiniz bulunmuyor.",pending:"Silme talebiniz alındı ve değerlendirme bekliyor. Hesabınız henüz silinmedi.",cancelled:"Silme talebiniz geri çekildi. Hesabınız kullanılmaya devam edebilir.",processing:"Silme talebiniz işleme alındı. Güncel durum için destek ile iletişime geçebilirsiniz.",completed:"Silme talebiniz tamamlandı."})[state]||"Talep durumu alınamadı. Destek ile iletişime geçin.";
+ $("status").textContent=({deleting:"Silme işlemi sürüyor. Hesap erişimi kapalı tutuluyor; gerekirse destek işlemi yeniden deneyecek.",none:"Hesap silme talebiniz bulunmuyor.",pending:"Silme talebiniz alındı ve değerlendirme bekliyor. Hesabınız henüz silinmedi.",cancelled:"Silme talebiniz geri çekildi. Hesabınız kullanılmaya devam edebilir.",processing:"Silme talebiniz işleme alındı. Güncel durum için destek ile iletişime geçebilirsiniz.",completed:"Hesap girişiniz ve profiliniz silindi. İnceleme kapsamında korunmasına karar verilen işletme kayıtları saklanır."})[state]||"Talep durumu alınamadı. Destek ile iletişime geçin.";
+ if(result.expectedCompletionAt&&state==="processing")$("status").textContent+=" Hedef tamamlanma: "+new Date(result.expectedCompletionAt).toLocaleString("tr-TR");
+ if(result.requiresOwnerConsent)$("status").textContent+=" Kapanış onayı eksik: talebi geri çekip yeni açıklamayı onaylayarak yeniden oluşturun.";
 }
 function showError(error){
  const code=error?.code;
@@ -31,15 +63,17 @@ function showError(error){
 onAuthStateChanged(auth,async user=>{
  $("signedIn").hidden=true;$("requestForm").hidden=true;$("cancelForm").hidden=true;
  $("review").hidden=true;$("requests").replaceChildren();$("reviewPassword").value="";
- if(!user){$("status").textContent="Hesabınızı yönetmek için önce giriş yapın.";return}
+ if(!user){try{if(await showSavedReceipt(null))return}catch{}$("status").textContent="Hesabınızı yönetmek için önce giriş yapın.";return}
  try{
+  const {data}=await accountDeletion({action:"status"});if(auth.currentUser?.uid!==user.uid)return;
+  if(["deleting","completed"].includes(data.status)){render(data);$("signedIn").hidden=false;if(data.status==="completed"&&savedReceipt()?.uid===user.uid)await signOut(auth);return}
   const profile=await getDoc(doc(db,"users",user.uid));if(auth.currentUser?.uid!==user.uid)return;
   const role=profile.exists()?profile.data().role:"";
   const destination={tenant_admin:"tenant-manager-preview.html",tenant_operator:"tenant-operator-preview.html",admin:"yonetici.html",operator:"operator.html"}[role];
   $("review").hidden=role!=="admin";
   $("back").href="./"+(destination||"giris.html");$("back").textContent=destination?"Panele dön":"Girişe dön";
-  $("ownerNotice").hidden=role!=="tenant_admin";
-  const {data}=await accountDeletion({action:"status"});if(auth.currentUser?.uid!==user.uid)return;$("signedIn").hidden=false;render(data);
+  $("ownerNotice").hidden=role!=="tenant_admin";$("ownerConsentLabel").hidden=role!=="tenant_admin";$("ownerClosureConsent").required=role==="tenant_admin";
+  if(auth.currentUser?.uid!==user.uid)return;$("signedIn").hidden=false;render(data);
  }catch(error){showError(error)}
 });
 async function submit(action,input,button){
@@ -49,43 +83,52 @@ async function submit(action,input,button){
   const credential=EmailAuthProvider.credential(user.email,input.value);
   await reauthenticateWithCredential(user,credential);await user.getIdToken(true);
   input.value="";$("status").textContent="İşlem kaydediliyor…";
-  const {data}=await accountDeletion({action,...(action==="request"?{confirmation:"HESABIMI SİL"}:{})});
-  $("acknowledge").checked=false;render(data);
+  const {data}=await accountDeletion({action,...(action==="request"?{confirmation:"HESABIMI SİL",ownerClosureConsent:$("ownerClosureConsent").checked,receiptToken:receiptToken(user)}:{})});
+  $("acknowledge").checked=false;$("ownerClosureConsent").checked=false;render(data);
  }catch(error){showError(error)}finally{input.value="";busy=false;button.disabled=false}
 }
 $("requestForm").addEventListener("submit",event=>{event.preventDefault();if(!$("acknowledge").checked)return;submit("request",$("password"),$("submit"))});
 $("cancelForm").addEventListener("submit",event=>{event.preventDefault();submit("cancel",$("cancelPassword"),$("cancelRequest"))});
 let cursor=null;
+async function reviewAction(action,item,button){
+ button.disabled=true;
+ try{
+  const complete=action==="reviewComplete";
+  if(complete&&(!$("recordsReviewed").checked||$("retentionNote").value.trim().length<12))throw Error("Kayıt incelemesini onaylayın ve gerekçe/saklama süresini yazın.");
+  if(complete&&!confirm((item.scope==="business-owner-review"?"İşletme kapatılacak, operatör erişimi duracak ve sahibinin hesabı silinecek. Ticari kayıtlar korunacak.":"Hesap girişi ve profili kalıcı silinecek. İncelenen ticari kayıtlar korunacak.")+"\nHesap: "+(item.email||item.uid)+"\nBu işlemi tamamla?"))return;
+  const user=auth.currentUser;if(!user?.email)throw Error("Yeniden giriş yapın.");
+  const credential=EmailAuthProvider.credential(user.email,$("reviewPassword").value);
+  await reauthenticateWithCredential(user,credential);await user.getIdToken(true);$("reviewPassword").value="";
+  const extra=complete?{confirmation:"HESABI SİL:"+item.uid,recordsReviewed:true,retentionNote:$("retentionNote").value.trim()}:action==="reviewStart"?{expectedCompletionAt:new Date($("reviewDeadline").value+"T23:59:59").getTime()}:{};
+  const {data:result}=await accountDeletion({action,...(item.uid?{uid:item.uid}:{}),...extra});await loadRequests();
+  if(action==="reviewCleanup")$("reviewStatus").textContent="Temizlenen eski talepler: "+result.requestsRemoved+", süresi dolan takip kayıtları: "+result.receiptsRemoved+".";
+  if(complete){$("recordsReviewed").checked=false;$("retentionNote").value=""}
+ }catch(error){$("reviewStatus").textContent="İşlem tamamlanamadı: "+(error.message||error.code)}
+ finally{$("reviewPassword").value="";button.disabled=false}
+}
 async function loadRequests(next=false){
  $("loadRequests").disabled=true;$("moreRequests").disabled=true;
  try{
   const {data}=await accountDeletion({action:"reviewList",...(next&&cursor?{cursor}:{})});
   $("requests").replaceChildren();
+  const roles={tenant_admin:"Firma sahibi",tenant_operator:"Operatör",operator:"Operatör",admin:"Uygulama yöneticisi",unconfigured:"Tamamlanmamış hesap"};
+  const states={pending:"Bekliyor",processing:"İnceleniyor",deleting:"Silme sürüyor",completed:"Tamamlandı",cancelled:"Geri çekildi"};
   for(const item of data.items){
-   const row=document.createElement("article"),text=document.createElement("p");
-   text.textContent=[item.uid,item.email||"E-posta yok",item.role,item.status,item.requestedAt||""].join(" · ");row.append(text);
-   if(["pending","processing"].includes(item.status)){
-    const button=document.createElement("button");button.type="button";button.style.background="#334155";
-    button.textContent=item.status==="pending"?"İncelemeye al":"Beklemeye geri al";
-    button.addEventListener("click",async()=>{
-     button.disabled=true;
-     try{
-      const user=auth.currentUser;if(!user?.email)throw Error("Yeniden giriş yapın.");
-      const credential=EmailAuthProvider.credential(user.email,$("reviewPassword").value);
-      await reauthenticateWithCredential(user,credential);await user.getIdToken(true);$("reviewPassword").value="";
-      await accountDeletion({action:item.status==="pending"?"reviewStart":"reviewReopen",uid:item.uid});
-      await loadRequests();
-     }catch(error){$("reviewStatus").textContent="İnceleme işlemi tamamlanamadı: "+(error.message||error.code)}
-     finally{$("reviewPassword").value="";button.disabled=false}
-    });row.append(button);
-   }
+   const row=document.createElement("article"),text=document.createElement("p");row.dataset.uid=item.uid;
+   text.textContent=[item.email||"Hesap e-postası kaldırılmış",roles[item.role]||"Hesap",states[item.status]||"Bilinmiyor",item.requestedAt?new Date(item.requestedAt).toLocaleString("tr-TR"):""].join(" · ");row.append(text);
+   const identity=document.createElement("small");identity.textContent="Hesap kimliği: "+item.uid;row.append(identity);
+   const add=(label,action)=>{const button=document.createElement("button");button.type="button";button.style.background=action==="reviewComplete"?"#9f1239":"#334155";button.textContent=label;button.addEventListener("click",()=>reviewAction(action,item,button));row.append(button)};
+   if(item.status==="pending")add("İncelemeye al","reviewStart");
+   if(item.status==="processing"){add("Beklemeye geri al","reviewReopen");if(item.uid!==auth.currentUser?.uid)add("Hesabı kalıcı olarak sil","reviewComplete")}
+   if(item.status==="deleting")add("Silme işlemini yeniden dene","reviewComplete");
    $("requests").append(row);
   }
   cursor=data.nextCursor;$("moreRequests").hidden=!cursor;
-  $("reviewStatus").textContent=data.items.length+" talep gösteriliyor. Bu ekran silme işlemini tamamlamaz.";
+  $("reviewStatus").textContent=data.items.length+" talep gösteriliyor. Kalıcı silme yalnızca ayrıca onaylanan işlemle yapılır.";
  }catch(error){$("reviewStatus").textContent="Talepler alınamadı: "+(error.message||error.code)}
  finally{$("loadRequests").disabled=false;$("moreRequests").disabled=false}
 }
+$("cleanupRequests").addEventListener("click",()=>reviewAction("reviewCleanup",{},$("cleanupRequests")));
 $("loadRequests").addEventListener("click",()=>loadRequests());
 $("moreRequests").addEventListener("click",()=>loadRequests(true));
 </script></body></html>

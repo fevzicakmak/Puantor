@@ -1,5 +1,32 @@
 # Puantör tarayıcı doğrulaması
 
+## 20 Kasım 2026 — gerçek hesap temizliği ve kontrollü kapanış
+
+Demo Auth/Functions/Firestore ile tam tarayıcı testine şu adımlar eklendi:
+
+- Destek onayıyla gerçek operatör Auth kullanıcısı ve Firestore profili silindi;
+  iş ve tahsilat belgelerinin sayısı ve kayıtları korundu.
+- Kullanıcı oturumu kapandıktan sonra aynı cihazdaki gizli anahtarla yalnızca
+  silme sonucu görüntülendi; ilgili giriş önerisi temizlendi, başka hesap
+  önerisi kaldı. E-posta adresindeki Firebase normalizasyonu nedeniyle oluşan
+  büyük/küçük harf eşleşmesi hatası testte bulunup düzeltildi.
+- Firma sahibi kapanış onayını verdikten sonra destek hesabı gerçek sahibi
+  Auth'tan kaldırdı; işletme kapalı olarak işaretlendi ve kalan operatörün Auth
+  erişimi durduruldu. Müşteri, arşiv ve tahsilatlar korundu; diğer firmanın
+  hesabı durdurulmadı.
+- Silme özelliği demo proje ortam dosyasından etkinleştirilerek çalıştı. Canlı
+  varsayılanın kapalı olması ayrıca sunucu ve yayın kapısı testlerinde doğrulanır.
+
+Son başarılı Chromium koşusunda beklenmeyen tarayıcı hatası, başarısız ağ isteği
+ve üretim isteği sayısı 0. Ek kanıt: `deleted-account-receipt-mobile.png` ve
+`result.json`. Bu, fiziksel iPhone/TestFlight doğrulaması değildir.
+
+Sunucu emülatör testleri: Auth/alt belge temizliği hata enjeksiyonu ve tekrar,
+eşzamanlı işlem kilidi, kapanış onayı, açık iş engeli, 100'den fazla üyenin
+sayfalanması, sahte yabancı üyenin durdurulmaması, gizli sonuç anahtarı ve süresi
+dolan teknik kayıtların temizlenmesi. Firestore kural testleri eski token'ların
+silinen hesap veya kapalı işletmeye erişememesini de içerir.
+
 ## 20 Kasım 2026 — hesap silme talebi ek doğrulaması
 
 Mevcut görev/çalışma/arşiv/tahsilat testlerine ek olarak gerçek yerel Auth,

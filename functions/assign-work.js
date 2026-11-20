@@ -12,7 +12,7 @@ function createAssignWorkHandler({db,Timestamp,HttpsError,adminUid}){
    const tenant=manager.role==="tenant_admin"&&manager.tenantId===managerUid;
    if(!tenant&&!(managerUid===adminUid&&manager.role==="admin"))fail("permission-denied","Yönetici yetkisi gerekli.");
    const parent=tenant?db.collection("businesses").doc(managerUid):db;
-   if(tenant){const business=await tx.get(parent);if(!business.exists||business.data().ownerUid!==managerUid)fail("permission-denied","Firma yöneticisi doğrulanamadı.");}
+   if(tenant){const business=await tx.get(parent);if(!business.exists||business.data().ownerUid!==managerUid||business.data().accountStatus==="closed")fail("permission-denied","Firma yöneticisi doğrulanamadı veya işletme kapalı.");}
    const machines=parent.collection("machines"),operatorRef=parent.collection("operators").doc(operatorId),machineRef=machines.doc(machineId);
    const [ms,os,cs]=await Promise.all([tx.get(machineRef),tx.get(operatorRef),tx.get(parent.collection("customers").doc(customerId))]);
    if(!ms.exists||!os.exists||!cs.exists)fail("not-found","Makine, operatör veya müşteri bulunamadı.");

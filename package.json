@@ -3,9 +3,9 @@
   "private": true,
   "scripts": {
     "check": "python3 scripts/check-syntax.py",
-    "test:ui": "node tests/customer-ledger.mjs && node tests/forms.cjs && node tests/staging-build.cjs",
+    "test:ui": "node tests/customer-ledger.mjs && node tests/forms.cjs && node tests/staging-build.cjs && python3 tests/deletion-release.py",
     "test:e2e": "node scripts/build-e2e-public.cjs && firebase emulators:exec --config firebase.e2e.json --project demo-puantor-e2e --only auth,firestore,functions,hosting \"node tests/browser-e2e.cjs\"",
-    "test": "npm run test:ui && firebase emulators:exec --only firestore --project puantor-tenant-rules-test \"node tests/tenant-firestore-rules.cjs && node tests/operator-work-state.cjs && node tests/business-registration.cjs && node tests/account-deletion.cjs\"",
+    "test": "npm run test:ui && firebase emulators:exec --only firestore --project puantor-tenant-rules-test \"node tests/tenant-firestore-rules.cjs && node tests/operator-work-state.cjs && node tests/business-registration.cjs && node tests/account-deletion.cjs && node tests/account-deletion-completion.cjs\"",
     "build:ios": "node scripts/build-ios-public.cjs",
     "ios:sync": "npm run build:ios && cap sync ios",
     "ios:open": "cap open ios",

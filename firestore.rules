@@ -4,17 +4,27 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  function isAdmin() { return request.auth != null && request.auth.uid == '3m5MqDVbbFTVWl0VNWz1ipKZ8eO2'; }
-  function signedIn() { return request.auth != null; }
+  // Server-owned deletion receipts immediately block old, still-valid tokens.
+  // Pending/processing requests keep normal access. No client can write receipts.
+  function signedIn() {
+   return request.auth != null &&
+     (!exists(/databases/$(database)/documents/accountDeletionRequests/$(request.auth.uid)) ||
+      !(get(/databases/$(database)/documents/accountDeletionRequests/$(request.auth.uid)).data.status in ['deleting','completed']));
+  }
+  function isAdmin() { return signedIn() && request.auth.uid == '3m5MqDVbbFTVWl0VNWz1ipKZ8eO2'; }
+  function businessOpen(tenantId) {
+   return exists(/databases/$(database)/documents/businesses/$(tenantId)) &&
+     get(/databases/$(database)/documents/businesses/$(tenantId)).data.get('accountStatus', 'active') != 'closed';
+  }
   function isAssigned(machineId) {
    return signedIn() &&
      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operator' &&
      machineId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.machineIds;
   }
-  function tenantAdmin(tenantId) { return signedIn() && request.auth.uid == tenantId && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId; }
+  function tenantAdmin(tenantId) { return signedIn() && request.auth.uid == tenantId && businessOpen(tenantId) && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId; }
   function tenantOperator(tenantId) {
-   return signedIn() &&
+   return signedIn() && businessOpen(tenantId) &&
      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tenant_operator' &&
      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;

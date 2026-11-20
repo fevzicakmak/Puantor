@@ -7,7 +7,9 @@ function createBusinessRegistrationHandler({db,Timestamp,HttpsError}){
   if(typeof email!=="string"||email.toLowerCase().endsWith("@operators.puantor.invalid"))fail("permission-denied","İşletme kaydı için yönetici e-postası gerekli.");
   const input=request.data||{},userRef=db.collection("users").doc(uid),businessRef=db.collection("businesses").doc(uid);
   return db.runTransaction(async tx=>{
-   const [profile,business]=await Promise.all([tx.get(userRef),tx.get(businessRef)]);
+   const [profile,business,deletion]=await Promise.all([tx.get(userRef),tx.get(businessRef),tx.get(db.collection("accountDeletionRequests").doc(uid))]);
+   if((deletion.exists&&["deleting","completed"].includes(deletion.data().status))||(business.exists&&business.data().accountStatus==="closed"))
+    fail("permission-denied","Silinen veya kapatılan hesap yeniden etkinleştirilemez.");
    const user=profile.exists?profile.data():null,firm=business.exists?business.data():null;
    if(user&&(user.role!=="tenant_admin"||user.tenantId!==uid))fail("permission-denied","Mevcut hesabın yetkisi değiştirilemez.");
    if(firm&&firm.ownerUid!==uid)fail("permission-denied","Firma sahibi doğrulanamadı.");
