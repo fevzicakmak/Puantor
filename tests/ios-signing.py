@@ -84,6 +84,14 @@ class SigningTests(unittest.TestCase):
             signing.prepare(self.root, existing, self.values)
         self.assertEqual((existing / "keep.txt").read_text(), "keep")
 
+    def test_missing_secret_message_contains_names_without_values(self):
+        values = {**self.values, "APPLE_ASC_KEY_ID": "", "APPLE_ASC_ISSUER_ID": "", "APPLE_ASC_PRIVATE_KEY": ""}
+        with self.assertRaises(ValueError) as error:
+            signing.prepare(self.root, self.base / "missing", values)
+        self.assertIn("APPLE_ASC_PRIVATE_KEY", str(error.exception))
+        self.assertNotIn("TEAM123456", str(error.exception))
+        self.assertFalse((self.base / "missing").exists())
+
     def test_bad_pem_is_cleaned_without_revealing_content(self):
         broken = "-----BEGIN PRIVATE KEY-----\nNOT-A-KEY\n-----END PRIVATE KEY-----\n"
         with self.assertRaisesRegex(ValueError, "valid P-256"):

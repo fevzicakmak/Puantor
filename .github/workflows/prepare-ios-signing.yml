@@ -1,6 +1,13 @@
 name: Prepare signed iOS package
 on:
   workflow_call:
+    secrets:
+      APPLE_ASC_KEY_ID:
+        required: false
+      APPLE_ASC_ISSUER_ID:
+        required: false
+      APPLE_ASC_PRIVATE_KEY:
+        required: false
     inputs:
       team_id:
         required: true

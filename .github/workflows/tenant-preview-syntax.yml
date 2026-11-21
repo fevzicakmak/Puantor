@@ -30,6 +30,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.prepare_signed_package && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
     needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
     uses: ./.github/workflows/prepare-ios-signing.yml
+    secrets:
+      APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+      APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+      APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
     with:
       team_id: ${{ inputs.team_id }}
       bundle_id: ${{ inputs.bundle_id }}

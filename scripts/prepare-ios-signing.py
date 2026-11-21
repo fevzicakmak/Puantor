@@ -13,8 +13,9 @@ import uuid
 def prepare(root, output, values):
     root, output = Path(root).resolve(), Path(output).resolve()
     required = ["IOS_TEAM_ID", "IOS_BUNDLE_ID", "IOS_VERSION", "IOS_BUILD_NUMBER", "APPLE_ASC_KEY_ID", "APPLE_ASC_ISSUER_ID", "APPLE_ASC_PRIVATE_KEY"]
-    if any(not values.get(key) for key in required):
-        raise ValueError("Apple signing inputs or apple-testflight environment secrets are missing")
+    missing = [key for key in required if not values.get(key)]
+    if missing:
+        raise ValueError("Missing signing fields (names only): " + ", ".join(missing))
     if not re.fullmatch(r"[A-Z0-9]{10}", values["IOS_TEAM_ID"]):
         raise ValueError("Team ID must contain 10 uppercase letters/digits")
     if not re.fullmatch(r"[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*\.[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*", values["IOS_BUNDLE_ID"]):

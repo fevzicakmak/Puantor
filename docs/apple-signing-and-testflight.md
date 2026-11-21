@@ -56,6 +56,12 @@ varsa bu ortamda uygula. Environment secrets alanına şunları kaydet:
 | `APPLE_ASC_ISSUER_ID` | Takım anahtarının Issuer ID'si (UUID) |
 | `APPLE_ASC_PRIVATE_KEY` | İndirilen `.p8` dosyasının orijinal çok satırlı PEM metni |
 
+Environment secrets tercih edilir. Aynı üç ad Repository secrets bölümüne
+eklenmişse test iş akışı yalnızca bu üç Apple sırrını açıkça çağrılan imzalama
+işine aktarır; bütün depo sırları devralınmaz. Aynı adlı Environment secret
+varsa GitHub o ortamın değerini kullanır. Variables özel anahtar saklamak için
+kullanılmaz. Eksik alan hataları yalnızca alan adlarını gösterir.
+
 Özel anahtar GitHub'ın şifreli ortam sırrına girilir; kaynak depoya eklenmez.
 Base64 dönüşümü gerekmez. İş akışı anahtarı depo dışındaki geçici dizinde 0600
 izinli dosyaya yazar, açık anahtar üzerinden P-256 biçimini kontrol eder ve
