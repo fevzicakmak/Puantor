@@ -35,6 +35,23 @@ jobs:
           name: ios-simulator-app
           path: ios-simulator-app.zip
           retention-days: 14
+      - name: Compile unsigned physical-device archive
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath .puantor-ios-device-derived \
+            -archivePath .puantor-ios-archive/Puantor.xcarchive \
+            CODE_SIGNING_ALLOWED=NO archive
+          python3 scripts/verify-ios-archive.py .puantor-ios-archive/Puantor.xcarchive --report ios-device-archive-report.json
+          ditto -c -k --sequesterRsrc --keepParent .puantor-ios-archive/Puantor.xcarchive ios-device-archive.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-device-archive
+          path: |
+            ios-device-archive.zip
+            ios-device-archive-report.json
+          retention-days: 14
   ios-package:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -1,5 +1,10 @@
 # Puantör iOS hazırlığı
 
+21 Kasım ek hazırlığı: fiziksel iPhone için imzasız Release arşiv kontrolü ve
+yalnızca elle çalıştırılan Apple imzalama/export iş akışı eklendi. Kurulum:
+[Apple imzalama ve TestFlight](apple-signing-and-testflight.md). Gerçek Apple
+anahtarıyla imzalama ve TestFlight yüklemesi henüz yapılmadı.
+
 20 Kasım 2026. Bu değişiklik bir App Store yayını değildir. Canlı Firebase
 kuralları, Functions ve işletme verileri değiştirilmez.
 

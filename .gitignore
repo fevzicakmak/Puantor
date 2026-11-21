@@ -8,6 +8,10 @@ test-results/
 .puantor-ios-public/
 .puantor-ios-derived/
 ios-simulator-app.zip
+.puantor-ios-device-derived/
+.puantor-ios-archive/
+ios-device-archive.zip
+ios-device-archive-report.json
 ios/App/App/public/
 ios/App/App/capacitor.config.json
 ios/App/CapApp-SPM/.build/

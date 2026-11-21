@@ -9,7 +9,7 @@
     "build:ios": "node scripts/build-ios-public.cjs",
     "ios:sync": "npm run build:ios && cap sync ios",
     "ios:open": "cap open ios",
-    "test:ios": "node tests/ios-build.cjs"
+    "test:ios": "node tests/ios-build.cjs && python3 tests/ios-signing.py"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.2",
