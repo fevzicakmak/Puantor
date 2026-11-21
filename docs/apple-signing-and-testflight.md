@@ -19,6 +19,11 @@ App Store Connect dağıtımına uygun `.ipa` dışa aktarmayı dener. Provision
 Apple hesabındaki izinlere bağlı olarak sertifika/profil oluşturabilir veya
 güncelleyebilir. İş akışı TestFlight'a veya App Store'a yükleme yapmaz.
 
+Arşivleme adımı `CODE_SIGNING_ALLOWED=NO` ile yapılır; iOS App Development
+profili veya kayıtlı cihaz istemez. Apple dağıtım imzası, `app-store-connect`
+yöntemiyle export sırasında uygulanır. TestFlight dağıtımı için geliştirme
+cihazı UDID'si eklemek bu iş akışının gereği değildir.
+
 Mevcut test iş akışında ayrıca kontrollü bir hazırlık yolu vardır: yalnızca elle
 başlatılan `prepare_signed_package` seçeneği, `main` veya tam adı
 `feat/ios-app-store-foundation` olan hazırlık dalında beş kontrolün tamamını

@@ -65,20 +65,14 @@ jobs:
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
         run: python3 scripts/prepare-ios-signing.py --output "$RUNNER_TEMP/puantor-apple-signing"
-      - name: Archive with Apple automatic signing
-        env:
-          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
-          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+      - name: Archive physical-device app before distribution signing
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App \
             -configuration Release -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Puantor.xcarchive" \
             -derivedDataPath "$RUNNER_TEMP/PuantorDerivedData" \
             -xcconfig "$RUNNER_TEMP/puantor-apple-signing/Signing.xcconfig" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/puantor-apple-signing/AuthKey_${APPLE_ASC_KEY_ID}.p8" \
-            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID" archive
+            CODE_SIGNING_ALLOWED=NO archive
       - name: Verify device archive identity and assets
         env:
           IOS_BUNDLE_ID: ${{ inputs.bundle_id }}
