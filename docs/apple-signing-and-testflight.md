@@ -13,11 +13,19 @@ girmemesini denetler. Raporda SDK, Xcode build numarası ve uygulama kimliği va
 Bu kontrol imzayı doğruladığını iddia etmez. İmzasız arşiv iPhone'a kurulamaz.
 
 `Prepare signed iOS package` ayrı ve yalnızca elle çalıştırılan bir iş akışıdır.
-Yalnızca `main` dalında, `apple-testflight` GitHub ortamıyla çalışır. Apple
+Normal doğrudan çalıştırmada yalnızca `main` dalında, `apple-testflight` GitHub ortamıyla çalışır. Apple
 kimlikleri ve anahtarı sağlandığında otomatik provisioning ile arşiv ve
 App Store Connect dağıtımına uygun `.ipa` dışa aktarmayı dener. Provisioning,
 Apple hesabındaki izinlere bağlı olarak sertifika/profil oluşturabilir veya
 güncelleyebilir. İş akışı TestFlight'a veya App Store'a yükleme yapmaz.
+
+Mevcut test iş akışında ayrıca kontrollü bir hazırlık yolu vardır: yalnızca elle
+başlatılan `prepare_signed_package` seçeneği, `main` veya tam adı
+`feat/ios-app-store-foundation` olan hazırlık dalında beş kontrolün tamamını
+bekler; sonra aynı imzalama işini aynı şifreli ortamla çağırır. PR/push olayları
+Apple anahtarını kullanmaz. Bu yol, canlı Pages yayınını tetiklemek için bütün
+hazırlık PR’ını birleştirme zorunluluğu oluşturmaz. GitHub ortamındaki dal
+kısıtları ve onay kuralları ayrıca geçerlidir; bu akış onları değiştirmez.
 
 ## Apple tarafında gereken bilgiler
 

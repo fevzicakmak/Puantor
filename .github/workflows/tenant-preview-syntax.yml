@@ -8,7 +8,33 @@ on:
       - feat/**
   pull_request:
   workflow_dispatch:
+    inputs:
+      prepare_signed_package:
+        description: Prepare signed package after all checks (no TestFlight upload)
+        type: boolean
+        default: false
+      team_id:
+        description: Apple Developer Team ID (signing only)
+        type: string
+        default: ''
+      bundle_id:
+        description: Registered explicit Bundle ID (signing only)
+        type: string
+        default: ''
+      app_version:
+        description: App version (signing only)
+        type: string
+        default: '1.0'
 jobs:
+  apple-signing:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_signed_package && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
+    uses: ./.github/workflows/prepare-ios-signing.yml
+    with:
+      team_id: ${{ inputs.team_id }}
+      bundle_id: ${{ inputs.bundle_id }}
+      app_version: ${{ inputs.app_version }}
+      reviewed_branch: true
   ios-simulator:
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: macos-latest

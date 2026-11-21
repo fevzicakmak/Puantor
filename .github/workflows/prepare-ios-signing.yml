@@ -1,5 +1,20 @@
 name: Prepare signed iOS package
 on:
+  workflow_call:
+    inputs:
+      team_id:
+        required: true
+        type: string
+      bundle_id:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
+      reviewed_branch:
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       team_id:
@@ -22,7 +37,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   signed-package:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || (inputs.reviewed_branch && github.ref == 'refs/heads/feat/ios-app-store-foundation'))
     runs-on: macos-latest
     timeout-minutes: 30
     environment: apple-testflight
