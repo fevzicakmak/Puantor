@@ -11,6 +11,10 @@ const {createAssignWorkHandler}=require("./assign-work");
 exports.assignOperatorWork=onCall({region:"europe-west1"},createAssignWorkHandler({db,Timestamp,HttpsError,adminUid:ADMIN_UID}));
 const {createBusinessRegistrationHandler}=require("./business-registration");
 exports.completeBusinessRegistration=onCall({region:"europe-west1"},createBusinessRegistrationHandler({db,Timestamp,HttpsError}));
+const {createAccountDeletionHandler}=require("./account-deletion");
+const {createAccountDeletionCompletion}=require("./account-deletion-completion");
+const completeDeletion=createAccountDeletionCompletion({db,auth,Timestamp,HttpsError,adminUid:ADMIN_UID,enabled:()=>process.env.PUANTOR_ENABLE_ACCOUNT_DELETION==="true"});
+exports.accountDeletion=onCall({region:"europe-west1",timeoutSeconds:540},createAccountDeletionHandler({db,Timestamp,HttpsError,adminUid:ADMIN_UID,completeDeletion}));
 function adminOnly(request){if(!request.auth||request.auth.uid!==ADMIN_UID)throw new HttpsError("permission-denied","Yalnızca yönetici.");}
 function username(v){const x=String(v||"").trim().toLowerCase();if(!/^[a-z0-9._-]{3,32}$/.test(x))throw new HttpsError("invalid-argument","Kullanıcı adı 3-32 karakter olmalı.");return x;}
 function password(v){if(typeof v!=="string"||v.length<8||v.length>128)throw new HttpsError("invalid-argument","Şifre 8-128 karakter olmalı.");return v;}
@@ -70,7 +74,7 @@ async function requireTenantManager(request) {
  if(!request.auth)throw new HttpsError("unauthenticated","Oturum açmanız gerekiyor.");
  const uid=request.auth.uid;
  const [profile,business]=await Promise.all([db.collection("users").doc(uid).get(),db.collection("businesses").doc(uid).get()]);
- if(!profile.exists||profile.data().role!=="tenant_admin"||profile.data().tenantId!==uid||!business.exists||business.data().ownerUid!==uid)
+ if(!profile.exists||profile.data().role!=="tenant_admin"||profile.data().tenantId!==uid||!business.exists||business.data().ownerUid!==uid||business.data().accountStatus==="closed")
   throw new HttpsError("permission-denied","Firma yöneticisi doğrulanamadı.");
  return uid;
 }
@@ -84,6 +88,8 @@ exports.operatorLoginAddress=onCall({region:"europe-west1"},async ({data})=>{
  const mapping=await db.collection("operatorFirmCodes").doc(code).get();
  if(!mapping.exists)throw new HttpsError("not-found","Firma kodu veya kullanıcı adı geçersiz.");
  const tenantId=mapping.data().tenantId, business=db.collection("businesses").doc(tenantId);
+ const firm=await business.get();
+ if(!firm.exists||firm.data().accountStatus==="closed")throw new HttpsError("not-found","Firma kodu veya kullanıcı adı geçersiz.");
  const alias=await business.collection("operatorLoginNames").doc(name).get();
  const operatorId=alias.exists?alias.data().operatorId:name;
  const op=await business.collection("operators").doc(operatorId).get();
@@ -135,7 +141,8 @@ exports.tenantOperatorAdmin=onCall({region:"europe-west1",enforceAppCheck:false}
   try{
    created=await auth.createUser({email,password:password(data.password),displayName,emailVerified:true});
    await db.runTransaction(async tx=>{
-    const [current,alias]=await Promise.all([tx.get(ref),tx.get(aliases.doc(name))]);
+    const [current,alias,firm]=await Promise.all([tx.get(ref),tx.get(aliases.doc(name)),tx.get(business)]);
+    if(!firm.exists||firm.data().accountStatus==="closed")throw new HttpsError("failed-precondition","İşletme erişimi kapatılmış.");
     if(current.exists||alias.exists)throw new HttpsError("already-exists","Bu firmada kullanıcı adı kayıtlı.");
     tx.create(ref,{username:name,displayName,authUid:created.uid,authStatus:"active",machineIds:[],createdAt:FieldValue.serverTimestamp()});
     tx.create(db.collection("users").doc(created.uid),{role:"tenant_operator",tenantId,username:name,displayName,email,machineIds:[],activeMachineId:"",createdAt:FieldValue.serverTimestamp()});

@@ -5,9 +5,131 @@ on:
       - main
       - fix/**
       - feature/**
+      - feat/**
   pull_request:
   workflow_dispatch:
+    inputs:
+      prepare_signed_package:
+        description: Prepare signed package after all checks (no TestFlight upload)
+        type: boolean
+        default: false
+      team_id:
+        description: Apple Developer Team ID (signing only)
+        type: string
+        default: ''
+      bundle_id:
+        description: Registered explicit Bundle ID (signing only)
+        type: string
+        default: ''
+      app_version:
+        description: App version (signing only)
+        type: string
+        default: '1.0'
+      upload_testflight:
+        description: Upload an explicitly approved existing signed IPA
+        type: boolean
+        default: false
+      source_run_id:
+        type: string
+        default: ''
+      artifact_id:
+        type: string
+        default: ''
+      ipa_sha256:
+        type: string
+        default: ''
+      build_number:
+        type: string
+        default: ''
 jobs:
+  apple-testflight-upload:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload_testflight && !inputs.prepare_signed_package && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/upload-testflight.yml
+    secrets:
+      APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+      APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+      APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
+    with:
+      team_id: ${{ inputs.team_id }}
+      bundle_id: ${{ inputs.bundle_id }}
+      app_version: ${{ inputs.app_version }}
+      build_number: ${{ inputs.build_number }}
+      source_run_id: ${{ inputs.source_run_id }}
+      artifact_id: ${{ inputs.artifact_id }}
+      ipa_sha256: ${{ inputs.ipa_sha256 }}
+  apple-signing:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_signed_package && !inputs.upload_testflight && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
+    uses: ./.github/workflows/prepare-ios-signing.yml
+    secrets:
+      APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+      APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+      APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
+    with:
+      team_id: ${{ inputs.team_id }}
+      bundle_id: ${{ inputs.bundle_id }}
+      app_version: ${{ inputs.app_version }}
+      reviewed_branch: true
+  ios-simulator:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:ios && npm run ios:sync
+      - name: Compile unsigned iOS Simulator app
+        run: |
+          xcodebuild -version
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath .puantor-ios-derived \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package simulator build
+        run: ditto -c -k --sequesterRsrc --keepParent .puantor-ios-derived/Build/Products/Debug-iphonesimulator/App.app ios-simulator-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: ios-simulator-app.zip
+          retention-days: 14
+      - name: Compile unsigned physical-device archive
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath .puantor-ios-device-derived \
+            -archivePath .puantor-ios-archive/Puantor.xcarchive \
+            CODE_SIGNING_ALLOWED=NO archive
+          python3 scripts/verify-ios-archive.py .puantor-ios-archive/Puantor.xcarchive --report ios-device-archive-report.json
+          ditto -c -k --sequesterRsrc --keepParent .puantor-ios-archive/Puantor.xcarchive ios-device-archive.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-device-archive
+          path: |
+            ios-device-archive.zip
+            ios-device-archive-report.json
+          retention-days: 14
+  ios-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Verify local iOS package boundaries and existing screens
+        run: npm run test:ios
+      - name: Generate iOS assets and sync native project
+        run: npm run ios:sync
   syntax:
     runs-on: ubuntu-latest
     timeout-minutes: 10

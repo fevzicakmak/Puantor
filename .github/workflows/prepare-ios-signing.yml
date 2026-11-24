@@ -1,0 +1,102 @@
+name: Prepare signed iOS package
+on:
+  workflow_call:
+    secrets:
+      APPLE_ASC_KEY_ID:
+        required: false
+      APPLE_ASC_ISSUER_ID:
+        required: false
+      APPLE_ASC_PRIVATE_KEY:
+        required: false
+    inputs:
+      team_id:
+        required: true
+        type: string
+      bundle_id:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
+      reviewed_branch:
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      team_id:
+        description: Apple Developer Team ID
+        required: true
+        type: string
+      bundle_id:
+        description: Explicit Bundle ID already registered in your Apple account
+        required: true
+        type: string
+      app_version:
+        description: App version
+        required: true
+        default: '1.0'
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: puantor-apple-signing
+  cancel-in-progress: false
+jobs:
+  signed-package:
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || (inputs.reviewed_branch && github.ref == 'refs/heads/feat/ios-app-store-foundation'))
+    runs-on: macos-latest
+    timeout-minutes: 30
+    environment: apple-testflight
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:ios && npm run ios:sync
+      - name: Prepare validated signing inputs outside the repository
+        env:
+          IOS_TEAM_ID: ${{ inputs.team_id }}
+          IOS_BUNDLE_ID: ${{ inputs.bundle_id }}
+          IOS_VERSION: ${{ inputs.app_version }}
+          IOS_BUILD_NUMBER: ${{ github.run_number }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
+        run: python3 scripts/prepare-ios-signing.py --output "$RUNNER_TEMP/puantor-apple-signing"
+      - name: Archive physical-device app before distribution signing
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Puantor.xcarchive" \
+            -derivedDataPath "$RUNNER_TEMP/PuantorDerivedData" \
+            -xcconfig "$RUNNER_TEMP/puantor-apple-signing/Signing.xcconfig" \
+            CODE_SIGNING_ALLOWED=NO archive
+      - name: Verify device archive identity and assets
+        env:
+          IOS_BUNDLE_ID: ${{ inputs.bundle_id }}
+        run: python3 scripts/verify-ios-archive.py "$RUNNER_TEMP/Puantor.xcarchive" --bundle-id "$IOS_BUNDLE_ID" --report "$RUNNER_TEMP/ios-device-archive-report.json"
+      - name: Export distribution package without uploading
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Puantor.xcarchive" \
+            -exportPath "$RUNNER_TEMP/PuantorExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/puantor-apple-signing/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/puantor-apple-signing/AuthKey_${APPLE_ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-signed-package
+          path: |
+            ${{ runner.temp }}/PuantorExport/*.ipa
+            ${{ runner.temp }}/ios-device-archive-report.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove temporary Apple key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/puantor-apple-signing"

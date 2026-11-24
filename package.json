@@ -3,16 +3,25 @@
   "private": true,
   "scripts": {
     "check": "python3 scripts/check-syntax.py",
-    "test:ui": "node tests/customer-ledger.mjs && node tests/forms.cjs && node tests/staging-build.cjs",
+    "test:ui": "node tests/customer-ledger.mjs && node tests/forms.cjs && node tests/staging-build.cjs && python3 tests/deletion-release.py",
     "test:e2e": "node scripts/build-e2e-public.cjs && firebase emulators:exec --config firebase.e2e.json --project demo-puantor-e2e --only auth,firestore,functions,hosting \"node tests/browser-e2e.cjs\"",
-    "test": "npm run test:ui && firebase emulators:exec --only firestore --project puantor-tenant-rules-test \"node tests/tenant-firestore-rules.cjs && node tests/operator-work-state.cjs && node tests/business-registration.cjs\""
+    "test": "npm run test:ui && firebase emulators:exec --only firestore --project puantor-tenant-rules-test \"node tests/tenant-firestore-rules.cjs && node tests/operator-work-state.cjs && node tests/business-registration.cjs && node tests/account-deletion.cjs && node tests/account-deletion-completion.cjs\"",
+    "build:ios": "node scripts/build-ios-public.cjs",
+    "ios:sync": "npm run build:ios && cap sync ios",
+    "ios:open": "cap open ios",
+    "test:ios": "node tests/ios-build.cjs && python3 tests/ios-signing.py && python3 tests/testflight-upload.py && node tests/testflight-status.cjs"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.2",
     "@firebase/rules-unit-testing": "^4.0.1",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.0.0",
     "firebase-tools": "15.36.0",
     "jsdom": "^26.1.0",
     "playwright": "^1.65.1"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2"
   }
 }
