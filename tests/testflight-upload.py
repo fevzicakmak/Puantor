@@ -32,7 +32,7 @@ class UploadPackageTests(unittest.TestCase):
 
     def test_exact_approved_build(self):
         path, report = self.verify()
-        self.assertEqual(path, self.ipa)
+        self.assertEqual(path, self.ipa.resolve())
         self.assertEqual(report["build"], "73")
         self.assertEqual(report["ipaSHA256"], self.digest)
 
