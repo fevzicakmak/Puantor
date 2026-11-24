@@ -1,0 +1,126 @@
+name: Upload approved TestFlight package
+on:
+  workflow_call:
+    secrets:
+      APPLE_ASC_KEY_ID:
+        required: false
+      APPLE_ASC_ISSUER_ID:
+        required: false
+      APPLE_ASC_PRIVATE_KEY:
+        required: false
+    inputs:
+      team_id:
+        type: string
+        required: true
+      bundle_id:
+        type: string
+        required: true
+      app_version:
+        type: string
+        required: true
+      build_number:
+        type: string
+        required: true
+      artifact_id:
+        type: string
+        required: true
+      source_run_id:
+        type: string
+        required: true
+      ipa_sha256:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: puantor-testflight-upload
+  cancel-in-progress: false
+jobs:
+  upload:
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    runs-on: macos-latest
+    timeout-minutes: 25
+    environment: apple-testflight
+    env:
+      IOS_TEAM_ID: ${{ inputs.team_id }}
+      IOS_BUNDLE_ID: ${{ inputs.bundle_id }}
+      IOS_VERSION: ${{ inputs.app_version }}
+      IOS_BUILD_NUMBER: ${{ inputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/puantor-approved-ipa
+      - name: Verify exact approved package before Apple access
+        id: package
+        env:
+          APPROVED_IPA_SHA256: ${{ inputs.ipa_sha256 }}
+        run: |
+          python3 scripts/verify-testflight-package.py --directory "$RUNNER_TEMP/puantor-approved-ipa" \
+            --sha256 "$APPROVED_IPA_SHA256" --bundle "$IOS_BUNDLE_ID" \
+            --version "$IOS_VERSION" --build "$IOS_BUILD_NUMBER" --team "$IOS_TEAM_ID" \
+            --report "$RUNNER_TEMP/approved-ipa-report.json" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund && npm run ios:sync
+      - name: Prepare temporary API key
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
+        run: |
+          python3 scripts/prepare-ios-signing.py --output "$RUNNER_TEMP/puantor-testflight-key"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          ln -s "$RUNNER_TEMP/puantor-testflight-key/AuthKey_${APPLE_ASC_KEY_ID}.p8" "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_ASC_KEY_ID}.p8"
+      - name: Check for an already uploaded build
+        id: existing
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_KEY_PATH: ${{ runner.temp }}/puantor-testflight-key/AuthKey_${{ secrets.APPLE_ASC_KEY_ID }}.p8
+          TESTFLIGHT_REPORT: ${{ runner.temp }}/testflight-before-upload.json
+        run: node scripts/testflight-status.cjs --once
+      - name: Validate approved IPA with Apple
+        if: steps.existing.outputs.build_exists != 'true'
+        env:
+          IPA_PATH: ${{ steps.package.outputs.ipa_path }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: xcrun altool --validate-app --type ios --file "$IPA_PATH" --apiKey "$APPLE_ASC_KEY_ID" --apiIssuer "$APPLE_ASC_ISSUER_ID" --output-format json
+      - name: Upload approved IPA to TestFlight
+        if: steps.existing.outputs.build_exists != 'true'
+        env:
+          IPA_PATH: ${{ steps.package.outputs.ipa_path }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$APPLE_ASC_KEY_ID" --apiIssuer "$APPLE_ASC_ISSUER_ID" --output-format json
+      - name: Observe Apple processing without assigning testers or releasing
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_KEY_PATH: ${{ runner.temp }}/puantor-testflight-key/AuthKey_${{ secrets.APPLE_ASC_KEY_ID }}.p8
+          TESTFLIGHT_REPORT: ${{ runner.temp }}/testflight-processing.json
+        run: node scripts/testflight-status.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testflight-upload-evidence
+          path: |
+            ${{ runner.temp }}/approved-ipa-report.json
+            ${{ runner.temp }}/testflight-before-upload.json
+            ${{ runner.temp }}/testflight-processing.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove temporary API key
+        if: always()
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+        run: |
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_ASC_KEY_ID}.p8"
+          rm -rf "$RUNNER_TEMP/puantor-testflight-key"

@@ -25,9 +25,44 @@ on:
         description: App version (signing only)
         type: string
         default: '1.0'
+      upload_testflight:
+        description: Upload an explicitly approved existing signed IPA
+        type: boolean
+        default: false
+      source_run_id:
+        type: string
+        default: ''
+      artifact_id:
+        type: string
+        default: ''
+      ipa_sha256:
+        type: string
+        default: ''
+      build_number:
+        type: string
+        default: ''
 jobs:
+  apple-testflight-upload:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload_testflight && !inputs.prepare_signed_package && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/upload-testflight.yml
+    secrets:
+      APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+      APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+      APPLE_ASC_PRIVATE_KEY: ${{ secrets.APPLE_ASC_PRIVATE_KEY }}
+    with:
+      team_id: ${{ inputs.team_id }}
+      bundle_id: ${{ inputs.bundle_id }}
+      app_version: ${{ inputs.app_version }}
+      build_number: ${{ inputs.build_number }}
+      source_run_id: ${{ inputs.source_run_id }}
+      artifact_id: ${{ inputs.artifact_id }}
+      ipa_sha256: ${{ inputs.ipa_sha256 }}
   apple-signing:
-    if: github.event_name == 'workflow_dispatch' && inputs.prepare_signed_package && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_signed_package && !inputs.upload_testflight && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ios-app-store-foundation')
     needs: [syntax, ios-package, ios-simulator, firestore-rules, browser]
     uses: ./.github/workflows/prepare-ios-signing.yml
     secrets:
