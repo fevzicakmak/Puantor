@@ -12,10 +12,12 @@ import zipfile
 
 
 def decode_profile(data):
-    result = subprocess.run(["openssl", "cms", "-verify", "-inform", "DER", "-noverify"], input=data, capture_output=True)
-    if result.returncode:
-        raise ValueError("Distribution profile CMS signature could not be verified")
-    return plistlib.loads(result.stdout)
+    # Older macOS LibreSSL lacks the cms command, but supports PKCS#7 smime.
+    for command in ["cms", "smime"]:
+        result = subprocess.run(["openssl", command, "-verify", "-inform", "DER", "-noverify"], input=data, capture_output=True)
+        if result.returncode == 0:
+            return plistlib.loads(result.stdout)
+    raise ValueError("Distribution profile CMS signature could not be verified")
 
 
 def verify(directory, expected_hash, bundle, version, build, team, decoder=decode_profile):
